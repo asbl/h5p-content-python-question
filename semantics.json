@@ -1,0 +1,459 @@
+[
+    {
+        "name": "l10n",
+        "type": "group",
+        "label": "User interface",
+        "common": true,
+        "fields": [
+            {
+                "name": "checkAnswer",
+                "type": "text",
+                "label": "Check answer",
+                "default": "Check Answer",
+                "widget": "none"
+            },
+            {
+                "name": "run",
+                "type": "text",
+                "label": "▶ Run",
+                "default": "▶ Run",
+                "widget": "none"
+            },
+            {
+                "name": "stop",
+                "type": "text",
+                "label": "Stop",
+                "default": "Stop",
+                "widget": "none"
+            },
+            {
+                "name": "failedText",
+                "type": "text",
+                "label": "You failed - Try again",
+                "default": "You failed - Try again"
+            },
+            {
+                "name": "successText",
+                "type": "text",
+                "label": "All tests passed",
+                "default": "All tests passed"
+            },
+            {
+                "name": "testCase",
+                "type": "text",
+                "label": "Test Case",
+                "default": "Test Case"
+            },
+            {
+                "name": "hidden",
+                "type": "text",
+                "label": "[hidden]",
+                "default": "[hidden]",
+                "widget": "none"
+            },
+            {
+                "name": "testInput",
+                "type": "text",
+                "label": "Test Input",
+                "default": "Test Input"
+            },
+            {
+                "name": "lastOutput",
+                "type": "text",
+                "label": "Last Output",
+                "default": "Last Output"
+            },
+            {
+                "name": "passed",
+                "type": "text",
+                "label": "passed?",
+                "default": "passed?"
+            },
+            {
+                "name": "expectedOutput",
+                "type": "text",
+                "label": "Expected Output",
+                "default": "Expected Output"
+            },
+            {
+                "name": "canvas",
+                "type": "text",
+                "label": "Canvas",
+                "default": "Canvas"
+            },
+            {
+                "name": "instructions",
+                "type": "text",
+                "label": "Instructions",
+                "default": "Instructions"
+            },
+            {
+                "name": "showCode",
+                "type": "text",
+                "label": "Show Code",
+                "default": "Show Code"
+            },
+            {
+                "name": "exportImage",
+                "type": "text",
+                "label": "Export Image",
+                "default": "Export Image"
+            }
+        ]
+    },
+    {
+        "name": "contentType",
+        "type": "select",
+        "label": "Type",
+        "description": "Type of H5P Content ",
+        "options": [
+            {
+                "value": "ide_only",
+                "label": "Assignment only"
+            },
+            {
+                "value": "text_only",
+                "label": "Text only"
+            },
+            {
+                "value": "text_and_ide",
+                "label": "Text and Coding assignment"
+            }
+        ],
+        "default": "text_only"
+    },
+    {
+        "name": "contents",
+        "type": "list",
+        "label": "Content",
+        "widget": "showWhen",
+        "showWhen": {
+            "rules": [
+                {
+                    "field": "contentType",
+                    "equals": [
+                        "text_only",
+                        "text_and_ide"
+                    ]
+                }
+            ]
+        },
+        "description": "Text can contain text, images, videos and code",
+        "expanded": true,
+        "field": {
+            "name": "field",
+            "type": "group",
+            "label": "Field",
+            "fields": [
+                {
+                    "name": "type",
+                    "type": "select",
+                    "label": "Type",
+                    "description": "Type of H5P Content ",
+                    "options": [
+                        {
+                            "value": "text",
+                            "label": "Text"
+                        },
+                        {
+                            "value": "image",
+                            "label": "Image"
+                        },
+                        {
+                            "value": "code",
+                            "label": "Code"
+                        }
+                    ],
+                    "default": "text"
+                },
+                {
+                    "type": "text",
+                    "name": "text",
+                    "optional": true,
+                    "label": "Text",
+                    "description": "Write general description as markdown code",
+                    "widget": "showWhen",
+                    "showWhen": {
+                        "rules": [
+                            {
+                                "field": "type",
+                                "equals": [
+                                    "text"
+                                ]
+                            }
+                        ],
+                        "widget": "codeWidget"
+                    },
+                    "options": [
+                        {
+                            "language": "markdown",
+                            "showAlways": true
+                        }
+                    ]
+                },
+                {
+                    "name": "image",
+                    "type": "image",
+                    "label": "Image",
+                    "optional": true,
+                    "description": "An image",
+                    "widget": "showWhen",
+                    "showWhen": {
+                        "rules": [
+                            {
+                                "field": "type",
+                                "equals": [
+                                    "image"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                {
+                    "type": "boolean",
+                    "name": "showEditor",
+                    "label": "Show Editor?",
+                    "description": "Should an editor displayed to the user",
+                    "default": false,
+                    "widget": "showWhen",
+                    "showWhen": {
+                        "rules": [
+                            {
+                                "field": "type",
+                                "equals": [
+                                    "code"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                {
+                    "type": "text",
+                    "name": "code",
+                    "optional": true,
+                    "label": "Code",
+                    "description": "Write general description as markdown code",
+                    "widget": "showWhen",
+                    "showWhen": {
+                        "rules": [
+                            {
+                                "field": "type",
+                                "equals": [
+                                    "code"
+                                ]
+                            }
+                        ],
+                        "widget": "codeWidget"
+                    },
+                    "options": [
+                        {
+                            "language": "python",
+                            "showAlways": true
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "name": "editorSettings",
+        "type": "group",
+        "label": "Editor Settings",
+        "widget": "showWhen",
+        "showWhen": {
+            "rules": [
+                {
+                    "field": "contentType",
+                    "equals": [
+                        "ide_only",
+                        "text_and_ide"
+                    ]
+                }
+            ]
+        },
+        "description": "This defines how the actual editor is pre-populated and whether code should be executed before or after user input.",
+        "expanded": true,
+        "fields": [
+            {
+                "type": "text",
+                "name": "instructions",
+                "widget": "codeWidget",
+                "optional": true,
+                "label": "Instructions",
+                "description": "Write instructions as markdown code",
+                "options": [
+                    {
+                        "language": "markdown",
+                        "showAlways": true
+                    }
+                ]
+            },
+            {
+                "name": "instructionsImage",
+                "type": "image",
+                "label": "Instructions Image",
+                "optional": true,
+                "description": "An optional image appended to instructions"
+            },
+            {
+                "label": "Pre code",
+                "name": "preCode",
+                "type": "text",
+                "optional": true,
+                "widget": "codeWidget",
+                "default": "",
+                "description": "Code prepended before main program",
+                "options": [
+                    {
+                        "language": "python"
+                    }
+                ]
+            },
+            {
+                "label": "Default Code",
+                "name": "startingCode",
+                "type": "text",
+                "widget": "codeWidget",
+                "default": "print(\"Hello World\")",
+                "description": "Add default code here, so that users can modify this code.",
+                "options": [
+                    {
+                        "language": "python"
+                    }
+                ]
+            },
+            {
+                "label": "Post code",
+                "name": "postCode",
+                "type": "text",
+                "optional": true,
+                "widget": "codeWidget",
+                "default": "",
+                "description": "Code appended after main program",
+                "options": [
+                    {
+                        "language": "python"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "name": "gradingSettings",
+        "type": "group",
+        "label": "Grading Settings",
+        "widget": "showWhen",
+        "showWhen": {
+            "rules": [
+                {
+                    "field": "contentType",
+                    "equals": [
+                        "ide_only",
+                        "text_and_ide"
+                    ]
+                }
+            ]
+        },
+        "description": "Information how the content should be graded",
+        "expanded": true,
+        "fields": [
+            {
+                "name": "gradingMethod",
+                "type": "select",
+                "label": "Grading method",
+                "description": "Grading methods",
+                "default": "none",
+                "options": [
+                    {
+                        "value": "ioTestCases",
+                        "label": "Input/Output TestCases"
+                    },
+                    {
+                        "value": "targetImage",
+                        "label": "Target Image"
+                    },
+                    {
+                        "value": "none",
+                        "label": "No Grading"
+                    }
+                ]
+            },
+            {
+                "name": "testCases",
+                "type": "list",
+                "label": "Test Cases",
+                "entity": "testcase",
+                "widget": "showWhen",
+                "showWhen": {
+                    "rules": [
+                        {
+                            "field": "gradingMethod",
+                            "equals": ["ioTestCases", 
+                            "targetImage"]
+                        }
+                    ]
+                },
+                "min": 0,
+                "max": 20,
+                "field": {
+                    "name": "testCase",
+                    "type": "group",
+                    "label": "Test Case",
+                    "fields": [
+                        {
+                            "name": "hidden",
+                            "type": "boolean",
+                            "label": "Hidden Testcase",
+                            "description": "Input- and Output values are not shown to user.",
+                            "default": false
+                        },
+                        {
+                            "name": "inputs",
+                            "type": "list",
+                            "label": "Inputs",
+                            "entity": "input",
+                            "min": 1,
+                            "field": {
+                                "name": "input",
+                                "type": "text",
+                                "label": "Text",
+                                "description": "Input",
+                                "optional": true
+                            }
+                        },
+                        {
+                            "name": "outputs",
+                            "type": "list",
+                            "label": "Outputs",
+                            "entity": "output",
+                            "min": 1,
+                            "field": {
+                                "name": "output",
+                                "type": "text",
+                                "label": "Answer",
+                                "description": "Output",
+                                "optional": true
+                            },
+                            "widget": "showWhen",
+                            "showWhen": {
+                                "rules": [
+                                    {
+                                        "field": "../../gradingMethod",
+                                        "equals": "ioTestCases"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "targetCode",
+                "type": "text",
+                "label": "Solution Code",
+                "entity": "testcase",
+                "widget": "codeWidget"
+            }
+        ]
+    }
+]
