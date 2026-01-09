@@ -1,4 +1,4 @@
-import PyhonQuestionFactory from './python-factory';
+import PyhonQuestionFactory from "./python-factory";
 
 export default class PythonQuestion extends H5P.CodeQuestion {
   /**
@@ -9,18 +9,11 @@ export default class PythonQuestion extends H5P.CodeQuestion {
    */
   constructor(params, contentId, extras = {}) {
     super(params, contentId, extras);
-    //this.state = 'code';
-    this.language = 'python';
-    this.layout = 'python';
+    this.language = "python";
+    this.layout = "python";
   } // end of constructor
-
 
   getFactory() {
     return new PyhonQuestionFactory(this);
   }
-
 } // end of class
-
-
-
-

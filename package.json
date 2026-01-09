@@ -1,5 +1,5 @@
 {
-  "name": "h5p-content-python-question",
+  "name": "H5P.PythonQuestion",
   "version": "1.0.0",
   "description": "Python Question Content Type",
   "private": true,

@@ -1,11 +1,10 @@
-import PythonRuntime from './python-runtime';
+import PythonRuntime from "./python-runtime";
 
 export default class PythonManualRuntime extends PythonRuntime {
-
-  constructor(question, editor, options) {
+  constructor(question, codeContainer, options) {
     super(question, options);
-    this.code = editor.getCode();
-    this.editor = editor;
+    this.codeContainer = codeContainer;
+    this.code = codeContainer.editorManager.getCode();
   }
 
   async run() {
@@ -19,21 +18,26 @@ export default class PythonManualRuntime extends PythonRuntime {
   }
 
   setRunCanvas() {
-    const canvasData = this.createCanvas(this.canvasWrapper, 'run');
+    const canvasData = this.createCanvas(this.canvasWrapper, "run");
     this.canvasWrapper = canvasData[0];
     this.turtleDiv = canvasData[1];
     this.p5Div = canvasData[2];
-    this.editor.getPage('canvas').appendChild(this.canvasWrapper);
+    const canvasPage = this.codeContainer.pageManager.getPage("canvas");
+    if (canvasPage) {
+      canvasPage.appendChild(this.canvasWrapper);
+      if (this._containsCanvasCode()) {
+        this.codeContainer.canvasManager.addCanvas();
+        this.codeContainer.pageManager.showPage("canvas");
+      }
+    }
+
     return [this.canvasWrapper, this.turtleDiv, this.p5Div];
   }
 
   removeRunCanvas() {
-    this.editor.getPage('canvas').innerHTML = '';
-  }
-
-  showCanvas() {
-    if (this._containsCanvasCode(this.code)) {
-      this.editor.showCanvas();
+    const canvasPage = this.codeContainer.pageManager.getPage("canvas");
+    if (canvasPage) {
+      canvasPage.innerHTML = "";
     }
   }
 
@@ -43,8 +47,8 @@ export default class PythonManualRuntime extends PythonRuntime {
   }
 
   inputHandler(text) {
-    const rValue =  new Promise((resolve, _reject) => {
-      resolve(this.getPrompt()(text, 'Python asks for User-Input', ''));
+    const rValue = new Promise((resolve, _reject) => {
+      resolve(this.getPrompt()(text, "Python asks for User-Input", ""));
     });
     return rValue;
   }
@@ -55,24 +59,20 @@ export default class PythonManualRuntime extends PythonRuntime {
    */
   outputHandler(text) {
     // write output to console
-    const editorConsole = this.editor.getConsole();
+    const editorConsole = this.codeContainer.getConsoleManager().getConsole();
     if (editorConsole) {
-      editorConsole.parentElement.style.display = 'block';
-      const trimmed_output = '> ' + text.trim() + '\n';
+      editorConsole.parentElement.style.display = "block";
+      const trimmed_output = "> " + text.trim() + "\n";
       editorConsole.value += trimmed_output;
-      editorConsole.scrollTop = editorConsole.scrollHeight;
-      this.editor.showConsole(true);
+      this.codeContainer.consoleManager.showConsole(true);
     }
-    console.info(text);
   }
 
   setupEnvironment() {
     this.isTest = false;
     this.Sk = Sk;
     /* Preparations: Reset console*/
-    if (this.console != null) {
-      this.console.value = '';
-    }
+    this.codeContainer.consoleManager.clearConsole();
     const canvasData = this.setRunCanvas();
     const canvasWrapper = canvasData[0];
     const turtleDiv = canvasData[1];
@@ -83,10 +83,10 @@ export default class PythonManualRuntime extends PythonRuntime {
     if (window.p5 && window.p5 !== p5) {
       window.p5 = p5;
     }
-    p5Div.innerHTML = '';
+    p5Div.innerHTML = "";
     Sk.p5Sketch = this.p5Div.id;
     Sk.p5 = {
-      node: p5Div.id
+      node: p5Div.id,
     };
 
     /* Configure SK environment */
@@ -95,7 +95,7 @@ export default class PythonManualRuntime extends PythonRuntime {
         this.outputHandler(text);
       }, // handles output
       read: this.readHandler, // read input files
-      inputfun: async (x) =>  {
+      inputfun: async (x) => {
         const a = await this.inputHandler(x);
         return a;
       },
@@ -103,10 +103,13 @@ export default class PythonManualRuntime extends PythonRuntime {
       killableWhile: this.killableWhile,
       killableFor: this.killableFor,
       retainGlobals: this.retainGlobals,
-      __future__: Sk.python3
+      __future__: Sk.python3,
     });
     Sk.runtime = this;
-    this.showCanvas();
+    if (this._containsCanvasCode(this.code)) {
+      console.log("this contains canvas code");
+      this.codeContainer.canvasManager.addCanvas();
+      this.codeContainer.canvasManager.showCanvas();
+    }
   }
-      
-} 
+}

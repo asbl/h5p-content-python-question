@@ -105,8 +105,13 @@
         "name": "contentType",
         "type": "select",
         "label": "Type",
+        "required": true,
         "description": "Type of H5P Content ",
         "options": [
+            {
+                "value": "please_choose",
+                "label": "Please choose"
+            },
             {
                 "value": "ide_only",
                 "label": "Assignment only"
@@ -120,7 +125,7 @@
                 "label": "Text and Coding assignment"
             }
         ],
-        "default": "text_only"
+        "default":  "please_choose"
     },
     {
         "name": "contents",
@@ -379,6 +384,26 @@
                 ]
             },
             {
+                "name": "dueDateGroup",
+                "type": "group",
+                "label": "Due Date Settings",
+                "fields": [
+                    {
+                        "name": "enableDueDate",
+                        "type": "boolean",
+                        "label": "Enable Due Date",
+                        "default": true
+                    },
+                    {
+                        "name": "duedate",
+                        "type": "text",
+                        "label": "Due Date",
+                        "widget": "datetime",
+                        "default": "01.01.1970"
+                    }
+                ]
+            },
+            {
                 "name": "testCases",
                 "type": "list",
                 "label": "Test Cases",
@@ -388,8 +413,10 @@
                     "rules": [
                         {
                             "field": "gradingMethod",
-                            "equals": ["ioTestCases", 
-                            "targetImage"]
+                            "equals": [
+                                "ioTestCases",
+                                "targetImage"
+                            ]
                         }
                     ]
                 },

@@ -1,15 +1,14 @@
-import PythonRuntime from './python-runtime';
+import PythonRuntime from "./python-runtime";
 
 export default class PythonSolutionRuntime extends PythonRuntime {
-
   constructor(question, codeTester, options) {
     super(question, options);
     this.codeTester = codeTester;
     this.code = this.question.targetCode;
-    this.type = 'Solution runtime';
-    this.editor = this.question.editor;
+    this.type = "Solution runtime";
+    this.codeContainer = this.question.codeContainer;
   }
-      
+
   async run() {
     if (!this.solutions[this.codeTester.testCaseCounter] === true) {
       this.setup();
@@ -18,23 +17,25 @@ export default class PythonSolutionRuntime extends PythonRuntime {
   }
 
   setSolutionCanvas() {
-    const canvasWrapper = document.createElement('div');
+    const canvasWrapper = document.createElement("div");
     canvasWrapper.id = `canvas-wrapper_solution_${this.codeTester.testCaseCounter}_${H5P.createUUID()}`;
-    canvasWrapper.classList.add('canvas-wrapper');
-    canvasWrapper.classList.add('solution-canvas-wrapper');
-    const canvasData = this.createCanvas(canvasWrapper, 'testCaseNumber');
+    canvasWrapper.classList.add("canvas-wrapper");
+    canvasWrapper.classList.add("solution-canvas-wrapper");
+    const canvasData = this.createCanvas(canvasWrapper, "testCaseNumber");
     const turtleDiv = canvasData[1];
     const p5Div = canvasData[2];
-    const testCaseTableCell = this.codeTester.getTestCasesArea().querySelector(`.expected.expected-${this.codeTester.testCaseCounter}`);
+    const testCaseTableCell = this.codeTester
+      .getTestCasesArea()
+      .querySelector(`.expected.expected-${this.codeTester.testCaseCounter}`);
     if (testCaseTableCell !== null) {
       testCaseTableCell.appendChild(canvasWrapper);
     }
-    
+
     return [canvasWrapper, turtleDiv, p5Div];
   }
 
   setupEnvironment() {
-    this.codeTester.startTest(); 
+    this.codeTester.startTest();
     this.Sk = Sk;
     /* Preparations: Reset console*/
     if (this._containsCanvasCode()) {
@@ -51,14 +52,14 @@ export default class PythonSolutionRuntime extends PythonRuntime {
         this.outputHandler(text);
       }, // handles output
       read: this.readHandler, // read input files
-      inputfun: async (x) =>  {
+      inputfun: async (x) => {
         const a = await this.inputHandler(x);
         return a;
       },
       inputfunTakesPrompt: this.inputTakesPrompt,
       killableWhile: this.killableWhile,
       killableFor: this.killableFor,
-      retainGlobals: this.retainGlobals
+      retainGlobals: this.retainGlobals,
     });
     Sk.runtime = this;
   }
@@ -74,17 +75,16 @@ export default class PythonSolutionRuntime extends PythonRuntime {
     return new Promise((resolve, _reject) => {
       resolve(this.codeTester.getInput());
     });
-  } 
+  }
 
   outputHandler(text) {
     let trimmed_output = text;
-    const editorConsole = this.editor.getConsole();
+    const editorConsole = this.codeContainer.consoleManager.getConsole();
     if (editorConsole) {
-      editorConsole.parentElement.style.display = 'block';
+      editorConsole.parentElement.style.display = "block";
       trimmed_output = `[Solution-${this.codeTester.testCaseCounter + 1}] > ${text}\n`;
       editorConsole.value += trimmed_output;
       editorConsole.scrollTop = editorConsole.scrollHeight;
     }
   }
-
-} 
+}

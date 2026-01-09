@@ -1,15 +1,15 @@
 export default class PyhonQuestionFactory extends H5P.CodeQuestionFactory {
-  
   /**
    * Returns Ace-Editor-Instance
    * @param {HTMLElement} parent parentDiv-Element
    * @param {string} code code as String (optional)
    * @param isAssignment
-   * @returns {H5P.PythonAce} The generated Editor
+   * @returns {H5P.PythonCodeMirror} The generated Editor
    */
-  createEditor(parent, code, isAssignment = false) {
+  createContainer(parent, code, isAssignment = false) {
+    let container = null;
     if (isAssignment) {
-      return new H5P.PythonAce(parent, {
+      container = new H5P.PythonCodeContainer(parent, {
         isAssignment: true,
         code: code,
         hasButtons: true,
@@ -18,23 +18,42 @@ export default class PyhonQuestionFactory extends H5P.CodeQuestionFactory {
         language: this.question.language,
         console: this.question.hasConsole,
         consoleHidden: true,
-        l10n : this.question.l10n,
-        question: this.question
+        l10n: this.question.l10n,
+        question: this.question,
+        manualSetup: false,
+        instructions: this.question.instructions,
+        instructionsImage: this.question.instructionsImage,
+        runtimeFactory: this,
+        contentId: this.question.contentId,
+        resizeAction: () => {
+          this.question.trigger("resize");
+        },
       });
-    }
-    else {
-      return new H5P.PythonAce(parent, {
+    } else {
+      container = new H5P.PythonCodeContainer(parent, {
         isAssignment: false,
         code: code,
-        fixedSize : false,
-        consoleHidden : true,
+        fixedSize: false,
+        consoleHidden: true,
         hasButtons: true,
-        l10n : this.question.l10n,
-        question: this.question
+        l10n: this.question.l10n,
+        question: this.question,
+        manualSetup: false,
+        runtimeFactory: this,
+        contentId: this.question.contentId,
+        resizeAction: () => {
+          this.question.trigger("resize");
+        },
       });
     }
+    H5P.Util.setupOnDocumentReady(() => {
+      container.setup();
+      this.question.trigger("resize");
+    });
+
+    return container;
   }
-  
+
   /**
    * Creates a new Manual Runtime
    * @param {string} code Code to execute
@@ -73,10 +92,9 @@ export default class PyhonQuestionFactory extends H5P.CodeQuestionFactory {
   }
 
   createCodeTester() {
-    if (this.question.gradingMethod === 'ioTestCases') {
+    if (this.question.gradingMethod === "ioTestCases") {
       return new H5P.PythonIOTester(this.question);
-    }
-    else if (this.question.gradingMethod === 'targetImage') {
+    } else if (this.question.gradingMethod === "targetImage") {
       return new H5P.PythonImageTester(this.question);
     }
   }
