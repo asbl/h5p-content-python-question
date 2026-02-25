@@ -1,5 +1,5 @@
 .h5p-codequestion .table-testcase-container.image-tester tbody td {
-  height: 200px;
+    padding: 8px;
 }
 
 .h5p-codequestion .tester-image img {
@@ -12,43 +12,50 @@
 
 .h5p-codequestion .page-canvas .canvas-wrapper .turtle-content{
     position: relative;
-    background-color: white;
-    width: 400px;
     margin-left:auto;
     margin-right: auto;
 }
 
 
-.h5p-codequestion .testcases-area td.tester-image {
+.h5p-codequestion .testcases-area td.expected,
+.h5p-codequestion .testcases-area td.user-output {
     position: relative
 }
-.h5p-codequestion .testcases-area .tester-image.expected img {
-    width: 200px;
-    height: 200px;
+.h5p-codequestion .testcases-area .expected img,
+.h5p-codequestion .testcases-area .user-output img {
+    width: 150px;
+    height: 150px;
 }
 
 .h5p-codequestion .testcases-area .canvas-wrapper {
     position: relative;
     background-color: white;
-    width: 200px;
-    height: 200px;
+    width: 150px;
+    height: 150px;
+    border: 1px solid gray
 }
 
-.h5p-codequestion .testcases-area .tester-image canvas {
-    position: absolute !important;
-    top: 0px;
-    left: 0px;
-    width: 200px;
-    height: 200px;
+.h5p-codequestion .testcases-area .expected canvas,
+.h5p-codequestion .testcases-area .user-output canvas {
+    width: 150px;
+    height: 150px;
     margin: 0px !important;
 }
 
-.h5p-codequestion .testcases-area .tester-image canvas.merged {
-    width:200px;
-    height:200px;
-    background-color: white;
+.h5p-codequestion .testcases-area .expected canvas:nth-child(2),
+.h5p-codequestion .testcases-area .user-output canvas:nth-child(2) {
+    margin-top: -150px !important;
 }
 
-.h5p-codequestion .testcases-area .tester-image canvas.merged {
+.h5p-codequestion .testcases-area .expected canvas.merged,
+.h5p-codequestion .testcases-area .user-output canvas.merged {
+    width:150px;
+    height:150px;
+    background-color: white;
+    border: 1px solid gray
+}
+
+.h5p-codequestion .testcases-area .tester-image canvas.merged,
+.h5p-codequestion .testcases-area .user-output canvas.merged {
     background-color: white;
 }

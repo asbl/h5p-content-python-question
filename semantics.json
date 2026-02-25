@@ -167,6 +167,10 @@
                         {
                             "value": "code",
                             "label": "Code"
+                        },
+                        {
+                            "value": "solution-code",
+                            "label": "Solution Code (hidden)"
                         }
                     ],
                     "default": "text"
@@ -192,6 +196,31 @@
                     "options": [
                         {
                             "language": "markdown",
+                            "showAlways": true
+                        }
+                    ]
+                },
+                {
+                    "name": "solution",
+                    "type": "code",
+                    "label": "Solution Code in Spoiler-Tags",
+                    "optional": true,
+                    "description": "Solution Code in Spoiler-Tags",
+                    "widget": "showWhen",
+                    "showWhen": {
+                        "rules": [
+                            {
+                                "field": "type",
+                                "equals": [
+                                    "solution-code"
+                                ]
+                            }
+                        ],
+                        "widget": "codeWidget"
+                    },
+                    "options": [
+                        {
+                            "language": "python",
                             "showAlways": true
                         }
                     ]
@@ -367,8 +396,12 @@
                 "type": "select",
                 "label": "Grading method",
                 "description": "Grading methods",
-                "default": "none",
+                "default": "please_choose",
                 "options": [
+                    {
+                        "value": "please_choose",
+                        "label": "Please choose"
+                    },
                     {
                         "value": "ioTestCases",
                         "label": "Input/Output TestCases"
@@ -376,11 +409,8 @@
                     {
                         "value": "targetImage",
                         "label": "Target Image"
-                    },
-                    {
-                        "value": "none",
-                        "label": "No Grading"
                     }
+                    
                 ]
             },
             {

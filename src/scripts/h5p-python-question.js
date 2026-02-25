@@ -1,4 +1,6 @@
-import PyhonQuestionFactory from "./python-factory";
+import PythonCodeContainer from './container/container-python';
+import PythonManualRuntime from './runtime/runtime-manual-python';
+import PythonTestRuntime from './runtime/runtime-test-python';
 
 export default class PythonQuestion extends H5P.CodeQuestion {
   /**
@@ -9,11 +11,25 @@ export default class PythonQuestion extends H5P.CodeQuestion {
    */
   constructor(params, contentId, extras = {}) {
     super(params, contentId, extras);
-    this.language = "python";
-    this.layout = "python";
-  } // end of constructor
-
-  getFactory() {
-    return new PyhonQuestionFactory(this);
   }
-} // end of class
+
+  getCodingLanguage() {
+    return 'python';
+  }
+
+  getTestRuntimeClass() {
+    return PythonTestRuntime;
+  }
+
+  getCodeTesterFactoryClass() {
+    return H5P.CodeTesterFactory;
+  }
+
+  getManualRuntimeClass() {
+    return PythonManualRuntime;
+  }
+
+  getContainerClass() {
+    return PythonCodeContainer;
+  }
+}

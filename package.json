@@ -40,8 +40,7 @@
   },
   "dependencies": {
     "caniuse-lite": "^1.0.30001585",
-    "he": "^1.2.0",
-    "pixelmatch": "^5.3.0"
+    "he": "^1.2.0"
   },
   "browserslist": "> 0.5%, last 2 versions, Firefox ESR, not dead"
 }

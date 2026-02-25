@@ -2,8 +2,8 @@
   "title": "Python Question",
   "description": "Displays a Python Editor with Skulpt",
   "majorVersion": 6,
-  "minorVersion": 0,
-  "patchVersion": 3,
+  "minorVersion": 46,
+  "patchVersion": 0,
   "fullscreen": 1,
   "runnable": 1,
   "coreApi": {
@@ -27,9 +27,6 @@
       "path": "lib/skulpt-stdlib.js"
     },
     {
-      "path": "lib/p5/p5.min.js"
-    },
-    {
       "path": "dist/h5p-python-question.js"
     }
   ],
@@ -42,12 +39,12 @@
     {
       "machineName": "H5P.CodeQuestion",
       "majorVersion": 6,
-      "minorVersion": 0
+      "minorVersion": 46
     },
     {
       "machineName": "H5P.LibCodeTools",
       "majorVersion": 6,
-      "minorVersion": 0
+      "minorVersion": 46
     }
   ],
   "editorDependencies": [
