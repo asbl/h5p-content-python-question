@@ -1,41 +1,60 @@
-H5P-content-python-ide
-=====================
+# H5P Python Question Type
 
-Python Question Type for H5P (Hint: Beta Status)
+A custom H5P content type that provides an interactive Python programming environment for learning and assessment.  
+It allows educators to create coding assignments, interactive explanations, and auto-graded exercises directly inside H5P.
 
 
-## Description
+## ✨ Features
 
-This H5P content type provides a Python question type based on Skulpt and the Ace editor.
+- Interactive Python IDE inside H5P
+- Markdown-based learning pages with embedded code editors
+- Automatic validation using input/output test cases oder image-comparison
+- Turtle graphics support and p5 graphics support
+- Designed for programming education
+- Browser-based execution (no server required)
 
-The question type offers two different possibilities: 
 
-* Text pages can be created markdown with interactive editors.
-* An IDE can be provided with which coding assignments can be made available to students. Students' programmes can be checked with input/output test cases. 
+## Use Cases
 
-## Screenshots
+- Programming exercises for students
+- Interactive Python tutorials
+- Coding assignments with automatic grading
+- Teaching algorithmic thinking
+- Self-paced learning modules
+- Demonstrations and live coding explanations
 
-Interaktive Textfields
 
-![Markdown-text fields combined with Code](assets/codefields.png)
-![Markdown-text fields combined with Code](assets/codefields2.png)
+## How It Works
 
-Turtle Graphics
+This content type integrates:
 
-![Turtle-graphics](assets/turtle3.png)
-![Turtle-graphics](assets/turtle4.png)
+- **Skulpt** → Python execution in the browser
+- **Ace Editor** → code editing interface
 
-Assignments
+Student code runs directly in the browser and can be validated using predefined test cases.
 
-![Turtle-graphics](assets/assignment1.png.png)
-![Turtle-graphics](assets/assignment2.png.png)
+## Examples:
 
-## Video
+### Interactive Examples
 
-* [Demo (German Language)](https://www.youtube.com/watch?v=Kb346xXr7f8&feature=youtu.be)
+See: [Part of actual programming course (Language: German)](https://www.opencoding.de/course/view.php?id=12)
 
-## Based on
+### p5 Graphics
 
- * [H5P-content-code-question](https://codeberg.org/a_siebel/h5p-content-code-question)
- * [H5P-editor-code-widget](https://codeberg.org/a_siebel/h5p-editor-code-widget)
- * [H5P-lib-code-tools](https://codeberg.org/a_siebel/h5p-lib-code-tools)
+![p51](./assets/p51.png)
+
+![p51](./assets/p52.png)
+
+### Input and output vs popups
+
+![input](./assets/input.png)
+
+![output](./assets/output.png)
+
+### Input/Output Testcases
+
+![testcases](./assets/testcases.png)
+
+### Image Comparison Testcases with turtle graphics
+
+![testcases](./assets/turtlechecker.png)
