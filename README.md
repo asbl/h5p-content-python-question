@@ -4,7 +4,7 @@ A custom H5P content type that provides an interactive Python programming enviro
 It allows educators to create coding assignments, interactive explanations, and auto-graded exercises directly inside H5P.
 
 
-## ✨ Features
+## Features
 
 - Interactive Python IDE inside H5P
 - Markdown-based learning pages with embedded code editors
