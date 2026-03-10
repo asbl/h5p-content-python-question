@@ -15,9 +15,9 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
       new H5P.PageShowObserver(
         this.getPageManager().getPage('canvas'),
         () => {
-          /*this.getButtonManager().showButton('canvas');
-          this.getButtonManager().setActive('canvas');
-          this.registerDOM();*/
+        },
+        this.getButtonManager().hideButton('canvas'),
+        () => {
         },
       )
     );
@@ -42,8 +42,19 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
         () => {
 
           this.getPageManager().showPage('canvas');
-          this.getButtonManager().setActive('canvas');
+          this.getButtonManager().hideButton('canvas');
           this.registerDOM();
+        }
+      )
+    );
+
+    this.getObserverManager().register(
+      'button:stop:clicked-hide-canvas',
+      new H5P.ButtonClickedObserver(
+        this.getButtonManager().getButton('stopButton'),
+        () => {
+          this._runtime?.stop();
+          this.getButtonManager().hideButton('canvas');
         }
       )
     );

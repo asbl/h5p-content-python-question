@@ -78,11 +78,12 @@ export default class PythonRuntime extends H5P.Runtime {
     if (this.containsCanvasCode()) {
       this.getCanvasManager().attachCanvas('manual');
     }
+    
   }
 
   /**
    * Checks whether the code uses canvas-related libraries.
-   * @returns {boolean}
+   * @returns {boolean} True, if code contains turtle or p5 code
    */
   containsCanvasCode() {
     return this.containsTurtleCode() || this.containsP5Code();

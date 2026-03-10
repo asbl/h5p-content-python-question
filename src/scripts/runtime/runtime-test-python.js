@@ -12,7 +12,7 @@ import PythonSolutionRuntime from './runtime-solution-python';
 export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntime) {
   /**
    * Creates a Python runtime for executing the reference solution.
-   * @returns {PythonSolutionRuntime}
+   * @returns {PythonSolutionRuntime} The runtime to gneerate the solution
    */
   createSolutionRuntime() {
     return new PythonSolutionRuntime(

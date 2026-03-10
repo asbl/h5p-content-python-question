@@ -40,59 +40,15 @@ export default class SkulptRunner {
 
     this.p5Instance = null;
     this._isInitalized = false;
+
   }
 
-  static warmup(runtime) {
-    SkulptRunner._warmupSkulpt(runtime);
-    SkulptRunner._warmupP5();
-  }
-
-  static _warmupSkulpt(runtime) {
-    if (SkulptRunner._skulptWarmedUp) return;
-    SkulptRunner._skulptWarmedUp = true;
-
-    Sk.configure({
-      output: () => { },
-      read: (x) => {
-        if (!Sk.builtinFiles?.files?.[x]) {
-          throw `File not found: '${x}'`;
-        }
-        return Sk.builtinFiles.files[x];
-      },
-      __future__: Sk.python3,
-    });
-
-    Sk.importMainWithBody('<warmup>', false, 'pass', true);
-  }
-
-  static _warmupP5() {
-    if (!window.p5 || SkulptRunner._p5WarmedUp) return;
-    SkulptRunner._p5WarmedUp = true;
-
-    p5.prototype.linmap = p5.prototype.map;
-
-    if (!p5.prototype._skulptBound) {
-      p5.prototype._skulptBound = true;
-
-      p5.prototype.registerMethod('init', function () {
-        for (let key in this) {
-          if (p5.prototype[key] === undefined) {
-            p5.prototype[key] = this[key];
-          }
-        }
-      });
-    }
-
-    new p5(function (s) {
-      s.setup = function () {
-        s.createCanvas(1, 1);
-        s.noLoop();
-        s.remove();
-      };
-    });
-  }
-
+  /**
+   * Stops the current execution.
+   * @returns {boolean} true, if program is stopped
+   */
   stop() {
+    console.log("Stop", p5.prototype);
     this.stopped = true;
 
     if (!Sk) return;
@@ -106,20 +62,25 @@ export default class SkulptRunner {
       try {
         Sk.TurtleGraphics.stop();
       }
-      catch { }
+      catch {
+        console.warn('could not stop turtle');
+        return false;
+      }
     }
     // p5 abbrechen
-    if (this.p5Instance) {
+    if (Sk.p5) {
       try {
-        this.p5Instance.noLoop(); // stoppt den Loop
-        this.p5Instance.remove(); // zerstört Canvas und Instanz
+        Sk.p5.kill();
       }
-      catch { }
+      catch {
+        console.warn('could not stop p5');
+        return false;
+      }
       this.p5Instance = null;
     }
 
-
     this.runtime.codeContainer.getStateManager()?.stop();
+    return true;
   }
 
   setup() {
@@ -139,12 +100,52 @@ export default class SkulptRunner {
   }
 
   async execute(code, canvasDiv = null) {
-    if (!this._isInitalized) {
-      this.setup();
-    }
+    if (!this._isInitalized) this.setup();
+
     this.stopped = false;
     this.Sk = Sk;
     Sk.shouldStop = false;
+
+    // Canvas vorbereiten
+    if (canvasDiv) this.setupP5(canvasDiv);
+
+    // Prüfen, ob Python Code p5 verwendet
+    const containsP5 = this.runtime.containsP5Code();
+
+    if (containsP5 && canvasDiv) {
+      const runner = this;
+
+      // Erzeugen einer p5 Instanz mit Instance Mode
+      const sketch = function (p) {
+        runner.p5Instance = p;
+
+        // draw/ setup aus Benutzer-Code
+        if (window.setup) {
+          p.setup = () => window.setup();
+        }
+
+        if (window.draw) {
+          p.draw = () => {
+            if (runner.stopped) {
+              p.noLoop();
+              return;
+            }
+            window.draw();
+          };
+        }
+
+        // Methoden global spiegeln, damit Python circle(), line() usw. aufrufen kann
+        Object.getOwnPropertyNames(p.__proto__).forEach(name => {
+          if (typeof p[name] === 'function') {
+            window[name] = (...args) => p[name](...args);
+          }
+        });
+      };
+
+      // p5 Instanz erstellen
+      this.p5Instance = new p5(sketch, canvasDiv);
+      Sk.p5 = { instance: this.p5Instance };
+    }
 
     try {
       const result = await Sk.misceval.asyncToPromise(() =>
@@ -152,12 +153,10 @@ export default class SkulptRunner {
       );
       await this.onSuccess?.(result);
       return result;
-    }
-    catch (error) {
+    } catch (error) {
       await this.onError?.(error);
     }
   }
-
 
   onError(error) {
     if (
@@ -172,7 +171,7 @@ export default class SkulptRunner {
     }
 
     try {
-      console.warn("Error in skulptrunner", error)
+      console.warn('Error in skulptrunner', error);
       const message = error.args?.v?.[0]?.$mangled ?? 'Unknown error';
       const trace = error.traceback?.[0];
 
@@ -184,12 +183,16 @@ export default class SkulptRunner {
       );
     }
     catch {
-      console.info('Unhandled Skulpt error', error);
+      console.warn('Unhandled Skulpt error', error);
     }
   }
 
   async onSuccess(value) {
     this.runtime.onSuccess(value);
+    if (!this.runtime.containsP5Code) {
+      this.runtime.codeContainer.getStateManager()?.stop();
+    }
+
   }
 
 
