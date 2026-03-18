@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { default: SkulptRunner } = await import('../src/scripts/runtime/skulptrunner.js');
 
+/**
+ * Creates a minimal runtime stub for SkulptRunner tests.
+ * @returns {object} Runtime stub.
+ */
 function createRuntime() {
   const consoleManager = {
     write: vi.fn(),
