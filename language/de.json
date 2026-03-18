@@ -114,32 +114,6 @@
           }
         },
         {
-          "label": "Additional Python Files",
-          "entity": "file",
-          "description": "Additional Python modules that are available through imports when the Pyodide runner is used. Use module file names like helper.py.",
-          "field": {
-            "label": "Python File",
-            "fields": [
-              {
-                "label": "File Name",
-                "default": "helper.py",
-                "description": "Python module file name, for example helper.py"
-              },
-              {
-                "label": "Code"
-              },
-              {
-                "label": "Show file in editor",
-                "description": "If enabled, learners can switch to this file in the editor."
-              },
-              {
-                "label": "Learner can edit file",
-                "description": "If enabled, learners can modify this file in the editor."
-              }
-            ]
-          }
-        },
-        {
           "label": "Lernenden das Hinzufügen von Dateien erlauben",
           "description": "Wenn aktiviert, können Lernende eigene Python-Dateien anlegen, umbenennen und löschen. Im Tab-Streifen erscheint ein '+'-Button sowie ein Dateimanager."
         }
@@ -188,6 +162,36 @@
           {
             "label": "Code",
             "description": "Write general description as markdown code"
+          },
+          {
+            "label": "Zusätzliche Python-Dateien",
+            "entity": "file",
+            "description": "Zusätzliche Python-Module für diesen Editor (nur Pyodide).",
+            "field": {
+              "label": "Python-Datei",
+              "fields": [
+                {
+                  "label": "Dateiname",
+                  "default": "helper.py",
+                  "description": "Python-Modulname, z. B. helper.py"
+                },
+                {
+                  "label": "Code"
+                },
+                {
+                  "label": "Datei im Editor anzeigen",
+                  "description": "Wenn aktiviert, können Lernende in diese Datei wechseln."
+                },
+                {
+                  "label": "Lernende können die Datei bearbeiten",
+                  "description": "Wenn aktiviert, können Lernende diese Datei verändern."
+                }
+              ]
+            }
+          },
+          {
+            "label": "Lernenden das Hinzufügen von Dateien erlauben",
+            "description": "Wenn aktiviert, können Lernende eigene Python-Dateien anlegen, umbenennen und löschen. Gilt nur bei Pyodide."
           }
         ]
       }
@@ -216,6 +220,36 @@
         {
           "label": "Post code",
           "description": "Code appended after main program"
+        },
+        {
+          "label": "Zusätzliche Python-Dateien",
+          "entity": "file",
+          "description": "Zusätzliche Python-Module, die bei der Verwendung von Pyodide per Import verfügbar sind. Modulnamen wie helper.py verwenden.",
+          "field": {
+            "label": "Python-Datei",
+            "fields": [
+              {
+                "label": "Dateiname",
+                "default": "helper.py",
+                "description": "Python-ModulDateiname, z. B. helper.py"
+              },
+              {
+                "label": "Code"
+              },
+              {
+                "label": "Datei im Editor anzeigen",
+                "description": "Wenn aktiviert, können Lernende in diese Datei im Editor wechseln."
+              },
+              {
+                "label": "Lernende können die Datei bearbeiten",
+                "description": "Wenn aktiviert, können Lernende diese Datei im Editor verändern."
+              }
+            ]
+          }
+        },
+        {
+          "label": "Lernenden das Hinzufügen von Dateien erlauben",
+          "description": "Wenn aktiviert, können Lernende eigene Python-Dateien anlegen, umbenennen und löschen. Im Tab-Streifen erscheint ein '+'-Button sowie ein Dateimanager. Gilt nur bei Pyodide."
         }
       ]
     },

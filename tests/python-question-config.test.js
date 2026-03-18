@@ -5,7 +5,6 @@ import {
   buildPythonRuntimeOptions,
   decodeHtmlCode,
   getPyodidePackageEntriesFromParams,
-  getPyodideAllowAddingFilesFromParams,
   getPyodideSourceFileEntriesFromParams,
   normalizePythonAdvancedOptions,
   normalizePythonExecutionLimit,
@@ -65,18 +64,6 @@ describe('Python question config', () => {
         sourceFiles: [{ fileName: 'legacy.py' }],
       },
     })).toEqual([{ fileName: 'legacy.py' }]);
-
-    expect(getPyodideAllowAddingFilesFromParams({
-      pyodideOptions: {
-        allowAddingFiles: true,
-      },
-    })).toBe(true);
-
-    expect(getPyodideAllowAddingFilesFromParams({
-      pyodideOptions: {
-        allowAddingFiles: false,
-      },
-    })).toBe(false);
   });
 
   it('builds normalized config and derived option objects', () => {
@@ -88,15 +75,6 @@ describe('Python question config', () => {
           { package: 'pygame-ce' },
           { package: { value: 'sqlite3' } },
           { value: 'numpy' },
-        ],
-        allowAddingFiles: true,
-        sourceFiles: [
-          {
-            fileName: 'helper.py',
-            code: 'VALUE = 1',
-            visibleToLearner: true,
-            learnerEditable: true,
-          },
         ],
       },
       advancedOptions: {
@@ -117,15 +95,6 @@ describe('Python question config', () => {
         { value: 'numpy' },
       ],
       packages: ['numpy', 'pygame-ce', 'sqlite3'],
-      sourceFiles: [
-        {
-          name: 'helper.py',
-          code: 'VALUE = 1',
-          visible: true,
-          editable: true,
-        },
-      ],
-      allowAddingFiles: true,
       advancedOptions: {
         disableOutputPopups: true,
         enableImageUploads: true,
@@ -135,7 +104,19 @@ describe('Python question config', () => {
       },
     });
 
-    expect(buildPythonCodeContainerOptions({ fromParent: true }, config)).toEqual({
+    const editorParams = {
+      allowAddingFiles: true,
+      sourceFiles: [
+        {
+          fileName: 'helper.py',
+          code: 'VALUE = 1',
+          visibleToLearner: true,
+          learnerEditable: true,
+        },
+      ],
+    };
+
+    expect(buildPythonCodeContainerOptions({ fromParent: true }, config, editorParams)).toEqual({
       fromParent: true,
       enableImageUploads: true,
       enableSoundUploads: true,

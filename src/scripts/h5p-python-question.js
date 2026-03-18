@@ -89,13 +89,29 @@ export default class PythonQuestion extends H5P.CodeQuestion {
   }
 
   /**
-   * Returns normalized container options for the shared code container.
+   * Returns normalized container options for a specific editor instance.
+   * When contentParams is null (main assignment editor), reads from editorSettings.
+   * When contentParams is a content item, reads per-item sourceFiles/allowAddingFiles.
+   * @param {object|null} [contentParams] - Per-editor content item params, or null for main editor.
    * @returns {object} Container options.
    */
-  getCodeContainerOptions() {
+  getCodeContainerOptions(contentParams = null) {
+    // For the main assignment editor contentParams is null → use editorSettings.
+    // For content-part editors contentParams is the content item object.
+    const editorParams = contentParams !== null
+      ? contentParams
+      : {
+        // Prefer the new editorSettings location; fall back to old pyodideOptions for existing content.
+        sourceFiles: Array.isArray(this.params.editorSettings?.sourceFiles)
+          ? this.params.editorSettings.sourceFiles
+          : this.params.pyodideOptions?.sourceFiles,
+        allowAddingFiles: this.params.editorSettings?.allowAddingFiles,
+      };
+
     return buildPythonCodeContainerOptions(
-      super.getCodeContainerOptions(),
+      super.getCodeContainerOptions(contentParams),
       this.pythonConfig,
+      editorParams,
     );
   }
 

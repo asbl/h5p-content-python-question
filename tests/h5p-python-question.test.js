@@ -39,6 +39,9 @@ describe('PythonQuestion', () => {
           { value: 'numpy' },
           { package: '' },
         ],
+      },
+      editorSettings: {
+        startingCode: '',
         allowAddingFiles: true,
         sourceFiles: [
           {

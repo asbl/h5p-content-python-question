@@ -90,7 +90,7 @@ export function getPyodidePackageEntriesFromParams(params = {}) {
 
 /**
  * Resolves additional Python source files from semantics params.
- * Prefers the Pyodide advanced options shape and falls back to legacy editor settings.
+ * Checks pyodideOptions.sourceFiles (legacy) first, then editorSettings.sourceFiles.
  * @param {object} [params] - PythonQuestion params.
  * @returns {Array<*>} Raw source file entries.
  */
@@ -102,15 +102,6 @@ export function getPyodideSourceFileEntriesFromParams(params = {}) {
   return Array.isArray(params?.editorSettings?.sourceFiles)
     ? params.editorSettings.sourceFiles
     : [];
-}
-
-/**
- * Resolves whether learners are allowed to add, rename, and delete files.
- * @param {object} [params] - PythonQuestion params.
- * @returns {boolean} True if the file manager and '+' tab should be available.
- */
-export function getPyodideAllowAddingFilesFromParams(params = {}) {
-  return params?.pyodideOptions?.allowAddingFiles === true;
 }
 
 /**
@@ -139,8 +130,10 @@ export function normalizePythonAdvancedOptions(advancedOptions = {}) {
 
 /**
  * Builds a stable, normalized PythonQuestion configuration snapshot.
+ * Per-editor fields (sourceFiles, allowAddingFiles) are NOT included here;
+ * they are resolved per-container via buildPythonCodeContainerOptions.
  * @param {object} [params] - Raw PythonQuestion params.
- * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], sourceFiles: Array<{name: string, code: string, visible: boolean, editable: boolean}>, allowAddingFiles: boolean, advancedOptions: {disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}}} Normalized config.
+ * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], advancedOptions: {disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}}} Normalized config.
  */
 export function normalizePythonQuestionConfig(params = {}) {
   const runner = normalizePythonRunner(params.pythonRunner);
@@ -150,24 +143,23 @@ export function normalizePythonQuestionConfig(params = {}) {
     runner,
     pyodidePackageEntries,
     packages: normalizePythonPackageEntries(pyodidePackageEntries),
-    sourceFiles: normalizePythonSourceFiles(getPyodideSourceFileEntriesFromParams(params)),
-    allowAddingFiles: runner === 'pyodide'
-      ? getPyodideAllowAddingFilesFromParams(params)
-      : false,
     advancedOptions: normalizePythonAdvancedOptions(params.advancedOptions),
   };
 }
 
 /**
- * Merges normalized Python options into container options.
+ * Merges normalized Python options into container options for one editor instance.
  * @param {*} parentOptions - Parent container options.
- * @param {object} config - Normalized PythonQuestion config.
+ * @param {object} config - Normalized PythonQuestion config (global/runner-level).
+ * @param {object} [editorParams] - Per-editor raw params (editorSettings or a content item).
  * @returns {object} Final container options.
  */
-export function buildPythonCodeContainerOptions(parentOptions, config) {
+export function buildPythonCodeContainerOptions(parentOptions, config, editorParams = {}) {
   const baseOptions = (!Array.isArray(parentOptions) && typeof parentOptions === 'object' && parentOptions !== null)
     ? { ...parentOptions }
     : {};
+
+  const rawSourceFiles = Array.isArray(editorParams?.sourceFiles) ? editorParams.sourceFiles : [];
 
   return {
     ...baseOptions,
@@ -176,8 +168,8 @@ export function buildPythonCodeContainerOptions(parentOptions, config) {
     showSaveLoadButtons: config?.advancedOptions?.enableSaveLoadButtons !== false,
     projectStorageEnabled: config?.runner === 'pyodide',
     entryFileName: 'main.py',
-    allowAddingFiles: config?.allowAddingFiles === true,
-    sourceFiles: config?.runner === 'pyodide' ? [...(config?.sourceFiles || [])] : [],
+    allowAddingFiles: config?.runner === 'pyodide' && editorParams?.allowAddingFiles === true,
+    sourceFiles: config?.runner === 'pyodide' ? normalizePythonSourceFiles(rawSourceFiles) : [],
     downloadFilename: 'main.py',
     projectDownloadFilename: 'python-project.h5pproject',
     projectBundleType: 'h5p-python-question-project',

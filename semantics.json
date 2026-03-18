@@ -176,54 +176,6 @@
                 }
             },
             {
-                "name": "sourceFiles",
-                "type": "list",
-                "label": "Additional Python Files",
-                "entity": "file",
-                "optional": true,
-                "description": "Additional Python modules that are available through imports when the Pyodide runner is used. Use module file names like helper.py.",
-                "field": {
-                    "name": "sourceFile",
-                    "type": "group",
-                    "label": "Python File",
-                    "fields": [
-                        {
-                            "name": "fileName",
-                            "type": "text",
-                            "label": "File Name",
-                            "default": "helper.py",
-                            "description": "Python module file name, for example helper.py"
-                        },
-                        {
-                            "name": "code",
-                            "type": "text",
-                            "label": "Code",
-                            "widget": "codeWidget",
-                            "default": "",
-                            "options": [
-                                {
-                                    "language": "python"
-                                }
-                            ]
-                        },
-                        {
-                            "name": "visibleToLearner",
-                            "type": "boolean",
-                            "label": "Show file in editor",
-                            "description": "If enabled, learners can switch to this file in the editor.",
-                            "default": true
-                        },
-                        {
-                            "name": "learnerEditable",
-                            "type": "boolean",
-                            "label": "Learner can edit file",
-                            "description": "If enabled, learners can modify this file in the editor.",
-                            "default": true
-                        }
-                    ]
-                }
-            },
-            {
                 "name": "allowAddingFiles",
                 "type": "boolean",
                 "label": "Allow learners to add files",
@@ -390,6 +342,83 @@
                             "showAlways": true
                         }
                     ]
+                },
+                {
+                    "name": "sourceFiles",
+                    "type": "list",
+                    "label": "Additional Python Files",
+                    "entity": "file",
+                    "optional": true,
+                    "description": "Additional Python modules available for import in this editor when using Pyodide. Use module file names like helper.py.",
+                    "widget": "showWhen",
+                    "showWhen": {
+                        "rules": [
+                            {
+                                "field": "type",
+                                "equals": [
+                                    "code"
+                                ]
+                            }
+                        ]
+                    },
+                    "field": {
+                        "name": "sourceFile",
+                        "type": "group",
+                        "label": "Python File",
+                        "fields": [
+                            {
+                                "name": "fileName",
+                                "type": "text",
+                                "label": "File Name",
+                                "default": "helper.py",
+                                "description": "Python module file name, for example helper.py"
+                            },
+                            {
+                                "name": "code",
+                                "type": "text",
+                                "label": "Code",
+                                "widget": "codeWidget",
+                                "default": "",
+                                "options": [
+                                    {
+                                        "language": "python"
+                                    }
+                                ]
+                            },
+                            {
+                                "name": "visibleToLearner",
+                                "type": "boolean",
+                                "label": "Show file in editor",
+                                "description": "If enabled, learners can switch to this file in the editor.",
+                                "default": true
+                            },
+                            {
+                                "name": "learnerEditable",
+                                "type": "boolean",
+                                "label": "Learner can edit file",
+                                "description": "If enabled, learners can modify this file in the editor.",
+                                "default": true
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "allowAddingFiles",
+                    "type": "boolean",
+                    "label": "Allow learners to add files",
+                    "description": "If enabled, learners can add, rename and delete their own Python files in this editor. Only applies when using Pyodide.",
+                    "default": false,
+                    "widget": "showWhen",
+                    "showWhen": {
+                        "rules": [
+                            {
+                                "field": "type",
+                                "equals": [
+                                    "code"
+                                ]
+                            }
+                        ]
+                    }
                 }
             ]
         }
@@ -474,6 +503,61 @@
                         "language": "python"
                     }
                 ]
+            },
+            {
+                "name": "sourceFiles",
+                "type": "list",
+                "label": "Additional Python Files",
+                "entity": "file",
+                "optional": true,
+                "description": "Additional Python modules available for import when using Pyodide. Use module file names like helper.py.",
+                "field": {
+                    "name": "sourceFile",
+                    "type": "group",
+                    "label": "Python File",
+                    "fields": [
+                        {
+                            "name": "fileName",
+                            "type": "text",
+                            "label": "File Name",
+                            "default": "helper.py",
+                            "description": "Python module file name, for example helper.py"
+                        },
+                        {
+                            "name": "code",
+                            "type": "text",
+                            "label": "Code",
+                            "widget": "codeWidget",
+                            "default": "",
+                            "options": [
+                                {
+                                    "language": "python"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "visibleToLearner",
+                            "type": "boolean",
+                            "label": "Show file in editor",
+                            "description": "If enabled, learners can switch to this file in the editor.",
+                            "default": true
+                        },
+                        {
+                            "name": "learnerEditable",
+                            "type": "boolean",
+                            "label": "Learner can edit file",
+                            "description": "If enabled, learners can modify this file in the editor.",
+                            "default": true
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "allowAddingFiles",
+                "type": "boolean",
+                "label": "Allow learners to add files",
+                "description": "If enabled, learners can add, rename and delete their own Python files in the editor. Only applies when using Pyodide.",
+                "default": false
             }
         ]
     },
