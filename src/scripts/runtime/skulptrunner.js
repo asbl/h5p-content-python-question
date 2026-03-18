@@ -386,7 +386,7 @@ export default class SkulptRunner {
     }
     if (!canvasDiv) return;
 
-    Sk.canvas = canvasWrapper.id;
+    Sk.canvas = canvasDiv.id;
 
     if (this.runtime.containsTurtleCode()) {
       this.setupTurtleDiv(canvasDiv);

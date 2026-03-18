@@ -370,7 +370,6 @@
                                 "name": "fileName",
                                 "type": "text",
                                 "label": "File Name",
-                                "default": "helper.py",
                                 "description": "Python module file name, for example helper.py"
                             },
                             {
@@ -520,7 +519,6 @@
                             "name": "fileName",
                             "type": "text",
                             "label": "File Name",
-                            "default": "helper.py",
                             "description": "Python module file name, for example helper.py"
                         },
                         {
