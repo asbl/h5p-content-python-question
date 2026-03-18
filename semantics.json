@@ -224,10 +224,10 @@
                 }
             },
             {
-                "name": "showMainFileInEditor",
+                "name": "allowAddingFiles",
                 "type": "boolean",
-                "label": "Show main.py in editor",
-                "description": "If enabled, learners can switch to main.py in the editor tabs.",
+                "label": "Allow learners to add files",
+                "description": "If enabled, learners can add, rename and delete their own Python files in the editor. A file manager and a '+' button in the tab strip will be shown.",
                 "default": false
             }
         ]

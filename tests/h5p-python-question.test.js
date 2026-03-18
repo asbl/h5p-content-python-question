@@ -39,7 +39,7 @@ describe('PythonQuestion', () => {
           { value: 'numpy' },
           { package: '' },
         ],
-        showMainFileInEditor: true,
+        allowAddingFiles: true,
         sourceFiles: [
           {
             fileName: 'helper.py',
@@ -78,7 +78,7 @@ describe('PythonQuestion', () => {
       showSaveLoadButtons: false,
       projectStorageEnabled: true,
       entryFileName: 'main.py',
-      entryFileVisible: true,
+      allowAddingFiles: true,
       sourceFiles: [
         {
           name: 'helper.py',
@@ -119,7 +119,7 @@ describe('PythonQuestion', () => {
       showSaveLoadButtons: true,
       projectStorageEnabled: false,
       entryFileName: 'main.py',
-      entryFileVisible: true,
+      allowAddingFiles: false,
       sourceFiles: [],
       downloadFilename: 'main.py',
       projectDownloadFilename: 'python-project.h5pproject',

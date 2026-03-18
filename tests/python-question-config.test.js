@@ -5,7 +5,7 @@ import {
   buildPythonRuntimeOptions,
   decodeHtmlCode,
   getPyodidePackageEntriesFromParams,
-  getPyodideShowMainFileInEditorFromParams,
+  getPyodideAllowAddingFilesFromParams,
   getPyodideSourceFileEntriesFromParams,
   normalizePythonAdvancedOptions,
   normalizePythonExecutionLimit,
@@ -66,15 +66,15 @@ describe('Python question config', () => {
       },
     })).toEqual([{ fileName: 'legacy.py' }]);
 
-    expect(getPyodideShowMainFileInEditorFromParams({
+    expect(getPyodideAllowAddingFilesFromParams({
       pyodideOptions: {
-        showMainFileInEditor: true,
+        allowAddingFiles: true,
       },
     })).toBe(true);
 
-    expect(getPyodideShowMainFileInEditorFromParams({
+    expect(getPyodideAllowAddingFilesFromParams({
       pyodideOptions: {
-        showMainFileInEditor: false,
+        allowAddingFiles: false,
       },
     })).toBe(false);
   });
@@ -89,7 +89,7 @@ describe('Python question config', () => {
           { package: { value: 'sqlite3' } },
           { value: 'numpy' },
         ],
-        showMainFileInEditor: true,
+        allowAddingFiles: true,
         sourceFiles: [
           {
             fileName: 'helper.py',
@@ -125,7 +125,7 @@ describe('Python question config', () => {
           editable: true,
         },
       ],
-      entryFileVisible: true,
+      allowAddingFiles: true,
       advancedOptions: {
         disableOutputPopups: true,
         enableImageUploads: true,
@@ -142,7 +142,7 @@ describe('Python question config', () => {
       showSaveLoadButtons: false,
       projectStorageEnabled: true,
       entryFileName: 'main.py',
-      entryFileVisible: true,
+      allowAddingFiles: true,
       sourceFiles: [
         {
           name: 'helper.py',

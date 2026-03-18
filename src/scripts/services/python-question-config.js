@@ -105,12 +105,12 @@ export function getPyodideSourceFileEntriesFromParams(params = {}) {
 }
 
 /**
- * Resolves whether main.py should be shown as a learner-visible editor file.
+ * Resolves whether learners are allowed to add, rename, and delete files.
  * @param {object} [params] - PythonQuestion params.
- * @returns {boolean} True if the main file should be visible in tabs.
+ * @returns {boolean} True if the file manager and '+' tab should be available.
  */
-export function getPyodideShowMainFileInEditorFromParams(params = {}) {
-  return params?.pyodideOptions?.showMainFileInEditor === true;
+export function getPyodideAllowAddingFilesFromParams(params = {}) {
+  return params?.pyodideOptions?.allowAddingFiles === true;
 }
 
 /**
@@ -140,7 +140,7 @@ export function normalizePythonAdvancedOptions(advancedOptions = {}) {
 /**
  * Builds a stable, normalized PythonQuestion configuration snapshot.
  * @param {object} [params] - Raw PythonQuestion params.
- * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], sourceFiles: Array<{name: string, code: string, visible: boolean, editable: boolean}>, entryFileVisible: boolean, advancedOptions: {disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}}} Normalized config.
+ * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], sourceFiles: Array<{name: string, code: string, visible: boolean, editable: boolean}>, allowAddingFiles: boolean, advancedOptions: {disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}}} Normalized config.
  */
 export function normalizePythonQuestionConfig(params = {}) {
   const runner = normalizePythonRunner(params.pythonRunner);
@@ -151,9 +151,9 @@ export function normalizePythonQuestionConfig(params = {}) {
     pyodidePackageEntries,
     packages: normalizePythonPackageEntries(pyodidePackageEntries),
     sourceFiles: normalizePythonSourceFiles(getPyodideSourceFileEntriesFromParams(params)),
-    entryFileVisible: runner === 'pyodide'
-      ? getPyodideShowMainFileInEditorFromParams(params)
-      : true,
+    allowAddingFiles: runner === 'pyodide'
+      ? getPyodideAllowAddingFilesFromParams(params)
+      : false,
     advancedOptions: normalizePythonAdvancedOptions(params.advancedOptions),
   };
 }
@@ -176,7 +176,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config) {
     showSaveLoadButtons: config?.advancedOptions?.enableSaveLoadButtons !== false,
     projectStorageEnabled: config?.runner === 'pyodide',
     entryFileName: 'main.py',
-    entryFileVisible: config?.entryFileVisible !== false,
+    allowAddingFiles: config?.allowAddingFiles === true,
     sourceFiles: config?.runner === 'pyodide' ? [...(config?.sourceFiles || [])] : [],
     downloadFilename: 'main.py',
     projectDownloadFilename: 'python-project.h5pproject',
