@@ -47,7 +47,7 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
    */
   reset() {
     super.reset();
-    this.canvasManager?.removeCanvas();
+    this._canvasManager?.removeCanvas();
   }
 
   /**
