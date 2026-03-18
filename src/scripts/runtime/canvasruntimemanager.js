@@ -7,6 +7,8 @@ export default class CanvasRuntimeManager {
     this.host = host; // z.B. codeContainer oder codeTester
     this.canvasWrapper = null;
     this.canvasDiv = null;
+    this.loadingOverlay = null;
+    this.loadingLabel = null;
     this.runner = runner;
   }
 
@@ -17,6 +19,22 @@ export default class CanvasRuntimeManager {
     this.canvasWrapper = document.createElement('div');
     this.canvasWrapper.id = wrapperId;
     this.canvasWrapper.classList.add('canvas-wrapper');
+
+    this.loadingOverlay = document.createElement('div');
+    this.loadingOverlay.classList.add('canvas-loading');
+    this.loadingOverlay.hidden = true;
+    this.loadingOverlay.style.display = 'none';
+
+    const loadingSpinner = document.createElement('span');
+    loadingSpinner.classList.add('canvas-loading__spinner');
+    loadingSpinner.setAttribute('aria-hidden', 'true');
+    this.loadingOverlay.appendChild(loadingSpinner);
+
+    this.loadingLabel = document.createElement('span');
+    this.loadingLabel.classList.add('canvas-loading__label');
+    this.loadingOverlay.appendChild(this.loadingLabel);
+
+    this.canvasWrapper.appendChild(this.loadingOverlay);
 
     this.canvasDiv = document.createElement('div');
     this.canvasDiv.id = canvasId;
@@ -47,7 +65,27 @@ export default class CanvasRuntimeManager {
     if (typeof this.host.showCanvas === 'function') {
       this.host.showCanvas();
     }
-    this.runner.addCanvas(this.getWrapper(), this.getDiv());
+    this.runner.addCanvas(this.getWrapper(), this.getDiv(), this);
+  }
+
+  /**
+   * Updates the loading overlay for the active canvas wrapper.
+   * @param {boolean} isLoading - Whether loading is active.
+   * @param {string} [message] - Loading message.
+   * @returns {void}
+   */
+  setLoading(isLoading, message = '') {
+    if (!this.loadingOverlay) {
+      return;
+    }
+
+    this.loadingOverlay.hidden = !isLoading;
+    this.loadingOverlay.style.display = isLoading ? 'flex' : 'none';
+    this.loadingOverlay.classList.toggle('is-visible', isLoading);
+
+    if (this.loadingLabel) {
+      this.loadingLabel.textContent = message;
+    }
   }
 
   removeCanvas() {
@@ -55,8 +93,11 @@ export default class CanvasRuntimeManager {
       this.host.removeCanvas(this.canvasDiv);
     }
 
+    this.setLoading(false);
     this.canvasWrapper = null;
     this.canvasDiv = null;
+    this.loadingOverlay = null;
+    this.loadingLabel = null;
   }
 
 }

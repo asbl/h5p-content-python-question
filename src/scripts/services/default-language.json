@@ -1,0 +1,23 @@
+{
+  "libraryStrings": {
+    "canvas": "Canvas",
+    "exportImage": "Export Image",
+    "pythonRuntime": "Python Runtime",
+    "skulptRunner": "Skulpt Runner",
+    "pyodideRunner": "Pyodide Runner",
+    "pythonInputPrompt": "Input:",
+    "pyodideLoading": "Loading Pyodide...",
+    "pyodideReady": "Pyodide ready.",
+    "pyodideCanvasLoading": "Preparing canvas runtime...",
+    "pyodideMissingWindow": "No window object available to load Pyodide.",
+    "pyodideMissingApi": "Pyodide script loaded but loadPyodide() was not found.",
+    "pyodideScriptLoadFailed": "Failed to load Pyodide script: {url}",
+    "pyodideP5Missing": "p5.js is not loaded.",
+    "executionLimitExceeded": "Program exceeded the execution time limit.",
+    "skulptExecutionAborted": "Program was aborted.",
+    "skulptUnknownError": "Unknown error",
+    "skulptRuntimeError": "Error: {message} on line {line}; column: {column}",
+    "skulptFileNotFound": "File not found: {file}",
+    "skulptP5Missing": "p5.js is not loaded."
+  }
+}

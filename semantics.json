@@ -1,107 +1,5 @@
 [
     {
-        "name": "l10n",
-        "type": "group",
-        "label": "User interface",
-        "common": true,
-        "fields": [
-            {
-                "name": "checkAnswer",
-                "type": "text",
-                "label": "Check answer",
-                "default": "Check Answer",
-                "widget": "none"
-            },
-            {
-                "name": "run",
-                "type": "text",
-                "label": "▶ Run",
-                "default": "▶ Run",
-                "widget": "none"
-            },
-            {
-                "name": "stop",
-                "type": "text",
-                "label": "Stop",
-                "default": "Stop",
-                "widget": "none"
-            },
-            {
-                "name": "failedText",
-                "type": "text",
-                "label": "You failed - Try again",
-                "default": "You failed - Try again"
-            },
-            {
-                "name": "successText",
-                "type": "text",
-                "label": "All tests passed",
-                "default": "All tests passed"
-            },
-            {
-                "name": "testCase",
-                "type": "text",
-                "label": "Test Case",
-                "default": "Test Case"
-            },
-            {
-                "name": "hidden",
-                "type": "text",
-                "label": "[hidden]",
-                "default": "[hidden]",
-                "widget": "none"
-            },
-            {
-                "name": "testInput",
-                "type": "text",
-                "label": "Test Input",
-                "default": "Test Input"
-            },
-            {
-                "name": "lastOutput",
-                "type": "text",
-                "label": "Last Output",
-                "default": "Last Output"
-            },
-            {
-                "name": "passed",
-                "type": "text",
-                "label": "passed?",
-                "default": "passed?"
-            },
-            {
-                "name": "expectedOutput",
-                "type": "text",
-                "label": "Expected Output",
-                "default": "Expected Output"
-            },
-            {
-                "name": "canvas",
-                "type": "text",
-                "label": "Canvas",
-                "default": "Canvas"
-            },
-            {
-                "name": "instructions",
-                "type": "text",
-                "label": "Instructions",
-                "default": "Instructions"
-            },
-            {
-                "name": "showCode",
-                "type": "text",
-                "label": "Show Code",
-                "default": "Show Code"
-            },
-            {
-                "name": "exportImage",
-                "type": "text",
-                "label": "Export Image",
-                "default": "Export Image"
-            }
-        ]
-    },
-    {
         "name": "contentType",
         "type": "select",
         "label": "Type",
@@ -126,6 +24,158 @@
             }
         ],
         "default":  "please_choose"
+    },
+    {
+    "name": "pythonRunner",
+    "type": "select",
+    "label": "Python Runner",
+    "description": "Choose the Python interpreter used for code execution",
+    "default": "skulpt",
+    "options": [
+        {
+            "value": "skulpt",
+            "label": "Skulpt (browser-based, fast)"
+        },
+        {
+            "value": "pyodide",
+            "label": "Pyodide (full Python 3 support, loaded via CDN)"
+        }
+    ]
+    },
+    {
+        "name": "advancedOptions",
+        "type": "group",
+        "label": "Advanced Runtime Options",
+        "fields": [
+            {
+                "name": "disableOutputPopups",
+                "type": "boolean",
+                "label": "Disable output popups",
+                "description": "If enabled, program output will only be written to the console and not shown in popup dialogs.",
+                "default": false
+            },
+            {
+                "name": "enableSaveLoadButtons",
+                "type": "boolean",
+                "label": "Show save and load buttons",
+                "description": "If enabled, learners can download their code and load it again later using the shared save/load buttons.",
+                "default": true
+            },
+            {
+                "name": "enableImageUploads",
+                "type": "boolean",
+                "label": "Enable image uploads",
+                "description": "If enabled, learners can upload images during runtime and access them in their code.",
+                "default": false
+            },
+            {
+                "name": "enableSoundUploads",
+                "type": "boolean",
+                "label": "Enable sound uploads",
+                "description": "If enabled, learners can upload sounds and music during runtime and access them in their code.",
+                "default": false
+            },
+            {
+                "name": "execLimit",
+                "type": "number",
+                "label": "Execution Limit",
+                "description": "Maximum execution time in milliseconds. Use to prevent programs from running indefinitely. [0: No limit]",
+                "default": 0,
+                "min": 0
+            }
+        ]
+    },
+    {
+        "name": "pyodideOptions",
+        "type": "group",
+        "label": "Pyodide Advanced Options",
+        "widget": "showWhen",
+        "showWhen": {
+            "rules": [
+                {
+                    "field": "pythonRunner",
+                    "equals": [
+                        "pyodide"
+                    ]
+                }
+            ]
+        },
+        "fields": [
+            {
+                "name": "packages",
+                "type": "list",
+                "label": "Pyodide-Packages",
+                "entity": "package",
+                "description": "Additional Pyodide packages that should be loaded before execution.",
+                "field": {
+                    "name": "package",
+                    "type": "select",
+                    "label": "Paket",
+                    "options": [
+                        {
+                            "value": "numpy",
+                            "label": "numpy"
+                        },
+                        {
+                            "value": "pandas",
+                            "label": "pandas"
+                        },
+                        {
+                            "value": "matplotlib",
+                            "label": "matplotlib"
+                        },
+                        {
+                            "value": "scipy",
+                            "label": "scipy"
+                        },
+                        {
+                            "value": "sympy",
+                            "label": "sympy"
+                        },
+                        {
+                            "value": "networkx",
+                            "label": "networkx"
+                        },
+                        {
+                            "value": "micropip",
+                            "label": "micropip"
+                        },
+                        {
+                            "value": "pygame-ce",
+                            "label": "pygame-ce"
+                        },
+                        {
+                            "value": "sqlite3",
+                            "label": "sqlite3"
+                        },
+                        {
+                            "value": "miniworlds",
+                            "label": "miniworlds"
+                        },
+                        {
+                            "value": "pillow",
+                            "label": "Pillow"
+                        },
+                        {
+                            "value": "beautifulsoup4",
+                            "label": "beautifulsoup4"
+                        },
+                        {
+                            "value": "lxml",
+                            "label": "lxml"
+                        },
+                        {
+                            "value": "regex",
+                            "label": "regex"
+                        },
+                        {
+                            "value": "packaging",
+                            "label": "packaging"
+                        }
+                    ]
+                }
+            }
+        ]
     },
     {
         "name": "contents",
@@ -369,6 +419,54 @@
                         "language": "python"
                     }
                 ]
+            },
+            {
+                "label": "Additional Python Files",
+                "name": "sourceFiles",
+                "type": "list",
+                "entity": "file",
+                "optional": true,
+                "description": "Additional Python modules that are available through imports when the Pyodide runner is used. Use module file names like helper.py.",
+                "field": {
+                    "name": "sourceFile",
+                    "type": "group",
+                    "label": "Python File",
+                    "fields": [
+                        {
+                            "name": "fileName",
+                            "type": "text",
+                            "label": "File Name",
+                            "default": "helper.py",
+                            "description": "Python module file name, for example helper.py"
+                        },
+                        {
+                            "name": "code",
+                            "type": "text",
+                            "label": "Code",
+                            "widget": "codeWidget",
+                            "default": "",
+                            "options": [
+                                {
+                                    "language": "python"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "visibleToLearner",
+                            "type": "boolean",
+                            "label": "Show file in editor",
+                            "description": "If enabled, learners can switch to this file in the editor.",
+                            "default": true
+                        },
+                        {
+                            "name": "learnerEditable",
+                            "type": "boolean",
+                            "label": "Learner can edit file",
+                            "description": "If enabled, learners can modify this file in the editor.",
+                            "default": true
+                        }
+                    ]
+                }
             }
         ]
     },
@@ -422,7 +520,7 @@
                         "name": "enableDueDate",
                         "type": "boolean",
                         "label": "Enable Due Date",
-                        "default": true
+                        "default": false
                     },
                     {
                         "name": "duedate",

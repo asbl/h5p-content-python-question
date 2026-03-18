@@ -1,6 +1,10 @@
 /* global Sk, p5 */
 
-import Util from '../services/util';
+import {
+  getPythonL10nValue,
+  tPython,
+} from '../services/python-l10n';
+import { normalizePythonExecutionLimit } from '../services/python-execution-limit';
 
 export default class SkulptRunner {
 
@@ -24,6 +28,8 @@ export default class SkulptRunner {
     this.killableFor =
       options.killableFor !== undefined ? options.killableFor : true;
 
+    this.executionLimit = normalizePythonExecutionLimit(options.executionLimit ?? options.execLimit);
+
     this.suspension = this._createSuspensionConfig();
 
     /* Error state */
@@ -31,9 +37,9 @@ export default class SkulptRunner {
     this.errorLineNumber = null;
 
     /* Localization */
-    this.l10n = Util.extend({ hidden: 'hidden' }, runtime.l10n);
+    this.l10n = runtime.l10n || {};
 
-    this.type = 'Skulpt Runner';
+    this.type = getPythonL10nValue(this.l10n, 'skulptRunner');
 
     this.canvasWrapper = null;
     this.canvasDiv = null;
@@ -44,11 +50,44 @@ export default class SkulptRunner {
   }
 
   /**
+   * Returns whether execution limiting is enabled.
+   * @returns {boolean} True if a positive execution limit is configured.
+   */
+  hasExecutionLimit() {
+    return this.executionLimit > 0;
+  }
+
+  /**
+   * Returns the localized execution-limit error message.
+   * @returns {string} Localized timeout text.
+   */
+  getExecutionLimitMessage() {
+    return getPythonL10nValue(this.l10n, 'executionLimitExceeded');
+  }
+
+  /**
+   * Determines whether the given error was caused by the execution limit.
+   * @param {*} error - Candidate error.
+   * @returns {boolean} True if the error indicates a timeout.
+   */
+  isExecutionLimitError(error) {
+    if (!this.hasExecutionLimit()) {
+      return false;
+    }
+
+    const errorMessage = String(error?.toString?.() || error?.message || error || '');
+
+    return error?.tp$name === 'TimeoutError'
+      || error?.name === 'TimeoutError'
+      || errorMessage.includes(this.getExecutionLimitMessage())
+      || errorMessage.includes('Program exceeded run time limit');
+  }
+
+  /**
    * Stops the current execution.
    * @returns {boolean} true, if program is stopped
    */
   stop() {
-    console.log("Stop", p5.prototype);
     this.stopped = true;
 
     if (!Sk) return;
@@ -85,18 +124,92 @@ export default class SkulptRunner {
 
   setup() {
     this._isInitalized = true;
+    Sk.timeoutMsg = () => this.getExecutionLimitMessage();
     Sk.configure({
       output: (text) => {
         this.runtime.outputHandler(text);
       },
-      read: this._readHandler,
+      read: (fileName) => this._readHandler(fileName),
       inputfun: (prompt) => this.runtime.inputHandler(prompt),
       inputfunTakesPrompt: this.inputTakesPrompt,
       killableWhile: this.killableWhile,
       killableFor: this.killableFor,
       retainGlobals: this.retainGlobals,
+      execLimit: this.hasExecutionLimit() ? this.executionLimit : null,
       __future__: Sk.python3
     });
+  }
+
+  getImageManager() {
+    return this.runtime?.codeContainer?.getImageManager?.() || null;
+  }
+
+  getUploadedImages() {
+    const imageManager = this.getImageManager();
+
+    if (!imageManager?.isEnabled?.()) {
+      return [];
+    }
+
+    return imageManager.getImages();
+  }
+
+  getSoundManager() {
+    return this.runtime?.codeContainer?.getSoundManager?.() || null;
+  }
+
+  getUploadedSounds() {
+    const soundManager = this.getSoundManager();
+
+    if (!soundManager?.isEnabled?.()) {
+      return [];
+    }
+
+    return soundManager.getSounds();
+  }
+
+  buildImageRegistry() {
+    return this.getUploadedImages().reduce((registry, image) => {
+      registry[image.name] = {
+        name: image.name,
+        url: image.objectUrl,
+        path: null,
+        mime_type: image.mimeType,
+        size: image.size,
+      };
+
+      return registry;
+    }, {});
+  }
+
+  installImageRegistry() {
+    if (!Sk?.ffi?.remapToPy || !Sk?.builtins) {
+      return;
+    }
+
+    Sk.builtins.h5p_images = Sk.ffi.remapToPy(this.buildImageRegistry());
+  }
+
+  buildSoundRegistry() {
+    return this.getUploadedSounds().reduce((registry, sound) => {
+      registry[sound.name] = {
+        name: sound.name,
+        url: sound.objectUrl,
+        path: null,
+        mime_type: sound.mimeType,
+        size: sound.size,
+      };
+
+      return registry;
+    }, {});
+  }
+
+  installSoundRegistry() {
+    if (!Sk?.ffi?.remapToPy || !Sk?.builtins) {
+      return;
+    }
+
+    Sk.builtins.h5p_sounds = Sk.ffi.remapToPy(this.buildSoundRegistry());
   }
 
   async execute(code, canvasDiv = null) {
@@ -105,6 +218,9 @@ export default class SkulptRunner {
     this.stopped = false;
     this.Sk = Sk;
     Sk.shouldStop = false;
+    Sk.execStart = Date.now();
+    this.installImageRegistry();
+    this.installSoundRegistry();
 
     // Canvas vorbereiten
     if (canvasDiv) this.setupP5(canvasDiv);
@@ -159,6 +275,11 @@ export default class SkulptRunner {
   }
 
   onError(error) {
+    if (this.isExecutionLimitError(error)) {
+      this.runtime.onError(this.getExecutionLimitMessage());
+      return;
+    }
+
     if (
       error === 'Interrupted execution' ||
       error === 'Program suspended' ||
@@ -166,20 +287,25 @@ export default class SkulptRunner {
     ) {
       this.runtime
         .getConsoleManager()
-        .write('Programm wurde abgebrochen.\n');
+        .write(`${getPythonL10nValue(this.l10n, 'skulptExecutionAborted')}\n`);
       return;
     }
 
     try {
       console.warn('Error in skulptrunner', error);
-      const message = error.args?.v?.[0]?.$mangled ?? 'Unknown error';
+      const message = error.args?.v?.[0]?.$mangled
+        ?? getPythonL10nValue(this.l10n, 'skulptUnknownError');
       const trace = error.traceback?.[0];
 
       this.errorMessage = error;
       this.errorLineNumber = trace?.lineno ?? null;
 
       this.runtime.onError(
-        `Error: ${message} on line ${trace?.lineno}; column: ${trace?.colno}`
+        tPython(this.l10n, 'skulptRuntimeError', {
+          message,
+          line: trace?.lineno ?? '?',
+          column: trace?.colno ?? '?',
+        })
       );
     }
     catch {
@@ -189,7 +315,7 @@ export default class SkulptRunner {
 
   async onSuccess(value) {
     this.runtime.onSuccess(value);
-    if (!this.runtime.containsP5Code) {
+    if (!this.runtime.containsP5Code()) {
       this.runtime.codeContainer.getStateManager()?.stop();
     }
 
@@ -198,7 +324,7 @@ export default class SkulptRunner {
 
   _readHandler(x) {
     if (!Sk.builtinFiles?.files?.[x]) {
-      throw `File not found: '${x}'`;
+      throw tPython(this.l10n, 'skulptFileNotFound', { file: x });
     }
     return Sk.builtinFiles.files[x];
   }
@@ -219,7 +345,7 @@ export default class SkulptRunner {
 
   setupP5(canvasDiv) {
     if (!window.p5) {
-      console.error('p5.js ist nicht geladen');
+      console.error(getPythonL10nValue(this.l10n, 'skulptP5Missing'));
       return;
     }
 

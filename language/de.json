@@ -1,0 +1,285 @@
+{
+  "semantics": [
+    {
+      "label": "Type",
+      "description": "Type of H5P Content ",
+      "options": [
+        {
+          "label": "Please choose"
+        },
+        {
+          "label": "Assignment only"
+        },
+        {
+          "label": "Text only"
+        },
+        {
+          "label": "Text and Coding assignment"
+        }
+      ]
+    },
+    {
+      "label": "Python Runner",
+      "description": "Choose the Python interpreter used for code execution",
+      "options": [
+        {
+          "label": "Skulpt (browser-based, fast)"
+        },
+        {
+          "label": "Pyodide (full Python 3 support, loaded via CDN)"
+        }
+      ]
+    },
+    {
+      "label": "Advanced Runtime Options",
+      "fields": [
+        {
+          "label": "Disable output popups",
+          "description": "If enabled, program output will only be written to the console and not shown in popup dialogs."
+        },
+        {
+          "label": "Show save and load buttons",
+          "description": "If enabled, learners can download their code and load it again later using the shared save/load buttons."
+        },
+        {
+          "label": "Enable image uploads",
+          "description": "If enabled, learners can upload images during runtime and access them in their code."
+        },
+        {
+          "label": "Enable sound uploads",
+          "description": "If enabled, learners can upload sounds and music during runtime and access them in their code."
+        },
+        {
+          "label": "Execution Limit",
+          "description": "Maximum number of Python execution steps allowed. Use to prevent infinite loops. [0: No limit]"
+        }
+      ]
+    },
+    {
+      "label": "Pyodide Advanced Options",
+      "fields": [
+        {
+          "label": "Pyodide-Packages",
+          "entity": "package",
+          "description": "Additional Pyodide packages that should be loaded before execution.",
+          "field": {
+            "label": "Paket",
+            "options": [
+              {
+                "label": "numpy"
+              },
+              {
+                "label": "pandas"
+              },
+              {
+                "label": "matplotlib"
+              },
+              {
+                "label": "scipy"
+              },
+              {
+                "label": "sympy"
+              },
+              {
+                "label": "networkx"
+              },
+              {
+                "label": "micropip"
+              },
+              {
+                "label": "pygame-ce"
+              },
+              {
+                "label": "sqlite3"
+              },
+              {
+                "label": "miniworlds"
+              },
+              {
+                "label": "Pillow"
+              },
+              {
+                "label": "beautifulsoup4"
+              },
+              {
+                "label": "lxml"
+              },
+              {
+                "label": "regex"
+              },
+              {
+                "label": "packaging"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "Content",
+      "description": "Text can contain text, images, videos and code",
+      "field": {
+        "label": "Field",
+        "fields": [
+          {
+            "label": "Type",
+            "description": "Type of H5P Content ",
+            "options": [
+              {
+                "label": "Text"
+              },
+              {
+                "label": "Image"
+              },
+              {
+                "label": "Code"
+              },
+              {
+                "label": "Solution Code (hidden)"
+              }
+            ]
+          },
+          {
+            "label": "Text",
+            "description": "Write general description as markdown code"
+          },
+          {
+            "label": "Solution Code in Spoiler-Tags",
+            "description": "Solution Code in Spoiler-Tags"
+          },
+          {
+            "label": "Image",
+            "description": "An image"
+          },
+          {
+            "label": "Show Editor?",
+            "description": "Should an editor displayed to the user"
+          },
+          {
+            "label": "Code",
+            "description": "Write general description as markdown code"
+          }
+        ]
+      }
+    },
+    {
+      "label": "Editor Settings",
+      "description": "This defines how the actual editor is pre-populated and whether code should be executed before or after user input.",
+      "fields": [
+        {
+          "label": "Instructions",
+          "description": "Write instructions as markdown code"
+        },
+        {
+          "label": "Instructions Image",
+          "description": "An optional image appended to instructions"
+        },
+        {
+          "label": "Pre code",
+          "description": "Code prepended before main program"
+        },
+        {
+          "label": "Default Code",
+          "default": "print(\"Hello World\")",
+          "description": "Add default code here, so that users can modify this code."
+        },
+        {
+          "label": "Post code",
+          "description": "Code appended after main program"
+        },
+        {
+          "label": "Additional Python Files",
+          "entity": "file",
+          "description": "Additional Python modules that are available through imports when the Pyodide runner is used. Use module file names like helper.py.",
+          "field": {
+            "label": "Python File",
+            "fields": [
+              {
+                "label": "File Name",
+                "default": "helper.py",
+                "description": "Python module file name, for example helper.py"
+              },
+              {
+                "label": "Code"
+              },
+              {
+                "label": "Show file in editor",
+                "description": "If enabled, learners can switch to this file in the editor."
+              },
+              {
+                "label": "Learner can edit file",
+                "description": "If enabled, learners can modify this file in the editor."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "label": "Grading Settings",
+      "description": "Information how the content should be graded",
+      "fields": [
+        {
+          "label": "Grading method",
+          "description": "Grading methods",
+          "options": [
+            {
+              "label": "Please choose"
+            },
+            {
+              "label": "Input/Output TestCases"
+            },
+            {
+              "label": "Target Image"
+            }
+          ]
+        },
+        {
+          "label": "Due Date Settings",
+          "fields": [
+            {
+              "label": "Enable Due Date"
+            },
+            {
+              "label": "Due Date",
+              "default": "01.01.1970"
+            }
+          ]
+        },
+        {
+          "label": "Test Cases",
+          "entity": "testcase",
+          "field": {
+            "label": "Test Case",
+            "fields": [
+              {
+                "label": "Hidden Testcase",
+                "description": "Input- and Output values are not shown to user."
+              },
+              {
+                "label": "Inputs",
+                "entity": "input",
+                "field": {
+                  "label": "Text",
+                  "description": "Input"
+                }
+              },
+              {
+                "label": "Outputs",
+                "entity": "output",
+                "field": {
+                  "label": "Answer",
+                  "description": "Output"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "label": "Solution Code",
+          "entity": "testcase"
+        }
+      ]
+    }
+  ]
+}

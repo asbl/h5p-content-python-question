@@ -60,7 +60,9 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
     this.codeTester.addOutput(trimmedText);
 
     const testCaseIndex = this.codeTester.session.testCaseIndex;
-    this._consoleManager.write(text, `Test ${testCaseIndex + 1}`);
+    const testCaseLabel = this.codeTester.l10n.testCase;
+
+    this._consoleManager.write(text, `${testCaseLabel} ${testCaseIndex + 1}`);
   }
 
   /**

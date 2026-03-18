@@ -1,4 +1,5 @@
 const path = require('path');
+const sass = require('sass');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const TerserPlugin = require('terser-webpack-plugin');
 
@@ -50,7 +51,11 @@ module.exports = {
           },
           { loader: "css-loader" },
           {
-            loader: "sass-loader"
+            loader: "sass-loader",
+            options: {
+              implementation: sass,
+              api: 'modern'
+            }
           }
         ]
       },

@@ -1,0 +1,171 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  buildPythonCodeContainerOptions,
+  buildPythonRuntimeOptions,
+  decodeHtmlCode,
+  getPyodidePackageEntriesFromParams,
+  normalizePythonAdvancedOptions,
+  normalizePythonExecutionLimit,
+  normalizePythonQuestionConfig,
+  normalizePythonRunner,
+  normalizePythonSourceFileName,
+  normalizePythonSourceFiles,
+} from '../src/scripts/services/python-question-config.js';
+
+describe('Python question config', () => {
+  it('normalizes runner and advanced options', () => {
+    expect(normalizePythonRunner('pyodide')).toBe('pyodide');
+    expect(normalizePythonRunner('custom')).toBe('skulpt');
+    expect(normalizePythonExecutionLimit(1500.9)).toBe(1500);
+    expect(normalizePythonExecutionLimit('invalid')).toBe(0);
+    expect(normalizePythonAdvancedOptions({
+      disableOutputPopups: true,
+      enableImageUploads: true,
+      enableSoundUploads: true,
+      enableSaveLoadButtons: false,
+      execLimit: 1500.9,
+    })).toEqual({
+      disableOutputPopups: true,
+      enableImageUploads: true,
+      enableSoundUploads: true,
+      enableSaveLoadButtons: false,
+      executionLimit: 1500,
+    });
+  });
+
+  it('normalizes execution-limit edge cases consistently', () => {
+    expect(normalizePythonExecutionLimit('900.8')).toBe(900);
+    expect(normalizePythonExecutionLimit(0)).toBe(0);
+    expect(normalizePythonExecutionLimit(-1)).toBe(0);
+    expect(normalizePythonExecutionLimit(Number.POSITIVE_INFINITY)).toBe(0);
+  });
+
+  it('extracts raw package entries from both supported semantics shapes', () => {
+    expect(getPyodidePackageEntriesFromParams({
+      pyodideOptions: ['numpy'],
+    })).toEqual(['numpy']);
+
+    expect(getPyodidePackageEntriesFromParams({
+      pyodideOptions: {
+        packages: [{ package: 'pygame-ce' }],
+      },
+    })).toEqual([{ package: 'pygame-ce' }]);
+  });
+
+  it('builds normalized config and derived option objects', () => {
+    const config = normalizePythonQuestionConfig({
+      pythonRunner: 'pyodide',
+      editorSettings: {
+        sourceFiles: [
+          {
+            fileName: 'helper.py',
+            code: 'VALUE = 1',
+            visibleToLearner: true,
+            learnerEditable: true,
+          },
+        ],
+      },
+      pyodideOptions: [
+        'numpy',
+        { package: 'pygame-ce' },
+        { package: { value: 'sqlite3' } },
+        { value: 'numpy' },
+      ],
+      advancedOptions: {
+        disableOutputPopups: true,
+        enableImageUploads: true,
+        enableSoundUploads: true,
+        enableSaveLoadButtons: false,
+        execLimit: 2750,
+      },
+    });
+
+    expect(config).toEqual({
+      runner: 'pyodide',
+      pyodidePackageEntries: [
+        'numpy',
+        { package: 'pygame-ce' },
+        { package: { value: 'sqlite3' } },
+        { value: 'numpy' },
+      ],
+      packages: ['numpy', 'pygame-ce', 'sqlite3'],
+      sourceFiles: [
+        {
+          name: 'helper.py',
+          code: 'VALUE = 1',
+          visible: true,
+          editable: true,
+        },
+      ],
+      advancedOptions: {
+        disableOutputPopups: true,
+        enableImageUploads: true,
+        enableSoundUploads: true,
+        enableSaveLoadButtons: false,
+        executionLimit: 2750,
+      },
+    });
+
+    expect(buildPythonCodeContainerOptions({ fromParent: true }, config)).toEqual({
+      fromParent: true,
+      enableImageUploads: true,
+      enableSoundUploads: true,
+      showSaveLoadButtons: false,
+      projectStorageEnabled: true,
+      entryFileName: 'main.py',
+      sourceFiles: [
+        {
+          name: 'helper.py',
+          code: 'VALUE = 1',
+          visible: true,
+          editable: true,
+        },
+      ],
+      downloadFilename: 'main.py',
+      projectDownloadFilename: 'python-project.h5pproject',
+      projectBundleType: 'h5p-python-question-project',
+    });
+
+    expect(buildPythonRuntimeOptions(config, { pyodideReady: 'Ready' })).toEqual({
+      runner: 'pyodide',
+      l10n: { pyodideReady: 'Ready' },
+      packages: ['numpy', 'pygame-ce', 'sqlite3'],
+      disableOutputPopups: true,
+      executionLimit: 2750,
+      projectStorageEnabled: true,
+    });
+  });
+
+  it('decodes HTML entities and normalizes Python source file names', () => {
+    expect(decodeHtmlCode('&lt;tag&gt;')).toBe('<tag>');
+    expect(normalizePythonSourceFileName('1 helper.py', 0)).toBe('helper.py');
+    expect(normalizePythonSourceFiles([
+      {
+        fileName: 'main.py',
+        code: '&lt;value&gt;',
+        visibleToLearner: false,
+        learnerEditable: true,
+      },
+      {
+        fileName: 'helper.py',
+        code: 'print(1)',
+        visibleToLearner: true,
+        learnerEditable: false,
+      },
+    ])).toEqual([
+      {
+        name: 'module_1.py',
+        code: '<value>',
+        visible: false,
+        editable: false,
+      },
+      {
+        name: 'helper.py',
+        code: 'print(1)',
+        visible: true,
+        editable: false,
+      },
+    ]);
+  });
+});

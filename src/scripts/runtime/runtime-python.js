@@ -1,5 +1,9 @@
 import SkulptRunner from './skulptrunner';
 import CanvasRuntimeManager from './canvasruntimemanager';
+import PyodideRunner from './pyodiderunner';
+import {
+  getPythonL10nValue,
+} from '../services/python-l10n';
 
 /**
  * Python runtime for executing Python code via Skulpt.
@@ -13,12 +17,19 @@ export default class PythonRuntime extends H5P.Runtime {
    */
   constructor(resizeActionHandler, code, options = {}) {
     super(resizeActionHandler, code, options);
+    this.l10n = options.l10n || {};
 
     /**
      * Human-readable runtime type.
      * @type {string}
      */
-    this.type = 'Python Runtime';
+    this.type = getPythonL10nValue(this.l10n, 'pythonRuntime');
+
+    /**
+     * Which Python runner to use (skulpt or pyodide).
+     * @type {string}
+     */
+    this.runnerType = options.runner || 'skulpt';
 
     /**
      * Internal SkulptRunner instance.
@@ -53,6 +64,10 @@ export default class PythonRuntime extends H5P.Runtime {
     this._canvasManager = this.getCanvasManager();
   }
 
+  /**
+   * Returns the runtime canvas manager.
+   * @returns {CanvasRuntimeManager} Canvas runtime manager.
+   */
   getCanvasManager() {
     if (!this._canvasManager) {
       this._canvasManager = new CanvasRuntimeManager(this.codeContainer.getCanvasManager(), this.runner);
@@ -68,17 +83,72 @@ export default class PythonRuntime extends H5P.Runtime {
    */
   getRunner() {
     if (!this.runner) {
-      this.runner = new SkulptRunner(this, this.options);
+      if (this.runnerType === 'pyodide') {
+        this.runner = new PyodideRunner(this, this.options);
+      }
+      else {
+        this.runner = new SkulptRunner(this, this.options);
+      }
     }
     return this.runner;
   }
 
+  /**
+   * Returns the current project workspace when Pyodide project support is enabled.
+   * @returns {object|null} Workspace snapshot or null.
+   */
+  getProjectSnapshot() {
+    if (this.runnerType !== 'pyodide') {
+      return null;
+    }
+
+    return this.codeContainer?.getWorkspaceSnapshot?.() || null;
+  }
+
+  /**
+   * Returns all code that should be analyzed for imports and canvas usage.
+   * @returns {string} Combined Python source code.
+   */
+  getAnalysisCode() {
+    const projectSnapshot = this.getProjectSnapshot();
+
+    if (!projectSnapshot?.files?.length) {
+      return this.getCode();
+    }
+
+    return projectSnapshot.files
+      .map((file) => (file.isEntry ? this.getCode() : String(file.code || '')))
+      .join('\n');
+  }
+
+  /**
+   * Returns local Python module names from the current project workspace.
+   * @returns {string[]} Local module names without the .py extension.
+   */
+  getLocalModuleNames() {
+    const projectSnapshot = this.getProjectSnapshot();
+
+    if (!projectSnapshot?.files?.length) {
+      return [];
+    }
+
+    return projectSnapshot.files
+      .filter((file) => file.isEntry !== true)
+      .map((file) => String(file.name || '').replace(/\.py$/i, ''))
+      .filter(Boolean);
+  }
+
   prepareForRun() {
-    super.prepareForRun();
+    if (this.runnerType === 'pyodide') {
+      this.runner.setup().catch((error) => this.onError(error.toString()));
+    }
+    else {
+      super.prepareForRun();
+    }
+
     if (this.containsCanvasCode()) {
       this.getCanvasManager().attachCanvas('manual');
     }
-    
   }
 
   /**
@@ -86,11 +156,15 @@ export default class PythonRuntime extends H5P.Runtime {
    * @returns {boolean} True, if code contains turtle or p5 code
    */
   containsCanvasCode() {
-    return this.containsTurtleCode() || this.containsP5Code();
+    return this.containsTurtleCode() || this.containsP5Code() || this.containsSDLCode();
+  }
+
+  containsSDLCode() {
+    return this.containsPygameCode() || this.containsMiniworldsCode();
   }
 
   containsTurtleCode() {
-    const code = this.getCode();
+    const code = this.getAnalysisCode();
     if (!code) return false;
     return (
       code.includes('import turtle') ||
@@ -99,11 +173,29 @@ export default class PythonRuntime extends H5P.Runtime {
   }
 
   containsP5Code() {
-    const code = this.getCode();
+    const code = this.getAnalysisCode();
     if (!code) return false;
     return (
       code.includes('import p5') ||
       code.includes('from p5 import')
+    );
+  }
+
+  containsPygameCode() {
+    const code = this.getAnalysisCode();
+    if (!code) return false;
+    return (
+      code.includes('import pygame') ||
+      code.includes('from pygame import')
+    );
+  }
+
+  containsMiniworldsCode() {
+    const code = this.getAnalysisCode();
+    if (!code) return false;
+    return (
+      code.includes('import miniworlds') ||
+      code.includes('from miniworlds import')
     );
   }
 
