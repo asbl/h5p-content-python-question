@@ -112,6 +112,36 @@
               }
             ]
           }
+        },
+        {
+          "label": "Additional Python Files",
+          "entity": "file",
+          "description": "Additional Python modules that are available through imports when the Pyodide runner is used. Use module file names like helper.py.",
+          "field": {
+            "label": "Python File",
+            "fields": [
+              {
+                "label": "File Name",
+                "default": "helper.py",
+                "description": "Python module file name, for example helper.py"
+              },
+              {
+                "label": "Code"
+              },
+              {
+                "label": "Show file in editor",
+                "description": "If enabled, learners can switch to this file in the editor."
+              },
+              {
+                "label": "Learner can edit file",
+                "description": "If enabled, learners can modify this file in the editor."
+              }
+            ]
+          }
+        },
+        {
+          "label": "Show main.py in editor",
+          "description": "If enabled, learners can switch to main.py in the editor tabs."
         }
       ]
     },
@@ -186,32 +216,6 @@
         {
           "label": "Post code",
           "description": "Code appended after main program"
-        },
-        {
-          "label": "Additional Python Files",
-          "entity": "file",
-          "description": "Additional Python modules that are available through imports when the Pyodide runner is used. Use module file names like helper.py.",
-          "field": {
-            "label": "Python File",
-            "fields": [
-              {
-                "label": "File Name",
-                "default": "helper.py",
-                "description": "Python module file name, for example helper.py"
-              },
-              {
-                "label": "Code"
-              },
-              {
-                "label": "Show file in editor",
-                "description": "If enabled, learners can switch to this file in the editor."
-              },
-              {
-                "label": "Learner can edit file",
-                "description": "If enabled, learners can modify this file in the editor."
-              }
-            ]
-          }
         }
       ]
     },

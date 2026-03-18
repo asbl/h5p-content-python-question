@@ -89,6 +89,31 @@ export function getPyodidePackageEntriesFromParams(params = {}) {
 }
 
 /**
+ * Resolves additional Python source files from semantics params.
+ * Prefers the Pyodide advanced options shape and falls back to legacy editor settings.
+ * @param {object} [params] - PythonQuestion params.
+ * @returns {Array<*>} Raw source file entries.
+ */
+export function getPyodideSourceFileEntriesFromParams(params = {}) {
+  if (Array.isArray(params?.pyodideOptions?.sourceFiles)) {
+    return params.pyodideOptions.sourceFiles;
+  }
+
+  return Array.isArray(params?.editorSettings?.sourceFiles)
+    ? params.editorSettings.sourceFiles
+    : [];
+}
+
+/**
+ * Resolves whether main.py should be shown as a learner-visible editor file.
+ * @param {object} [params] - PythonQuestion params.
+ * @returns {boolean} True if the main file should be visible in tabs.
+ */
+export function getPyodideShowMainFileInEditorFromParams(params = {}) {
+  return params?.pyodideOptions?.showMainFileInEditor === true;
+}
+
+/**
  * Normalizes the selected Python runtime.
  * @param {string} [runner] - Raw runner value.
  * @returns {'skulpt'|'pyodide'} Supported runner identifier.
@@ -115,16 +140,20 @@ export function normalizePythonAdvancedOptions(advancedOptions = {}) {
 /**
  * Builds a stable, normalized PythonQuestion configuration snapshot.
  * @param {object} [params] - Raw PythonQuestion params.
- * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], advancedOptions: {disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}}} Normalized config.
+ * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], sourceFiles: Array<{name: string, code: string, visible: boolean, editable: boolean}>, entryFileVisible: boolean, advancedOptions: {disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}}} Normalized config.
  */
 export function normalizePythonQuestionConfig(params = {}) {
+  const runner = normalizePythonRunner(params.pythonRunner);
   const pyodidePackageEntries = getPyodidePackageEntriesFromParams(params);
 
   return {
-    runner: normalizePythonRunner(params.pythonRunner),
+    runner,
     pyodidePackageEntries,
     packages: normalizePythonPackageEntries(pyodidePackageEntries),
-    sourceFiles: normalizePythonSourceFiles(params?.editorSettings?.sourceFiles),
+    sourceFiles: normalizePythonSourceFiles(getPyodideSourceFileEntriesFromParams(params)),
+    entryFileVisible: runner === 'pyodide'
+      ? getPyodideShowMainFileInEditorFromParams(params)
+      : true,
     advancedOptions: normalizePythonAdvancedOptions(params.advancedOptions),
   };
 }
@@ -147,6 +176,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config) {
     showSaveLoadButtons: config?.advancedOptions?.enableSaveLoadButtons !== false,
     projectStorageEnabled: config?.runner === 'pyodide',
     entryFileName: 'main.py',
+    entryFileVisible: config?.entryFileVisible !== false,
     sourceFiles: config?.runner === 'pyodide' ? [...(config?.sourceFiles || [])] : [],
     downloadFilename: 'main.py',
     projectDownloadFilename: 'python-project.h5pproject',

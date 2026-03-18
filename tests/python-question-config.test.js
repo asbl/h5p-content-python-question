@@ -5,6 +5,8 @@ import {
   buildPythonRuntimeOptions,
   decodeHtmlCode,
   getPyodidePackageEntriesFromParams,
+  getPyodideShowMainFileInEditorFromParams,
+  getPyodideSourceFileEntriesFromParams,
   normalizePythonAdvancedOptions,
   normalizePythonExecutionLimit,
   normalizePythonQuestionConfig,
@@ -51,12 +53,43 @@ describe('Python question config', () => {
         packages: [{ package: 'pygame-ce' }],
       },
     })).toEqual([{ package: 'pygame-ce' }]);
+
+    expect(getPyodideSourceFileEntriesFromParams({
+      pyodideOptions: {
+        sourceFiles: [{ fileName: 'helper.py' }],
+      },
+    })).toEqual([{ fileName: 'helper.py' }]);
+
+    expect(getPyodideSourceFileEntriesFromParams({
+      editorSettings: {
+        sourceFiles: [{ fileName: 'legacy.py' }],
+      },
+    })).toEqual([{ fileName: 'legacy.py' }]);
+
+    expect(getPyodideShowMainFileInEditorFromParams({
+      pyodideOptions: {
+        showMainFileInEditor: true,
+      },
+    })).toBe(true);
+
+    expect(getPyodideShowMainFileInEditorFromParams({
+      pyodideOptions: {
+        showMainFileInEditor: false,
+      },
+    })).toBe(false);
   });
 
   it('builds normalized config and derived option objects', () => {
     const config = normalizePythonQuestionConfig({
       pythonRunner: 'pyodide',
-      editorSettings: {
+      pyodideOptions: {
+        packages: [
+          'numpy',
+          { package: 'pygame-ce' },
+          { package: { value: 'sqlite3' } },
+          { value: 'numpy' },
+        ],
+        showMainFileInEditor: true,
         sourceFiles: [
           {
             fileName: 'helper.py',
@@ -66,12 +99,6 @@ describe('Python question config', () => {
           },
         ],
       },
-      pyodideOptions: [
-        'numpy',
-        { package: 'pygame-ce' },
-        { package: { value: 'sqlite3' } },
-        { value: 'numpy' },
-      ],
       advancedOptions: {
         disableOutputPopups: true,
         enableImageUploads: true,
@@ -98,6 +125,7 @@ describe('Python question config', () => {
           editable: true,
         },
       ],
+      entryFileVisible: true,
       advancedOptions: {
         disableOutputPopups: true,
         enableImageUploads: true,
@@ -114,6 +142,7 @@ describe('Python question config', () => {
       showSaveLoadButtons: false,
       projectStorageEnabled: true,
       entryFileName: 'main.py',
+      entryFileVisible: true,
       sourceFiles: [
         {
           name: 'helper.py',

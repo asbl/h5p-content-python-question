@@ -31,21 +31,15 @@ describe('PythonQuestion', () => {
     const question = new PythonQuestion({
       l10n: { localValue: 'child' },
       pythonRunner: 'pyodide',
-      pyodideOptions: [
-        'numpy',
-        { package: 'pygame-ce' },
-        { package: { value: 'sqlite3' } },
-        { value: 'numpy' },
-        { package: '' },
-      ],
-      advancedOptions: {
-        disableOutputPopups: true,
-        enableImageUploads: true,
-        enableSoundUploads: true,
-        enableSaveLoadButtons: false,
-        execLimit: 1800,
-      },
-      editorSettings: {
+      pyodideOptions: {
+        packages: [
+          'numpy',
+          { package: 'pygame-ce' },
+          { package: { value: 'sqlite3' } },
+          { value: 'numpy' },
+          { package: '' },
+        ],
+        showMainFileInEditor: true,
         sourceFiles: [
           {
             fileName: 'helper.py',
@@ -54,6 +48,13 @@ describe('PythonQuestion', () => {
             learnerEditable: true,
           },
         ],
+      },
+      advancedOptions: {
+        disableOutputPopups: true,
+        enableImageUploads: true,
+        enableSoundUploads: true,
+        enableSaveLoadButtons: false,
+        execLimit: 1800,
       },
     }, 42);
 
@@ -77,6 +78,7 @@ describe('PythonQuestion', () => {
       showSaveLoadButtons: false,
       projectStorageEnabled: true,
       entryFileName: 'main.py',
+      entryFileVisible: true,
       sourceFiles: [
         {
           name: 'helper.py',
@@ -117,6 +119,7 @@ describe('PythonQuestion', () => {
       showSaveLoadButtons: true,
       projectStorageEnabled: false,
       entryFileName: 'main.py',
+      entryFileVisible: true,
       sourceFiles: [],
       downloadFilename: 'main.py',
       projectDownloadFilename: 'python-project.h5pproject',
