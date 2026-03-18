@@ -72,6 +72,11 @@ beforeEach(async () => {
   ({ default: PythonSolutionRuntime } = await import('../src/scripts/runtime/runtime-solution-python.js'));
 });
 
+/**
+ * Creates a code-container stub that returns the author workspace snapshot.
+ * @param {object|null} [defaultWorkspace] Workspace snapshot.
+ * @returns {object} Code-container stub.
+ */
 function createCodeContainer(defaultWorkspace = null) {
   return {
     getDefaultWorkspaceSnapshot: vi.fn(() => defaultWorkspace),

@@ -55,6 +55,11 @@ vi.mock('../src/scripts/services/python-l10n', () => ({
 
 let PythonRuntime;
 
+/**
+ * Creates a runtime code-container stub.
+ * @param {object|null} [workspaceSnapshot] Workspace snapshot returned by the container.
+ * @returns {object} Code-container stub.
+ */
 function createCodeContainer(workspaceSnapshot = null) {
   return {
     getCanvasManager: vi.fn(() => ({ type: 'canvas-manager' })),

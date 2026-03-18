@@ -12,6 +12,12 @@ const TEST_OPTIONS = {
   exposeRegistry: true,
 };
 
+/**
+ * Creates a normalized uploaded-file entry for tests.
+ * @param {string} name Visible file name.
+ * @param {object} [overrides] Optional property overrides.
+ * @returns {object} Uploaded file entry.
+ */
 function makeFile(name, overrides = {}) {
   return {
     name,
@@ -23,6 +29,13 @@ function makeFile(name, overrides = {}) {
   };
 }
 
+/**
+ * Creates a minimal runner stub that exposes a file manager.
+ * @param {object[]} [files] Uploaded files returned by the manager.
+ * @param {object} [pyodide] Optional pyodide stub.
+ * @param {string} [containerUID] Container identifier.
+ * @returns {object} Runner stub.
+ */
 function createRunner(files = [], pyodide = undefined, containerUID = 'container:1') {
   return {
     pyodide,
