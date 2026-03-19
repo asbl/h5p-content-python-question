@@ -182,4 +182,22 @@ describe('Python question config', () => {
       },
     ]);
   });
+
+  it('skips empty placeholder source file entries from H5P editor list widget', () => {
+    // H5P editor pre-populates list fields with one empty item; these must be ignored.
+    expect(normalizePythonSourceFiles([
+      { code: '', visibleToLearner: true, learnerEditable: true },
+    ])).toEqual([]);
+
+    expect(normalizePythonSourceFiles([
+      { fileName: '', code: '   ', visibleToLearner: true, learnerEditable: true },
+    ])).toEqual([]);
+
+    // An entry with code but no name should still be kept (the user set code).
+    expect(normalizePythonSourceFiles([
+      { code: 'x = 1', visibleToLearner: true, learnerEditable: true },
+    ])).toEqual([
+      { name: 'module_1.py', code: 'x = 1', visible: true, editable: true },
+    ]);
+  });
 });

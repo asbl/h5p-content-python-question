@@ -52,6 +52,12 @@ export function normalizePythonSourceFiles(entries = []) {
   const usedNames = new Set(['main.py']);
 
   (Array.isArray(entries) ? entries : []).forEach((entry, index) => {
+    // Skip empty placeholder entries created by the H5P editor list widget
+    // (no filename and no code means the user never configured this slot).
+    const rawName = entry?.fileName || entry?.name || '';
+    const rawCode = entry?.code || '';
+    if (!rawName.trim() && !rawCode.trim()) return;
+
     let candidate = normalizePythonSourceFileName(entry?.fileName || entry?.name, index);
     let suffix = 2;
 
