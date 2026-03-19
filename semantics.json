@@ -418,6 +418,38 @@
                             }
                         ]
                     }
+                },
+                {
+                    "name": "editorMode",
+                    "type": "select",
+                    "label": "Editor mode",
+                    "description": "Choose whether learners see a code editor, a block-based editor, or both panels with a toggle.",
+                    "default": "code",
+                    "widget": "showWhen",
+                    "showWhen": {
+                        "rules": [
+                            {
+                                "field": "type",
+                                "equals": [
+                                    "code"
+                                ]
+                            }
+                        ]
+                    },
+                    "options": [
+                        {
+                            "value": "code",
+                            "label": "Code editor (CodeMirror)"
+                        },
+                        {
+                            "value": "blocks",
+                            "label": "Block editor (Blockly)"
+                        },
+                        {
+                            "value": "both",
+                            "label": "Both – blocks are source of truth, code preview is read-only"
+                        }
+                    ]
                 }
             ]
         }

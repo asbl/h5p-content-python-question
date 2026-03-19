@@ -106,6 +106,7 @@ describe('Python question config', () => {
 
     const editorParams = {
       allowAddingFiles: true,
+      editorMode: 'blocks',
       sourceFiles: [
         {
           fileName: 'helper.py',
@@ -135,7 +136,7 @@ describe('Python question config', () => {
       downloadFilename: 'main.py',
       projectDownloadFilename: 'python-project.h5pproject',
       projectBundleType: 'h5p-python-question-project',
-      editorMode: 'code',
+      editorMode: 'blocks',
     });
 
     expect(buildPythonRuntimeOptions(config, { pyodideReady: 'Ready' })).toEqual({

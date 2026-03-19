@@ -192,6 +192,21 @@
           {
             "label": "Lernenden das Hinzufügen von Dateien erlauben",
             "description": "Wenn aktiviert, können Lernende eigene Python-Dateien anlegen, umbenennen und löschen. Gilt nur bei Pyodide."
+          },
+          {
+            "label": "Editor-Modus",
+            "description": "Wähle, ob Lernende einen Code-Editor, einen blockbasierten Editor oder beide Ansichten mit Umschalter sehen.",
+            "options": [
+              {
+                "label": "Code-Editor (CodeMirror)"
+              },
+              {
+                "label": "Block-Editor (Blockly)"
+              },
+              {
+                "label": "Beides – Blöcke sind maßgeblich, Code-Vorschau ist schreibgeschützt"
+              }
+            ]
           }
         ]
       }
@@ -250,6 +265,21 @@
         {
           "label": "Lernenden das Hinzufügen von Dateien erlauben",
           "description": "Wenn aktiviert, können Lernende eigene Python-Dateien anlegen, umbenennen und löschen. Im Tab-Streifen erscheint ein '+'-Button sowie ein Dateimanager. Gilt nur bei Pyodide."
+        },
+        {
+          "label": "Editor-Modus",
+          "description": "Wähle, ob Lernende einen Code-Editor, einen blockbasierten Editor oder beide Ansichten mit Umschalter sehen.",
+          "options": [
+            {
+              "label": "Code-Editor (CodeMirror)"
+            },
+            {
+              "label": "Block-Editor (Blockly)"
+            },
+            {
+              "label": "Beides – Blöcke sind maßgeblich, Code-Vorschau ist schreibgeschützt"
+            }
+          ]
         }
       ]
     },
