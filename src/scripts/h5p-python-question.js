@@ -107,6 +107,7 @@ export default class PythonQuestion extends H5P.CodeQuestion {
           : this.params.pyodideOptions?.sourceFiles,
         allowAddingFiles: this.params.editorSettings?.allowAddingFiles,
         editorMode: this.params.editorSettings?.editorMode,
+        blocklyCategories: this.params.editorSettings?.blocklyCategories ?? null,
       };
 
     return buildPythonCodeContainerOptions(

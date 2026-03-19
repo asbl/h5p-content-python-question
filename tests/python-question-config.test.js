@@ -107,6 +107,7 @@ describe('Python question config', () => {
     const editorParams = {
       allowAddingFiles: true,
       editorMode: 'blocks',
+      blocklyCategories: { variables: true, logic: false, loops: true, math: false, text: true, lists: false, functions: false },
       sourceFiles: [
         {
           fileName: 'helper.py',
@@ -137,6 +138,7 @@ describe('Python question config', () => {
       projectDownloadFilename: 'python-project.h5pproject',
       projectBundleType: 'h5p-python-question-project',
       editorMode: 'blocks',
+      blocklyCategories: { variables: true, logic: false, loops: true, math: false, text: true, lists: false, functions: false },
     });
 
     expect(buildPythonRuntimeOptions(config, { pyodideReady: 'Ready' })).toEqual({

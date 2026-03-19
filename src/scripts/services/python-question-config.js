@@ -183,6 +183,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     projectDownloadFilename: 'python-project.h5pproject',
     projectBundleType: 'h5p-python-question-project',
     editorMode: normalizePythonEditorMode(editorParams?.editorMode),
+    blocklyCategories: editorParams?.blocklyCategories ?? null,
   };
 }
 

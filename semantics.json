@@ -16,11 +16,11 @@
             },
             {
                 "value": "text_only",
-                "label": "Text only"
+                "label": "Contents (Text, Editor, [...] only"
             },
             {
                 "value": "text_and_ide",
-                "label": "Text and Coding assignment"
+                "label": "Contents (Text, Editor, [...] + Coding assignment"
             }
         ],
         "default":  "please_choose"
@@ -450,6 +450,68 @@
                             "label": "Both – blocks are source of truth, code preview is read-only"
                         }
                     ]
+                },
+                {
+                    "name": "blocklyCategories",
+                    "type": "group",
+                    "label": "Blockly categories",
+                    "description": "Select which block categories are available in the Blockly editor. All categories are included by default.",
+                    "widget": "showWhen",
+                    "showWhen": {
+                        "rules": [
+                            {
+                                "field": "editorMode",
+                                "equals": [
+                                    "blocks",
+                                    "both"
+                                ]
+                            }
+                        ]
+                    },
+                    "fields": [
+                        {
+                            "name": "variables",
+                            "type": "boolean",
+                            "label": "Variables",
+                            "default": true
+                        },
+                        {
+                            "name": "logic",
+                            "type": "boolean",
+                            "label": "Logic",
+                            "default": true
+                        },
+                        {
+                            "name": "loops",
+                            "type": "boolean",
+                            "label": "Loops",
+                            "default": true
+                        },
+                        {
+                            "name": "math",
+                            "type": "boolean",
+                            "label": "Maths",
+                            "default": true
+                        },
+                        {
+                            "name": "text",
+                            "type": "boolean",
+                            "label": "Text",
+                            "default": true
+                        },
+                        {
+                            "name": "lists",
+                            "type": "boolean",
+                            "label": "Lists",
+                            "default": true
+                        },
+                        {
+                            "name": "functions",
+                            "type": "boolean",
+                            "label": "Functions",
+                            "default": true
+                        }
+                    ]
                 }
             ]
         }
@@ -607,6 +669,68 @@
                     {
                         "value": "both",
                         "label": "Both – blocks are source of truth, code preview is read-only"
+                    }
+                ]
+            },
+            {
+                "name": "blocklyCategories",
+                "type": "group",
+                "label": "Blockly categories",
+                "description": "Select which block categories are available in the Blockly editor. All categories are included by default.",
+                "widget": "showWhen",
+                "showWhen": {
+                    "rules": [
+                        {
+                            "field": "editorMode",
+                            "equals": [
+                                "blocks",
+                                "both"
+                            ]
+                        }
+                    ]
+                },
+                "fields": [
+                    {
+                        "name": "variables",
+                        "type": "boolean",
+                        "label": "Variables",
+                        "default": true
+                    },
+                    {
+                        "name": "logic",
+                        "type": "boolean",
+                        "label": "Logic",
+                        "default": true
+                    },
+                    {
+                        "name": "loops",
+                        "type": "boolean",
+                        "label": "Loops",
+                        "default": true
+                    },
+                    {
+                        "name": "math",
+                        "type": "boolean",
+                        "label": "Maths",
+                        "default": true
+                    },
+                    {
+                        "name": "text",
+                        "type": "boolean",
+                        "label": "Text",
+                        "default": true
+                    },
+                    {
+                        "name": "lists",
+                        "type": "boolean",
+                        "label": "Lists",
+                        "default": true
+                    },
+                    {
+                        "name": "functions",
+                        "type": "boolean",
+                        "label": "Functions",
+                        "default": true
                     }
                 ]
             }

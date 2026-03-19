@@ -207,6 +207,19 @@
                 "label": "Beides – Blöcke sind maßgeblich, Code-Vorschau ist schreibgeschützt"
               }
             ]
+          },
+          {
+            "label": "Blockly-Kategorien",
+            "description": "Wähle, welche Block-Kategorien im Blockly-Editor angezeigt werden sollen. Standardmäßig sind alle Kategorien aktiv.",
+            "fields": [
+              { "label": "Variablen" },
+              { "label": "Logik" },
+              { "label": "Schleifen" },
+              { "label": "Mathematik" },
+              { "label": "Text" },
+              { "label": "Listen" },
+              { "label": "Funktionen" }
+            ]
           }
         ]
       }
@@ -279,6 +292,19 @@
             {
               "label": "Beides – Blöcke sind maßgeblich, Code-Vorschau ist schreibgeschützt"
             }
+          ]
+        },
+        {
+          "label": "Blockly-Kategorien",
+          "description": "Wähle, welche Block-Kategorien im Blockly-Editor angezeigt werden sollen. Standardmäßig sind alle Kategorien aktiv.",
+          "fields": [
+            { "label": "Variablen" },
+            { "label": "Logik" },
+            { "label": "Schleifen" },
+            { "label": "Mathematik" },
+            { "label": "Text" },
+            { "label": "Listen" },
+            { "label": "Funktionen" }
           ]
         }
       ]
