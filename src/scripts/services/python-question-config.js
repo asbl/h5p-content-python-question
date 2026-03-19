@@ -148,6 +148,15 @@ export function normalizePythonQuestionConfig(params = {}) {
 }
 
 /**
+ * Normalizes the selected editor mode for a task.
+ * @param {string} [mode] - Raw value from semantics ('code' | 'blocks' | 'both').
+ * @returns {'code'|'blocks'|'both'} Validated editor mode.
+ */
+export function normalizePythonEditorMode(mode) {
+  return ['code', 'blocks', 'both'].includes(mode) ? mode : 'code';
+}
+
+/**
  * Merges normalized Python options into container options for one editor instance.
  * @param {*} parentOptions - Parent container options.
  * @param {object} config - Normalized PythonQuestion config (global/runner-level).
@@ -173,6 +182,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     downloadFilename: 'main.py',
     projectDownloadFilename: 'python-project.h5pproject',
     projectBundleType: 'h5p-python-question-project',
+    editorMode: normalizePythonEditorMode(editorParams?.editorMode),
   };
 }
 

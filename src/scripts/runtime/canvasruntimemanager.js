@@ -89,11 +89,6 @@ export default class CanvasRuntimeManager {
   }
 
   removeCanvas() {
-    // Remove the canvas wrapper element from the DOM completely
-    if (this.canvasWrapper && this.canvasWrapper.parentNode) {
-      this.canvasWrapper.parentNode.removeChild(this.canvasWrapper);
-    }
-
     if (this.host && typeof this.host.removeCanvas === 'function') {
       this.host.removeCanvas(this.canvasDiv);
     }

@@ -93,6 +93,7 @@ describe('PythonQuestion', () => {
       downloadFilename: 'main.py',
       projectDownloadFilename: 'python-project.h5pproject',
       projectBundleType: 'h5p-python-question-project',
+      editorMode: 'code',
     });
     expect(question.getAdvancedOption('enableSoundUploads')).toBe(true);
     expect(question.getAdvancedOption('missingOption')).toBe(false);
@@ -127,6 +128,7 @@ describe('PythonQuestion', () => {
       downloadFilename: 'main.py',
       projectDownloadFilename: 'python-project.h5pproject',
       projectBundleType: 'h5p-python-question-project',
+      editorMode: 'code',
     });
     expect(question.getRuntimeOptions().executionLimit).toBe(0);
     expect(question.getRuntimeOptions().projectStorageEnabled).toBe(false);

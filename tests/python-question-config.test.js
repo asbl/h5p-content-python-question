@@ -135,6 +135,7 @@ describe('Python question config', () => {
       downloadFilename: 'main.py',
       projectDownloadFilename: 'python-project.h5pproject',
       projectBundleType: 'h5p-python-question-project',
+      editorMode: 'code',
     });
 
     expect(buildPythonRuntimeOptions(config, { pyodideReady: 'Ready' })).toEqual({
