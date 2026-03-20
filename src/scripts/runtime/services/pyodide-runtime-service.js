@@ -332,21 +332,7 @@ if not globals().get('_h5p_runtime_compat_installed', False):
       type_comment=None,
     )
 
-    module = _h5p_ast.Module(
-      body=[
-        async_main,
-        _h5p_ast.Expr(
-          value=_h5p_ast.Await(
-            value=_h5p_ast.Call(
-              func=_h5p_ast.Name(id='_h5p_main', ctx=_h5p_ast.Load()),
-              args=[],
-              keywords=[],
-            ),
-          ),
-        ),
-      ],
-      type_ignores=[],
-    )
+    module = _h5p_ast.Module(body=[async_main], type_ignores=[])
 
     return _h5p_ast.fix_missing_locations(module)
 
@@ -354,6 +340,7 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     module = _h5p_build_async_input_module(source)
     namespace = globals()
     exec(compile(module, '<h5p-learner-code>', 'exec'), namespace, namespace)
+    return await namespace['_h5p_main']()
 
   def _h5p_asyncio_run(main, *args, **kwargs):
     global _h5p_background_task, _h5p_background_task_started
