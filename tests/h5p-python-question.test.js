@@ -97,6 +97,7 @@ describe('PythonQuestion', () => {
       projectBundleType: 'h5p-python-question-project',
       editorMode: 'code',
       blocklyCategories: null,
+      blocklyPackages: ['numpy', 'pygame-ce', 'sqlite3'],
     });
     expect(question.hasConsole).toBe(false);
     expect(question.getAdvancedOption('enableSoundUploads')).toBe(true);
@@ -136,6 +137,7 @@ describe('PythonQuestion', () => {
       projectBundleType: 'h5p-python-question-project',
       editorMode: 'code',
       blocklyCategories: null,
+      blocklyPackages: [],
     });
     expect(question.hasConsole).toBe(true);
     expect(question.shouldShowConsole()).toBe(true);

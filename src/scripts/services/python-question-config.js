@@ -192,6 +192,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     projectBundleType: 'h5p-python-question-project',
     editorMode: normalizePythonEditorMode(editorParams?.editorMode),
     blocklyCategories: editorParams?.blocklyCategories ?? null,
+    blocklyPackages: config?.runner === 'pyodide' ? [...(config?.packages || [])] : [],
   };
 }
 

@@ -142,6 +142,7 @@ describe('Python question config', () => {
       projectBundleType: 'h5p-python-question-project',
       editorMode: 'blocks',
       blocklyCategories: { variables: true, logic: false, loops: true, math: false, text: true, lists: false, functions: false },
+      blocklyPackages: ['numpy', 'pygame-ce', 'sqlite3'],
     });
 
     expect(buildPythonRuntimeOptions(config, { pyodideReady: 'Ready' })).toEqual({
