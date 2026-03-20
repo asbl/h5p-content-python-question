@@ -160,4 +160,82 @@ describe('PyodideRunner', () => {
     );
     expect(mocks.loadMissingPyodidePackages).toHaveBeenCalledWith(runner.pyodide, ['numpy']);
   });
+
+  it('executes input() code via the async input helper instead of regex rewriting', async () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, { packages: [] });
+    const runPythonAsync = vi.fn(() => Promise.resolve('ok'));
+
+    runner.pyodide = {
+      runPythonAsync,
+    };
+    runner._isInitialized = true;
+
+    await runner.execute('name = input("Name?")\nprint(name)');
+
+    const [executedCode] = runPythonAsync.mock.calls[0];
+    expect(executedCode).toContain('await _h5p_run_with_async_input(');
+    expect(executedCode).not.toContain('await input(');
+  });
+
+  it('restores overridden p5 window globals when stopping the runner', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+
+    const originalSetup = window.setup;
+    const originalDraw = window.draw;
+    const hadSetup = Object.prototype.hasOwnProperty.call(window, 'setup');
+    const hadDraw = Object.prototype.hasOwnProperty.call(window, 'draw');
+    const hadTempP5Fn = Object.prototype.hasOwnProperty.call(window, 'h5pTempP5Fn');
+    const originalTempP5Fn = window.h5pTempP5Fn;
+    const previousP5 = window.p5;
+
+    const remove = vi.fn();
+
+    window.setup = vi.fn();
+    window.draw = vi.fn();
+    delete window.h5pTempP5Fn;
+
+    window.p5 = class P5Mock {
+      constructor(sketch) {
+        const proto = {
+          h5pTempP5Fn() {},
+        };
+        const instance = Object.create(proto);
+        instance.noLoop = vi.fn();
+        sketch(instance);
+        this.remove = remove;
+      }
+    };
+
+    runner.setupP5(canvasDiv);
+
+    expect(typeof window.h5pTempP5Fn).toBe('function');
+
+    runner.stop();
+
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(window.setup).toBe(originalSetup);
+    expect(window.draw).toBe(originalDraw);
+    expect(Object.prototype.hasOwnProperty.call(window, 'h5pTempP5Fn')).toBe(hadTempP5Fn);
+    if (hadTempP5Fn) {
+      expect(window.h5pTempP5Fn).toBe(originalTempP5Fn);
+    }
+
+    if (!hadSetup) {
+      delete window.setup;
+    }
+    if (!hadDraw) {
+      delete window.draw;
+    }
+    if (!hadTempP5Fn) {
+      delete window.h5pTempP5Fn;
+    }
+    if (typeof previousP5 === 'undefined') {
+      delete window.p5;
+    } else {
+      window.p5 = previousP5;
+    }
+  });
 });

@@ -52,6 +52,11 @@ export default class PyodideRunner {
     this.sdlCanvas = null;
     this.hasBackgroundTask = false;
     this._resizeTimeout = null;
+    this._p5WindowBindings = new Map();
+    this._p5BaselineBindings = new Map([
+      ['setup', this.getWindowBindingSnapshot('setup')],
+      ['draw', this.getWindowBindingSnapshot('draw')],
+    ]);
 
     this.p5Instance = null;
     this._isInitialized = false;
@@ -297,15 +302,9 @@ export default class PyodideRunner {
 
       try {
         if (code.includes('input(')) {
-          const asyncCode = code.replace(/\binput\(/g, 'await input(');
-          const wrappedCode = `
-async def _h5p_main():
-${asyncCode.split('\n').map((line) => `  ${line}`).join('\n')}
-
-await _h5p_main()
-`;
-
-          result = await this.pyodide.runPythonAsync(wrappedCode);
+          result = await this.pyodide.runPythonAsync(
+            `await _h5p_run_with_async_input(${JSON.stringify(String(code || ''))})`
+          );
         }
         else {
           result = await this.pyodide.runPythonAsync(code);
@@ -351,8 +350,15 @@ await _h5p_main()
       this.p5Instance = null;
     }
 
+    this.restoreP5WindowBindings();
+
     if (this.sdlCanvas) {
       this.sdlCanvas = null;
+    }
+
+    if (this._resizeTimeout !== null && typeof window?.clearTimeout === 'function') {
+      window.clearTimeout(this._resizeTimeout);
+      this._resizeTimeout = null;
     }
 
     if (this.hasBackgroundTask && this.pyodide) {
@@ -423,6 +429,71 @@ await _h5p_main()
   }
 
   /**
+   * Stores the current window binding for a p5 global if not tracked yet.
+   * @param {string} name - Global function name.
+   * @returns {void}
+   */
+  rememberP5WindowBinding(name) {
+    if (this._p5WindowBindings.has(name)) {
+      return;
+    }
+
+    const baselineBinding = this._p5BaselineBindings.get(name);
+    if (baselineBinding) {
+      this._p5WindowBindings.set(name, baselineBinding);
+      return;
+    }
+
+    this._p5WindowBindings.set(name, {
+      existed: Object.prototype.hasOwnProperty.call(window, name),
+      value: window[name],
+    });
+  }
+
+  /**
+   * Captures whether a global window binding exists and its current value.
+   * @param {string} name - Global function name.
+   * @returns {{existed: boolean, value: *}} Snapshot of the current binding.
+   */
+  getWindowBindingSnapshot(name) {
+    return {
+      existed: Object.prototype.hasOwnProperty.call(window, name),
+      value: window[name],
+    };
+  }
+
+  /**
+   * Binds one p5 function to window while tracking the previous binding.
+   * @param {string} name - Global function name.
+   * @param {Function} fn - Function implementation.
+   * @returns {void}
+   */
+  bindP5WindowFunction(name, fn) {
+    if (typeof fn !== 'function') {
+      return;
+    }
+
+    this.rememberP5WindowBinding(name);
+    window[name] = fn;
+  }
+
+  /**
+   * Restores all window globals that were overridden for p5 execution.
+   * @returns {void}
+   */
+  restoreP5WindowBindings() {
+    this._p5WindowBindings.forEach((binding, name) => {
+      if (binding?.existed) {
+        window[name] = binding.value;
+      } else {
+        delete window[name];
+      }
+    });
+
+    this._p5WindowBindings.clear();
+  }
+
+  /**
    * Mounts a p5 sketch into the provided canvas container.
    * @param {HTMLElement} canvasDiv - Canvas mount target.
    * @returns {void}
@@ -432,6 +503,11 @@ await _h5p_main()
       console.error(getPythonL10nValue(this.l10n, 'pyodideP5Missing'));
       return;
     }
+
+    const learnerSetup = typeof window.setup === 'function' ? window.setup : null;
+    const learnerDraw = typeof window.draw === 'function' ? window.draw : null;
+
+    this.restoreP5WindowBindings();
 
     if (this.p5Instance) {
       this.p5Instance.remove();
@@ -446,22 +522,34 @@ await _h5p_main()
     const sketch = (p) => {
       runner.p5Instance = p;
 
-      if (window.setup) {
-        p.setup = () => window.setup();
+      if (learnerSetup) {
+        p.setup = () => learnerSetup();
       }
-      if (window.draw) {
+      if (learnerDraw) {
         p.draw = () => {
           if (runner.stopped) {
             p.noLoop();
             return;
           }
-          window.draw();
+          learnerDraw();
         };
+      }
+
+      if (learnerSetup) {
+        runner.bindP5WindowFunction('setup', (...args) => p.setup?.(...args));
+      }
+
+      if (learnerDraw) {
+        runner.bindP5WindowFunction('draw', (...args) => p.draw?.(...args));
       }
 
       Object.getOwnPropertyNames(p.__proto__).forEach((name) => {
         if (typeof p[name] === 'function') {
-          window[name] = (...args) => p[name](...args);
+          if (name === 'constructor') {
+            return;
+          }
+
+          runner.bindP5WindowFunction(name, (...args) => p[name](...args));
         }
       });
     };

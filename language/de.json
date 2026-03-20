@@ -34,6 +34,10 @@
       "label": "Advanced Runtime Options",
       "fields": [
         {
+          "label": "Konsole anzeigen",
+          "description": "Wenn aktiviert, wird die integrierte Konsole unterhalb des Editors angezeigt."
+        },
+        {
           "label": "Disable output popups",
           "description": "If enabled, program output will only be written to the console and not shown in popup dialogs."
         },

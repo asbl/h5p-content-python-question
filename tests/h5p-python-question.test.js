@@ -53,6 +53,7 @@ describe('PythonQuestion', () => {
         ],
       },
       advancedOptions: {
+        showConsole: false,
         disableOutputPopups: true,
         enableImageUploads: true,
         enableSoundUploads: true,
@@ -76,6 +77,7 @@ describe('PythonQuestion', () => {
     });
     expect(question.getCodeContainerOptions()).toEqual({
       fromParent: true,
+      hasConsole: false,
       enableImageUploads: true,
       enableSoundUploads: true,
       showSaveLoadButtons: false,
@@ -96,10 +98,12 @@ describe('PythonQuestion', () => {
       editorMode: 'code',
       blocklyCategories: null,
     });
+    expect(question.hasConsole).toBe(false);
     expect(question.getAdvancedOption('enableSoundUploads')).toBe(true);
     expect(question.getAdvancedOption('missingOption')).toBe(false);
     expect(question.shouldEnableSoundUploads()).toBe(true);
     expect(question.shouldEnableSaveLoadButtons()).toBe(false);
+    expect(question.shouldShowConsole()).toBe(false);
   });
 
   it('supports the object-based pyodide package format and default runner', () => {
@@ -119,6 +123,7 @@ describe('PythonQuestion', () => {
     expect(question.shouldEnableImageUploads()).toBe(false);
     expect(question.getCodeContainerOptions()).toEqual({
       fromParent: true,
+      hasConsole: true,
       enableImageUploads: false,
       enableSoundUploads: false,
       showSaveLoadButtons: true,
@@ -132,6 +137,8 @@ describe('PythonQuestion', () => {
       editorMode: 'code',
       blocklyCategories: null,
     });
+    expect(question.hasConsole).toBe(true);
+    expect(question.shouldShowConsole()).toBe(true);
     expect(question.getRuntimeOptions().executionLimit).toBe(0);
     expect(question.getRuntimeOptions().projectStorageEnabled).toBe(false);
   });

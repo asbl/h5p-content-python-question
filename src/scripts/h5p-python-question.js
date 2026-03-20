@@ -27,6 +27,7 @@ export default class PythonQuestion extends H5P.CodeQuestion {
 
     // Recreate tester so it also uses the updated localization chain.
     this.codeTester = this.getCodeTesterFactory().create();
+    this.hasConsole = this.shouldShowConsole();
 
     this.pythonRunner = this.pythonConfig.runner;
   }
@@ -86,6 +87,14 @@ export default class PythonQuestion extends H5P.CodeQuestion {
    */
   shouldEnableSaveLoadButtons() {
     return this.getAdvancedOption('enableSaveLoadButtons');
+  }
+
+  /**
+   * Indicates whether the integrated console should be visible.
+   * @returns {boolean} True if the console should be shown.
+   */
+  shouldShowConsole() {
+    return this.getAdvancedOption('showConsole');
   }
 
   /**

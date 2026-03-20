@@ -122,10 +122,11 @@ export function normalizePythonRunner(runner) {
 /**
  * Normalizes advanced runtime options from semantics.
  * @param {object} [advancedOptions] - Raw advanced options.
- * @returns {{disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}} Normalized options.
+ * @returns {{showConsole: boolean, disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}} Normalized options.
  */
 export function normalizePythonAdvancedOptions(advancedOptions = {}) {
   return {
+    showConsole: advancedOptions?.showConsole !== false,
     disableOutputPopups: advancedOptions?.disableOutputPopups === true,
     enableImageUploads: advancedOptions?.enableImageUploads === true,
     enableSoundUploads: advancedOptions?.enableSoundUploads === true,
@@ -139,7 +140,7 @@ export function normalizePythonAdvancedOptions(advancedOptions = {}) {
  * Per-editor fields (sourceFiles, allowAddingFiles) are NOT included here;
  * they are resolved per-container via buildPythonCodeContainerOptions.
  * @param {object} [params] - Raw PythonQuestion params.
- * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], advancedOptions: {disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}}} Normalized config.
+ * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], advancedOptions: {showConsole: boolean, disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}}} Normalized config.
  */
 export function normalizePythonQuestionConfig(params = {}) {
   const runner = normalizePythonRunner(params.pythonRunner);
@@ -178,6 +179,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
 
   return {
     ...baseOptions,
+    hasConsole: config?.advancedOptions?.showConsole !== false,
     enableImageUploads: config?.advancedOptions?.enableImageUploads === true,
     enableSoundUploads: config?.advancedOptions?.enableSoundUploads === true,
     showSaveLoadButtons: config?.advancedOptions?.enableSaveLoadButtons !== false,

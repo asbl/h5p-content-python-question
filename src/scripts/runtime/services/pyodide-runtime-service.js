@@ -195,6 +195,7 @@ export function installPyodideRuntimeCompatibility(pyodide) {
 
   state.compatibilityPromise = pyodide.runPythonAsync(`
 import asyncio
+import ast as _h5p_ast
 import sys as _h5p_sys
 import time as _h5p_time
 
@@ -285,6 +286,74 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     _h5p_background_task = None
     _h5p_background_task_started = False
     return True
+
+  class _h5p_await_input_transformer(_h5p_ast.NodeTransformer):
+    def __init__(self):
+      super().__init__()
+      self._inside_await = False
+
+    def visit_Await(self, node):
+      previous = self._inside_await
+      self._inside_await = True
+      self.generic_visit(node)
+      self._inside_await = previous
+      return node
+
+    def visit_Call(self, node):
+      self.generic_visit(node)
+      if (
+        not self._inside_await
+        and isinstance(node.func, _h5p_ast.Name)
+        and node.func.id == 'input'
+      ):
+        return _h5p_ast.copy_location(_h5p_ast.Await(value=node), node)
+      return node
+
+  def _h5p_build_async_input_module(source):
+    source = '' if source is None else str(source)
+    tree = _h5p_ast.parse(source, mode='exec')
+    transformed_body = _h5p_await_input_transformer().visit(tree).body
+
+    if not transformed_body:
+      transformed_body = [_h5p_ast.Pass()]
+
+    async_main = _h5p_ast.AsyncFunctionDef(
+      name='_h5p_main',
+      args=_h5p_ast.arguments(
+        posonlyargs=[],
+        args=[],
+        kwonlyargs=[],
+        kw_defaults=[],
+        defaults=[]
+      ),
+      body=transformed_body,
+      decorator_list=[],
+      returns=None,
+      type_comment=None,
+    )
+
+    module = _h5p_ast.Module(
+      body=[
+        async_main,
+        _h5p_ast.Expr(
+          value=_h5p_ast.Await(
+            value=_h5p_ast.Call(
+              func=_h5p_ast.Name(id='_h5p_main', ctx=_h5p_ast.Load()),
+              args=[],
+              keywords=[],
+            ),
+          ),
+        ),
+      ],
+      type_ignores=[],
+    )
+
+    return _h5p_ast.fix_missing_locations(module)
+
+  async def _h5p_run_with_async_input(source):
+    module = _h5p_build_async_input_module(source)
+    namespace = globals()
+    exec(compile(module, '<h5p-learner-code>', 'exec'), namespace, namespace)
 
   def _h5p_asyncio_run(main, *args, **kwargs):
     global _h5p_background_task, _h5p_background_task_started

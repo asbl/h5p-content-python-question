@@ -48,6 +48,13 @@
         "label": "Advanced Runtime Options",
         "fields": [
             {
+                "name": "showConsole",
+                "type": "boolean",
+                "label": "Show console",
+                "description": "If enabled, the integrated console will be shown below the editor.",
+                "default": true
+            },
+            {
                 "name": "disableOutputPopups",
                 "type": "boolean",
                 "label": "Disable output popups",

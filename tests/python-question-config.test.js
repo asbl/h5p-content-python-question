@@ -27,6 +27,7 @@ describe('Python question config', () => {
       enableSaveLoadButtons: false,
       execLimit: 1500.9,
     })).toEqual({
+      showConsole: true,
       disableOutputPopups: true,
       enableImageUploads: true,
       enableSoundUploads: true,
@@ -96,6 +97,7 @@ describe('Python question config', () => {
       ],
       packages: ['numpy', 'pygame-ce', 'sqlite3'],
       advancedOptions: {
+        showConsole: true,
         disableOutputPopups: true,
         enableImageUploads: true,
         enableSoundUploads: true,
@@ -120,6 +122,7 @@ describe('Python question config', () => {
 
     expect(buildPythonCodeContainerOptions({ fromParent: true }, config, editorParams)).toEqual({
       fromParent: true,
+      hasConsole: true,
       enableImageUploads: true,
       enableSoundUploads: true,
       showSaveLoadButtons: false,
@@ -148,6 +151,20 @@ describe('Python question config', () => {
       disableOutputPopups: true,
       executionLimit: 2750,
       projectStorageEnabled: true,
+    });
+  });
+
+  it('disables the container console when showConsole is false', () => {
+    const config = normalizePythonQuestionConfig({
+      pythonRunner: 'skulpt',
+      advancedOptions: {
+        showConsole: false,
+      },
+    });
+
+    expect(config.advancedOptions.showConsole).toBe(false);
+    expect(buildPythonCodeContainerOptions({ fromParent: true }, config, {})).toMatchObject({
+      hasConsole: false,
     });
   });
 
