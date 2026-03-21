@@ -38,7 +38,9 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
   prepareForRun() {
     super.prepareForRun();
     if (this.containsCanvasCode(this.getCode())) {
-      this.getCanvasManager().attachCanvas('testcase', this.codeTester.testCaseIndex);
+      const testCaseIndex = this.codeTester?.session?.testCaseIndex
+        ?? this.codeTester?.testCaseIndex;
+      this.getCanvasManager().attachCanvas('testcase', testCaseIndex);
     }
   }
 

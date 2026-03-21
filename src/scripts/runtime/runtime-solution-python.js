@@ -48,7 +48,9 @@ export default class PythonSolutionRuntime extends H5P.SolutionRuntimeMixin(Pyth
   prepareForRun() {
     super.prepareForRun();
     if (this.containsCanvasCode(this.getCode())) {
-      this.getCanvasManager().attachCanvas('expected', this.codeTester.testCaseIndex);
+      const testCaseIndex = this.codeTester?.session?.testCaseIndex
+        ?? this.codeTester?.testCaseIndex;
+      this.getCanvasManager().attachCanvas('expected', testCaseIndex);
     }
   }
 

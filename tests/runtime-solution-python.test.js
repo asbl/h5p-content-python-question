@@ -139,7 +139,7 @@ describe('PythonSolutionRuntime', () => {
     const runtime = new PythonSolutionRuntime(vi.fn(), 'solution', { runner: 'pyodide' });
     runtime.codeTester = {
       view: { type: 'expected-view' },
-      testCaseIndex: 2,
+      session: { testCaseIndex: 2 },
     };
 
     const first = runtime.getCanvasManager();
@@ -155,7 +155,8 @@ describe('PythonSolutionRuntime', () => {
     const runtime = new PythonSolutionRuntime(vi.fn(), 'solution', { runner: 'pyodide' });
     runtime.codeTester = {
       view: { type: 'expected-view' },
-      testCaseIndex: 7,
+      testCaseIndex: 1,
+      session: { testCaseIndex: 7 },
     };
     vi.spyOn(runtime, 'containsCanvasCode').mockReturnValue(true);
 
@@ -169,7 +170,7 @@ describe('PythonSolutionRuntime', () => {
     const runtime = new PythonSolutionRuntime(vi.fn(), 'solution', { runner: 'pyodide' });
     runtime.codeTester = {
       view: { type: 'expected-view' },
-      testCaseIndex: 1,
+      session: { testCaseIndex: 1 },
     };
     vi.spyOn(runtime, 'containsCanvasCode').mockReturnValue(false);
 
