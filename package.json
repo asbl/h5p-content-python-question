@@ -6,9 +6,9 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "stylelint './src/**/*.scss' && eslint './src/**/*.js'",
-    "build": "webpack --mode=production",
-    "watch": "webpack --watch --mode=development"
+    "lint": "stylelint --allow-empty-input './src/**/*.scss' && eslint './src/**/*.js'",
+    "build": "webpack",
+    "watch": "webpack --watch"
   },
   "repository": {
     "type": "git",
