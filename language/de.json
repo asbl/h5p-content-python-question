@@ -116,10 +116,6 @@
               }
             ]
           }
-        },
-        {
-          "label": "Lernenden das Hinzufügen von Dateien erlauben",
-          "description": "Wenn aktiviert, können Lernende eigene Python-Dateien anlegen, umbenennen und löschen. Im Tab-Streifen erscheint ein '+'-Button sowie ein Dateimanager."
         }
       ]
     },
