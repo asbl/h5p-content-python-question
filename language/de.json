@@ -3,7 +3,6 @@
     {
       "label": "Type",
       "description": "Type of H5P Content ",
-      "default": "please_choose",
       "options": [
         {
           "label": "Please choose"
@@ -22,7 +21,6 @@
     {
       "label": "Python Runner",
       "description": "Choose the Python interpreter used for code execution",
-      "default": "skulpt",
       "options": [
         {
           "label": "Skulpt (browser-based, fast)"
@@ -37,33 +35,27 @@
       "fields": [
         {
           "label": "Konsole anzeigen",
-          "description": "Wenn aktiviert, wird die integrierte Konsole unterhalb des Editors angezeigt.",
-          "default": true
+          "description": "Wenn aktiviert, wird die integrierte Konsole unterhalb des Editors angezeigt."
         },
         {
           "label": "Disable output popups",
-          "description": "If enabled, program output will only be written to the console and not shown in popup dialogs.",
-          "default": false
+          "description": "If enabled, program output will only be written to the console and not shown in popup dialogs."
         },
         {
           "label": "Show save and load buttons",
-          "description": "If enabled, learners can download their code and load it again later using the shared save/load buttons.",
-          "default": true
+          "description": "If enabled, learners can download their code and load it again later using the shared save/load buttons."
         },
         {
           "label": "Enable image uploads",
-          "description": "If enabled, learners can upload images during runtime and access them in their code.",
-          "default": false
+          "description": "If enabled, learners can upload images during runtime and access them in their code."
         },
         {
           "label": "Enable sound uploads",
-          "description": "If enabled, learners can upload sounds and music during runtime and access them in their code.",
-          "default": false
+          "description": "If enabled, learners can upload sounds and music during runtime and access them in their code."
         },
         {
           "label": "Execution Limit",
-          "description": "Maximum number of Python execution steps allowed. Use to prevent infinite loops. [0: No limit]",
-          "default": 0
+          "description": "Maximum number of Python execution steps allowed. Use to prevent infinite loops. [0: No limit]"
         }
       ]
     },
@@ -72,8 +64,8 @@
       "fields": [
         {
           "label": "Pyodide-Packages",
-          "description": "Additional Pyodide packages that should be loaded before execution.",
           "entity": "package",
+          "description": "Additional Pyodide packages that should be loaded before execution.",
           "field": {
             "label": "Paket",
             "options": [
@@ -136,7 +128,6 @@
           {
             "label": "Type",
             "description": "Type of H5P Content ",
-            "default": "text",
             "options": [
               {
                 "label": "Text"
@@ -154,17 +145,11 @@
           },
           {
             "label": "Text",
-            "description": "Write general description as markdown code",
-            "options": [
-              {}
-            ]
+            "description": "Write general description as markdown code"
           },
           {
             "label": "Solution Code in Spoiler-Tags",
-            "description": "Solution Code in Spoiler-Tags",
-            "options": [
-              {}
-            ]
+            "description": "Solution Code in Spoiler-Tags"
           },
           {
             "label": "Image",
@@ -172,20 +157,16 @@
           },
           {
             "label": "Show Editor?",
-            "description": "Should an editor displayed to the user",
-            "default": false
+            "description": "Should an editor displayed to the user"
           },
           {
             "label": "Code",
-            "description": "Write general description as markdown code",
-            "options": [
-              {}
-            ]
+            "description": "Write general description as markdown code"
           },
           {
             "label": "Zusätzliche Python-Dateien",
-            "description": "Zusätzliche Python-Module für diesen Editor (nur Pyodide).",
             "entity": "file",
+            "description": "Zusätzliche Python-Module für diesen Editor (nur Pyodide).",
             "field": {
               "label": "Python-Datei",
               "fields": [
@@ -194,34 +175,26 @@
                   "description": "Python-Modulname, z. B. helper.py"
                 },
                 {
-                  "label": "Code",
-                  "default": "",
-                  "options": [
-                    {}
-                  ]
+                  "label": "Code"
                 },
                 {
                   "label": "Datei im Editor anzeigen",
-                  "description": "Wenn aktiviert, können Lernende in diese Datei wechseln.",
-                  "default": true
+                  "description": "Wenn aktiviert, können Lernende in diese Datei wechseln."
                 },
                 {
                   "label": "Lernende können die Datei bearbeiten",
-                  "description": "Wenn aktiviert, können Lernende diese Datei verändern.",
-                  "default": true
+                  "description": "Wenn aktiviert, können Lernende diese Datei verändern."
                 }
               ]
             }
           },
           {
             "label": "Lernenden das Hinzufügen von Dateien erlauben",
-            "description": "Wenn aktiviert, können Lernende eigene Python-Dateien anlegen, umbenennen und löschen. Gilt nur bei Pyodide.",
-            "default": false
+            "description": "Wenn aktiviert, können Lernende eigene Python-Dateien anlegen, umbenennen und löschen. Gilt nur bei Pyodide."
           },
           {
             "label": "Editor-Modus",
             "description": "Wähle, ob Lernende einen Code-Editor, einen blockbasierten Editor oder beide Ansichten mit Umschalter sehen.",
-            "default": "code",
             "options": [
               {
                 "label": "Code-Editor (CodeMirror)"
@@ -239,32 +212,25 @@
             "description": "Wähle, welche Block-Kategorien im Blockly-Editor angezeigt werden sollen. Standardmäßig sind alle Kategorien aktiv.",
             "fields": [
               {
-                "label": "Variablen",
-                "default": true
+                "label": "Variablen"
               },
               {
-                "label": "Logik",
-                "default": true
+                "label": "Logik"
               },
               {
-                "label": "Schleifen",
-                "default": true
+                "label": "Schleifen"
               },
               {
-                "label": "Mathematik",
-                "default": true
+                "label": "Mathematik"
               },
               {
-                "label": "Text",
-                "default": true
+                "label": "Text"
               },
               {
-                "label": "Listen",
-                "default": true
+                "label": "Listen"
               },
               {
-                "label": "Funktionen",
-                "default": true
+                "label": "Funktionen"
               }
             ]
           }
@@ -277,10 +243,7 @@
       "fields": [
         {
           "label": "Instructions",
-          "description": "Write instructions as markdown code",
-          "options": [
-            {}
-          ]
+          "description": "Write instructions as markdown code"
         },
         {
           "label": "Instructions Image",
@@ -288,32 +251,21 @@
         },
         {
           "label": "Pre code",
-          "description": "Code prepended before main program",
-          "default": "",
-          "options": [
-            {}
-          ]
+          "description": "Code prepended before main program"
         },
         {
           "label": "Default Code",
-          "description": "Add default code here, so that users can modify this code.",
           "default": "print(\"Hello World\")",
-          "options": [
-            {}
-          ]
+          "description": "Add default code here, so that users can modify this code."
         },
         {
           "label": "Post code",
-          "description": "Code appended after main program",
-          "default": "",
-          "options": [
-            {}
-          ]
+          "description": "Code appended after main program"
         },
         {
           "label": "Zusätzliche Python-Dateien",
-          "description": "Zusätzliche Python-Module, die bei der Verwendung von Pyodide per Import verfügbar sind. Modulnamen wie helper.py verwenden.",
           "entity": "file",
+          "description": "Zusätzliche Python-Module, die bei der Verwendung von Pyodide per Import verfügbar sind. Modulnamen wie helper.py verwenden.",
           "field": {
             "label": "Python-Datei",
             "fields": [
@@ -322,34 +274,26 @@
                 "description": "Python-ModulDateiname, z. B. helper.py"
               },
               {
-                "label": "Code",
-                "default": "",
-                "options": [
-                  {}
-                ]
+                "label": "Code"
               },
               {
                 "label": "Datei im Editor anzeigen",
-                "description": "Wenn aktiviert, können Lernende in diese Datei im Editor wechseln.",
-                "default": true
+                "description": "Wenn aktiviert, können Lernende in diese Datei im Editor wechseln."
               },
               {
                 "label": "Lernende können die Datei bearbeiten",
-                "description": "Wenn aktiviert, können Lernende diese Datei im Editor verändern.",
-                "default": true
+                "description": "Wenn aktiviert, können Lernende diese Datei im Editor verändern."
               }
             ]
           }
         },
         {
           "label": "Lernenden das Hinzufügen von Dateien erlauben",
-          "description": "Wenn aktiviert, können Lernende eigene Python-Dateien anlegen, umbenennen und löschen. Im Tab-Streifen erscheint ein '+'-Button sowie ein Dateimanager. Gilt nur bei Pyodide.",
-          "default": false
+          "description": "Wenn aktiviert, können Lernende eigene Python-Dateien anlegen, umbenennen und löschen. Im Tab-Streifen erscheint ein '+'-Button sowie ein Dateimanager. Gilt nur bei Pyodide."
         },
         {
           "label": "Editor-Modus",
           "description": "Wähle, ob Lernende einen Code-Editor, einen blockbasierten Editor oder beide Ansichten mit Umschalter sehen.",
-          "default": "code",
           "options": [
             {
               "label": "Code-Editor (CodeMirror)"
@@ -367,32 +311,25 @@
           "description": "Wähle, welche Block-Kategorien im Blockly-Editor angezeigt werden sollen. Standardmäßig sind alle Kategorien aktiv.",
           "fields": [
             {
-              "label": "Variablen",
-              "default": true
+              "label": "Variablen"
             },
             {
-              "label": "Logik",
-              "default": true
+              "label": "Logik"
             },
             {
-              "label": "Schleifen",
-              "default": true
+              "label": "Schleifen"
             },
             {
-              "label": "Mathematik",
-              "default": true
+              "label": "Mathematik"
             },
             {
-              "label": "Text",
-              "default": true
+              "label": "Text"
             },
             {
-              "label": "Listen",
-              "default": true
+              "label": "Listen"
             },
             {
-              "label": "Funktionen",
-              "default": true
+              "label": "Funktionen"
             }
           ]
         }
@@ -405,7 +342,6 @@
         {
           "label": "Grading method",
           "description": "Grading methods",
-          "default": "please_choose",
           "options": [
             {
               "label": "Please choose"
@@ -422,8 +358,7 @@
           "label": "Due Date Settings",
           "fields": [
             {
-              "label": "Enable Due Date",
-              "default": false
+              "label": "Enable Due Date"
             },
             {
               "label": "Due Date",
@@ -439,8 +374,7 @@
             "fields": [
               {
                 "label": "Hidden Testcase",
-                "description": "Input- and Output values are not shown to user.",
-                "default": false
+                "description": "Input- and Output values are not shown to user."
               },
               {
                 "label": "Inputs",
