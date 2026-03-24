@@ -60,6 +60,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
    * @returns {void}
    */
   onCanvasPageShown() {
+    this._runtime?.runner?.acquireInputFocus?.();
     this.hideCanvasButton();
   }
 
@@ -68,6 +69,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
    * @returns {void}
    */
   onCanvasPageHidden() {
+    this._runtime?.runner?.releaseInputFocus?.();
     if (!this.getPageManager().isEmpty('canvas')) {
       this.getButtonManager().showButton('canvas');
       this.registerDOM();

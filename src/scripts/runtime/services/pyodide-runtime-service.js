@@ -64,6 +64,9 @@ export function setActivePyodideSDLCanvas(canvas) {
   }
 
   if (!canvas) {
+    if (state.activeSDLCanvas?.id === 'canvas') {
+      state.activeSDLCanvas.id = `canvas-inactive-${H5P.createUUID()}`;
+    }
     state.activeSDLCanvas = null;
     return;
   }

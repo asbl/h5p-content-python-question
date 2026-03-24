@@ -7,7 +7,12 @@ const mocks = vi.hoisted(() => ({
   loadMissingPyodidePackages: vi.fn(() => Promise.resolve()),
   resetPyodideBackgroundTaskState: vi.fn(() => Promise.resolve()),
   setActivePyodideRuntime: vi.fn(),
+  setActivePyodideSDLCanvas: vi.fn(),
   setPyodideExecutionLimit: vi.fn(() => Promise.resolve()),
+  sharedPyodideRuntimeState: {
+    sharedPyodidePromise: null,
+    activeSDLCanvas: null,
+  },
 }));
 
 vi.mock('../src/scripts/runtime/services/pyodide-package-service', () => ({
@@ -48,11 +53,9 @@ vi.mock('../src/scripts/runtime/services/pyodide-runtime-service', () => ({
   installPyodideRuntimeCompatibility: vi.fn(() => Promise.resolve()),
   resetPyodideBackgroundTaskState: mocks.resetPyodideBackgroundTaskState,
   setActivePyodideRuntime: mocks.setActivePyodideRuntime,
-  setActivePyodideSDLCanvas: vi.fn(),
+  setActivePyodideSDLCanvas: mocks.setActivePyodideSDLCanvas,
   setPyodideExecutionLimit: mocks.setPyodideExecutionLimit,
-  sharedPyodideRuntimeState: {
-    sharedPyodidePromise: null,
-  },
+  sharedPyodideRuntimeState: mocks.sharedPyodideRuntimeState,
 }));
 
 const { default: PyodideRunner } = await import('../src/scripts/runtime/pyodiderunner.js');
@@ -86,6 +89,8 @@ function createRuntime() {
 describe('PyodideRunner', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.sharedPyodideRuntimeState.sharedPyodidePromise = null;
+    mocks.sharedPyodideRuntimeState.activeSDLCanvas = null;
   });
 
   it('applies and clears the execution limit around learner code execution', async () => {
@@ -237,5 +242,59 @@ describe('PyodideRunner', () => {
     } else {
       window.p5 = previousP5;
     }
+  });
+
+  it('rebinds SDL rendering to the visible canvas when acquiring input focus', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const canvas = document.createElement('canvas');
+    const focus = vi.fn();
+
+    canvas.focus = focus;
+    document.body.appendChild(canvas);
+
+    runner.sdlCanvas = canvas;
+    runner.pyodide = {
+      canvas: {
+        setCanvas2D: vi.fn(),
+      },
+    };
+
+    runner.acquireInputFocus();
+
+    expect(runner.pyodide.canvas.setCanvas2D).toHaveBeenCalledWith(canvas);
+    expect(mocks.setActivePyodideSDLCanvas).toHaveBeenCalledWith(canvas);
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('rebinds SDL rendering to an inert canvas when releasing input focus', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const canvas = document.createElement('canvas');
+    const blur = vi.fn();
+
+    canvas.blur = blur;
+    document.body.appendChild(canvas);
+    canvas.focus();
+
+    runner.sdlCanvas = canvas;
+    runner.pyodide = {
+      canvas: {
+        setCanvas2D: vi.fn(),
+      },
+    };
+    mocks.sharedPyodideRuntimeState.activeSDLCanvas = canvas;
+
+    runner.releaseInputFocus();
+
+    expect(blur).toHaveBeenCalledTimes(1);
+    expect(runner.pyodide.canvas.setCanvas2D).toHaveBeenCalledTimes(1);
+
+    const [[inactiveCanvas]] = runner.pyodide.canvas.setCanvas2D.mock.calls;
+    expect(inactiveCanvas).toBeInstanceOf(HTMLCanvasElement);
+    expect(inactiveCanvas).not.toBe(canvas);
+    expect(inactiveCanvas.width).toBe(1);
+    expect(inactiveCanvas.height).toBe(1);
+    expect(mocks.setActivePyodideSDLCanvas).toHaveBeenCalledWith(null);
   });
 });

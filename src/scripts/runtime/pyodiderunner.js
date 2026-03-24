@@ -50,6 +50,7 @@ export default class PyodideRunner {
     this.canvasWrapper = null;
     this.canvasDiv = null;
     this.sdlCanvas = null;
+    this._inactiveSDLCanvas = null;
     this.hasBackgroundTask = false;
     this._resizeTimeout = null;
     this._p5WindowBindings = new Map();
@@ -353,6 +354,7 @@ export default class PyodideRunner {
     this.restoreP5WindowBindings();
 
     if (this.sdlCanvas) {
+      this.releaseInputFocus();
       this.sdlCanvas = null;
     }
 
@@ -494,6 +496,64 @@ export default class PyodideRunner {
   }
 
   /**
+   * Gives keyboard focus to the active SDL canvas when available.
+   * @returns {void}
+   */
+  acquireInputFocus() {
+    if (!this.sdlCanvas?.isConnected) {
+      return;
+    }
+
+    this.pyodide?.canvas?.setCanvas2D?.(this.sdlCanvas);
+    setActivePyodideSDLCanvas(this.sdlCanvas);
+    this.sdlCanvas.focus();
+  }
+
+  /**
+   * Returns a detached fallback canvas used when SDL should stop targeting the
+   * visible learner canvas.
+   * @returns {HTMLCanvasElement|null} Detached fallback canvas.
+   */
+  getInactiveSDLCanvas() {
+    if (typeof document === 'undefined') {
+      return null;
+    }
+
+    if (!this._inactiveSDLCanvas) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      canvas.tabIndex = -1;
+      this._inactiveSDLCanvas = canvas;
+    }
+
+    return this._inactiveSDLCanvas;
+  }
+
+  /**
+   * Releases keyboard focus from the SDL canvas when leaving the canvas page.
+   * @returns {void}
+   */
+  releaseInputFocus() {
+    if (!this.sdlCanvas) {
+      return;
+    }
+
+    if (typeof this.sdlCanvas.blur === 'function') {
+      this.sdlCanvas.blur();
+    }
+
+    const inactiveCanvas = this.getInactiveSDLCanvas();
+    if (inactiveCanvas) {
+      this.pyodide?.canvas?.setCanvas2D?.(inactiveCanvas);
+    }
+
+    if (sharedPyodideRuntimeState.activeSDLCanvas === this.sdlCanvas) {
+      setActivePyodideSDLCanvas(null);
+    }
+  }
+
+  /**
    * Mounts a p5 sketch into the provided canvas container.
    * @param {HTMLElement} canvasDiv - Canvas mount target.
    * @returns {void}
@@ -584,15 +644,13 @@ export default class PyodideRunner {
 
     canvasDiv.appendChild(canvas);
 
-    setActivePyodideSDLCanvas(canvas);
-
     if (this.pyodide?._api) {
       this.pyodide._api._skip_unwind_fatal_error = true;
     }
 
     this.pyodide.canvas.setCanvas2D(canvas);
     this.sdlCanvas = canvas;
-    canvas.focus();
+    this.acquireInputFocus();
     this.triggerResizeAfterCanvasUpdate();
 
     return canvas;

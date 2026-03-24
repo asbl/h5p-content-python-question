@@ -49,6 +49,16 @@ describe('Pyodide runtime service', () => {
     expect(sharedPyodideRuntimeState.activeSDLCanvas).toBe(secondCanvas);
   });
 
+  it('releases the active SDL canvas binding when cleared', () => {
+    const canvas = document.createElement('canvas');
+
+    setActivePyodideSDLCanvas(canvas);
+    setActivePyodideSDLCanvas(null);
+
+    expect(canvas.id).toMatch(/^canvas-inactive-/);
+    expect(sharedPyodideRuntimeState.activeSDLCanvas).toBeNull();
+  });
+
   it('installs and clears the execution-limit trace helpers', async () => {
     const pyodide = {
       runPythonAsync: vi.fn().mockResolvedValue(undefined),
