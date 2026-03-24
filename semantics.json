@@ -522,6 +522,7 @@
         "label": "Editor Settings",
         "widget": "showWhen",
         "showWhen": {
+            "detach": true,
             "rules": [
                 {
                     "field": "contentType",
@@ -742,6 +743,7 @@
         "label": "Grading Settings",
         "widget": "showWhen",
         "showWhen": {
+            "detach": true,
             "rules": [
                 {
                     "field": "contentType",
