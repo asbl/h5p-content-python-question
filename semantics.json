@@ -520,8 +520,9 @@
         "name": "editorSettings",
         "type": "group",
         "label": "Editor Settings",
-        "widget": "pythonQuestionShowWhen",
+        "widget": "showWhen",
         "showWhen": {
+            "detach": true,
             "rules": [
                 {
                     "field": "contentType",
@@ -740,8 +741,9 @@
         "name": "gradingSettings",
         "type": "group",
         "label": "Grading Settings",
-        "widget": "pythonQuestionShowWhen",
+        "widget": "showWhen",
         "showWhen": {
+            "detach": true,
             "rules": [
                 {
                     "field": "contentType",
