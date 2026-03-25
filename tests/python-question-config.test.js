@@ -72,10 +72,9 @@ describe('Python question config', () => {
       pythonRunner: 'pyodide',
       pyodideOptions: {
         packages: [
-          'numpy',
-          { package: 'pygame-ce' },
+          'miniworlds',
           { package: { value: 'sqlite3' } },
-          { value: 'numpy' },
+          { value: 'miniworlds' },
         ],
       },
       advancedOptions: {
@@ -90,12 +89,11 @@ describe('Python question config', () => {
     expect(config).toEqual({
       runner: 'pyodide',
       pyodidePackageEntries: [
-        'numpy',
-        { package: 'pygame-ce' },
+        'miniworlds',
         { package: { value: 'sqlite3' } },
-        { value: 'numpy' },
+        { value: 'miniworlds' },
       ],
-      packages: ['numpy', 'pygame-ce', 'sqlite3'],
+      packages: ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
       advancedOptions: {
         showConsole: true,
         disableOutputPopups: true,
@@ -142,13 +140,13 @@ describe('Python question config', () => {
       projectBundleType: 'h5p-python-question-project',
       editorMode: 'blocks',
       blocklyCategories: { variables: true, logic: false, loops: true, math: false, text: true, lists: false, functions: false },
-      blocklyPackages: ['numpy', 'pygame-ce', 'sqlite3'],
+      blocklyPackages: ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
     });
 
     expect(buildPythonRuntimeOptions(config, { pyodideReady: 'Ready' })).toEqual({
       runner: 'pyodide',
       l10n: { pyodideReady: 'Ready' },
-      packages: ['numpy', 'pygame-ce', 'sqlite3'],
+      packages: ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
       disableOutputPopups: true,
       executionLimit: 2750,
       projectStorageEnabled: true,

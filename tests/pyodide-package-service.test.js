@@ -23,7 +23,7 @@ describe('Pyodide package service', () => {
 
     await loadMissingPyodidePackages(pyodide, ['numpy', 'miniworlds', 'numpy']);
 
-    expect(pyodide.loadPackage).toHaveBeenNthCalledWith(1, ['numpy']);
+    expect(pyodide.loadPackage).toHaveBeenNthCalledWith(1, ['numpy', 'pygame-ce']);
     expect(pyodide.loadPackage).toHaveBeenNthCalledWith(2, ['micropip']);
     expect(micropip.install).toHaveBeenCalledWith(['miniworlds']);
     expect(getLoadedPyodidePackages(pyodide).has('numpy')).toBe(true);

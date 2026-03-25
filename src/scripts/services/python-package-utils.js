@@ -62,6 +62,26 @@ function normalizePythonPackageEntry(entry) {
 }
 
 /**
+ * Adds one package and its transitive dependencies while preserving order.
+ * @param {string} packageName - Normalized package name.
+ * @param {Set<string>} seen - Already added packages.
+ * @param {string[]} packageNames - Target package list.
+ * @returns {void}
+ */
+function addPythonPackageWithDependencies(packageName, seen, packageNames) {
+  if (!packageName || seen.has(packageName)) {
+    return;
+  }
+
+  seen.add(packageName);
+  packageNames.push(packageName);
+
+  getPythonPackageDependencies(packageName).forEach((dependencyName) => {
+    addPythonPackageWithDependencies(dependencyName, seen, packageNames);
+  });
+}
+
+/**
  * Normalizes and de-duplicates Python package entries.
  * @param {Array<*>} [entries] - Raw package entries.
  * @returns {string[]} Unique package names.
@@ -77,8 +97,7 @@ export function normalizePythonPackageEntries(entries = []) {
       return;
     }
 
-    seen.add(packageName);
-    packageNames.push(packageName);
+    addPythonPackageWithDependencies(packageName, seen, packageNames);
   });
 
   return packageNames;

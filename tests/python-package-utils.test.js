@@ -11,11 +11,12 @@ describe('Python package utils', () => {
   it('normalizes and de-duplicates mixed package entries', () => {
     expect(normalizePythonPackageEntries([
       'numpy',
+      'miniworlds',
       { package: 'pygame-ce' },
       { package: { value: 'sqlite3' } },
       { value: 'numpy' },
       { package: '   ' },
-    ])).toEqual(['numpy', 'pygame-ce', 'sqlite3']);
+    ])).toEqual(['numpy', 'miniworlds', 'pygame-ce', 'sqlite3']);
   });
 
   it('detects installable packages from import statements', () => {
@@ -38,7 +39,7 @@ from helper import value
   });
 
   it('splits packages by installer and exposes dependency packages', () => {
-    expect(splitPythonPackages(['numpy', 'miniworlds', 'pygame-ce'])).toEqual({
+    expect(splitPythonPackages(['miniworlds'])).toEqual({
       pyodidePackages: ['numpy', 'pygame-ce'],
       micropipPackages: ['miniworlds'],
     });
