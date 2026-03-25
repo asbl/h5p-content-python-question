@@ -499,8 +499,8 @@ export default class PyodideRunner {
       return;
     }
 
-    this.pyodide?.canvas?.setCanvas2D?.(this.sdlCanvas);
     setActivePyodideSDLCanvas(this.sdlCanvas);
+    this.pyodide?.canvas?.setCanvas2D?.(this.sdlCanvas);
     this.sdlCanvas.focus();
   }
 
@@ -540,11 +540,8 @@ export default class PyodideRunner {
 
     const inactiveCanvas = this.getInactiveSDLCanvas();
     if (inactiveCanvas) {
+      setActivePyodideSDLCanvas(inactiveCanvas);
       this.pyodide?.canvas?.setCanvas2D?.(inactiveCanvas);
-    }
-
-    if (sharedPyodideRuntimeState.activeSDLCanvas === this.sdlCanvas) {
-      setActivePyodideSDLCanvas(null);
     }
   }
 
@@ -643,7 +640,6 @@ export default class PyodideRunner {
       this.pyodide._api._skip_unwind_fatal_error = true;
     }
 
-    this.pyodide.canvas.setCanvas2D(canvas);
     this.sdlCanvas = canvas;
     this.acquireInputFocus();
     this.triggerResizeAfterCanvasUpdate();

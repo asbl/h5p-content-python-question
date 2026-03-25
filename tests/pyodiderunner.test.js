@@ -239,7 +239,8 @@ describe('PyodideRunner', () => {
     }
     if (typeof previousP5 === 'undefined') {
       delete window.p5;
-    } else {
+    }
+    else {
       window.p5 = previousP5;
     }
   });
@@ -283,8 +284,6 @@ describe('PyodideRunner', () => {
         setCanvas2D: vi.fn(),
       },
     };
-    mocks.sharedPyodideRuntimeState.activeSDLCanvas = canvas;
-
     runner.releaseInputFocus();
 
     expect(blur).toHaveBeenCalledTimes(1);
@@ -295,6 +294,29 @@ describe('PyodideRunner', () => {
     expect(inactiveCanvas).not.toBe(canvas);
     expect(inactiveCanvas.width).toBe(1);
     expect(inactiveCanvas.height).toBe(1);
-    expect(mocks.setActivePyodideSDLCanvas).toHaveBeenCalledWith(null);
+    expect(mocks.setActivePyodideSDLCanvas).toHaveBeenCalledWith(inactiveCanvas);
+  });
+
+  it('binds the visible SDL canvas only once during setup', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+
+    document.body.appendChild(canvasDiv);
+
+    runner.pyodide = {
+      canvas: {
+        setCanvas2D: vi.fn(),
+      },
+      _api: {},
+    };
+
+    const canvas = runner.setupSDLCanvas(canvasDiv);
+
+    expect(canvas).toBeInstanceOf(HTMLCanvasElement);
+    expect(runner.pyodide.canvas.setCanvas2D).toHaveBeenCalledTimes(1);
+    expect(mocks.setActivePyodideSDLCanvas).toHaveBeenCalledWith(canvas);
+
+    canvasDiv.remove();
   });
 });
