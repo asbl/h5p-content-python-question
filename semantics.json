@@ -456,7 +456,7 @@
                     "type": "group",
                     "label": "Blockly categories",
                     "description": "Select which block categories are available in the Blockly editor. All categories are included by default.",
-                    "widget": "showWhen",
+                    "widget": "pythonQuestionShowWhen",
                     "showWhen": {
                         "rules": [
                             {
@@ -677,7 +677,7 @@
                 "type": "group",
                 "label": "Blockly categories",
                 "description": "Select which block categories are available in the Blockly editor. All categories are included by default.",
-                "widget": "showWhen",
+                "widget": "pythonQuestionShowWhen",
                 "showWhen": {
                     "rules": [
                         {
