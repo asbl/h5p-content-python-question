@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   clearPyodideExecutionLimit,
+  getLoadedPyodidePackages,
   getPyodideRuntimeInput,
+  getSharedPyodide,
   resetSharedPyodideRuntimeState,
   setPyodideExecutionLimit,
   setActivePyodideRuntime,
@@ -14,6 +16,7 @@ import {
 describe('Pyodide runtime service', () => {
   beforeEach(() => {
     resetSharedPyodideRuntimeState();
+    window.loadPyodide = undefined;
   });
 
   it('routes output and input through the active runtime handlers', async () => {
@@ -87,5 +90,39 @@ describe('Pyodide runtime service', () => {
       2,
       '_h5p_clear_execution_limit()',
     );
+  });
+
+  it('creates isolated Pyodide instances with runtime-bound output handlers', async () => {
+    const runtimeA = { outputHandler: vi.fn(), inputHandler: vi.fn(() => 'A'), l10n: {} };
+    const runtimeB = { outputHandler: vi.fn(), inputHandler: vi.fn(() => 'B'), l10n: {} };
+
+    window.loadPyodide = vi
+      .fn()
+      .mockImplementation(({ stdout, stderr }) => Promise.resolve({
+        globals: { set: vi.fn() },
+        runPythonAsync: vi.fn().mockResolvedValue(undefined),
+        _stdout: stdout,
+        _stderr: stderr,
+      }));
+
+    const firstPyodide = await getSharedPyodide({}, runtimeA);
+    const secondPyodide = await getSharedPyodide({}, runtimeB);
+
+    expect(firstPyodide).not.toBe(secondPyodide);
+    firstPyodide._stdout('first');
+    secondPyodide._stdout('second');
+
+    expect(runtimeA.outputHandler).toHaveBeenCalledWith('first');
+    expect(runtimeB.outputHandler).toHaveBeenCalledWith('second');
+  });
+
+  it('tracks loaded packages per Pyodide instance', () => {
+    const firstPyodide = {};
+    const secondPyodide = {};
+
+    getLoadedPyodidePackages(firstPyodide).add('numpy');
+
+    expect(getLoadedPyodidePackages(firstPyodide).has('numpy')).toBe(true);
+    expect(getLoadedPyodidePackages(secondPyodide).has('numpy')).toBe(false);
   });
 });

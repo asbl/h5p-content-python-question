@@ -4,7 +4,10 @@ import {
   normalizePythonPackageEntries,
   splitPythonPackages,
 } from '../../services/python-package-utils';
-import { sharedPyodideRuntimeState } from './pyodide-runtime-service';
+import {
+  getLoadedPyodidePackages,
+  sharedPyodideRuntimeState,
+} from './pyodide-runtime-service';
 
 export {
   getImportedPythonPackages as getImportedPyodidePackages,
@@ -16,8 +19,14 @@ export {
  * Clears the shared set of already loaded packages.
  * @returns {void}
  */
-export function resetLoadedPyodidePackages() {
+export function resetLoadedPyodidePackages(pyodide = null) {
+  if (pyodide) {
+    getLoadedPyodidePackages(pyodide).clear();
+    return;
+  }
+
   sharedPyodideRuntimeState.loadedPackages.clear();
+  sharedPyodideRuntimeState.pyodideInstanceState = new WeakMap();
 }
 
 /**
@@ -25,9 +34,11 @@ export function resetLoadedPyodidePackages() {
  * @param {Array<*>} [packages] - Package entries.
  * @returns {void}
  */
-export function markLoadedPyodidePackages(packages = []) {
+export function markLoadedPyodidePackages(pyodide, packages = []) {
+  const loadedPackages = getLoadedPyodidePackages(pyodide);
+
   normalizePythonPackageEntries(packages).forEach((packageName) => {
-    sharedPyodideRuntimeState.loadedPackages.add(packageName);
+    loadedPackages.add(packageName);
   });
 }
 
@@ -37,12 +48,12 @@ export function markLoadedPyodidePackages(packages = []) {
  * @returns {Promise<void>} Resolves once micropip is installed.
  */
 export async function ensurePyodideMicropip(pyodide) {
-  if (sharedPyodideRuntimeState.loadedPackages.has('micropip')) {
+  if (getLoadedPyodidePackages(pyodide).has('micropip')) {
     return;
   }
 
   await pyodide.loadPackage(['micropip']);
-  markLoadedPyodidePackages(['micropip']);
+  markLoadedPyodidePackages(pyodide, ['micropip']);
 }
 
 /**
@@ -52,8 +63,9 @@ export async function ensurePyodideMicropip(pyodide) {
  * @returns {Promise<void>} Resolves once packages were installed.
  */
 export async function installPyodideMicropipPackages(pyodide, packages = []) {
+  const loadedPackages = getLoadedPyodidePackages(pyodide);
   const missingPackages = normalizePythonPackageEntries(packages)
-    .filter((packageName) => !sharedPyodideRuntimeState.loadedPackages.has(packageName));
+    .filter((packageName) => !loadedPackages.has(packageName));
 
   if (!missingPackages.length) {
     return;
@@ -72,7 +84,7 @@ export async function installPyodideMicropipPackages(pyodide, packages = []) {
     }
   }
 
-  markLoadedPyodidePackages([
+  markLoadedPyodidePackages(pyodide, [
     ...missingPackages,
     ...missingPackages.flatMap((packageName) => getPythonPackageDependencies(packageName)),
   ]);
@@ -85,8 +97,9 @@ export async function installPyodideMicropipPackages(pyodide, packages = []) {
  * @returns {Promise<void>} Resolves once all required packages are loaded.
  */
 export async function loadMissingPyodidePackages(pyodide, packages = []) {
+  const loadedPackages = getLoadedPyodidePackages(pyodide);
   const missingPackages = normalizePythonPackageEntries(packages)
-    .filter((packageName) => !sharedPyodideRuntimeState.loadedPackages.has(packageName));
+    .filter((packageName) => !loadedPackages.has(packageName));
 
   if (!missingPackages.length) {
     return;
@@ -96,7 +109,7 @@ export async function loadMissingPyodidePackages(pyodide, packages = []) {
 
   if (pyodidePackages.length) {
     await pyodide.loadPackage(pyodidePackages);
-    markLoadedPyodidePackages(pyodidePackages);
+    markLoadedPyodidePackages(pyodide, pyodidePackages);
   }
 
   if (micropipPackages.length) {

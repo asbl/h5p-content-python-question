@@ -7,8 +7,9 @@ import {
 import { normalizePythonExecutionLimit } from '../../services/python-execution-limit';
 
 /**
- * Shared Pyodide runtime state across all runner instances.
- * @type {{compatibilityPromise: Promise<*>|null, loadPyodidePromise: Promise<*>|null, sharedPyodidePromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, activeRuntime: object|null, activeSDLCanvas: HTMLCanvasElement|null, loadedPackages: Set<string>}}
+ * Shared Pyodide loader state across all runner instances.
+ * Per-instance Pyodide state is stored in a WeakMap keyed by the Pyodide object.
+ * @type {{loadPyodidePromise: Promise<*>|null, sharedPyodidePromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, compatibilityPromise: Promise<*>|null, activeRuntime: object|null, activeSDLCanvas: HTMLCanvasElement|null, loadedPackages: Set<string>, pyodideInstanceState: WeakMap<object, {compatibilityPromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, loadedPackages: Set<string>}>}}
  */
 export const sharedPyodideRuntimeState = {
   compatibilityPromise: null,
@@ -18,7 +19,37 @@ export const sharedPyodideRuntimeState = {
   activeRuntime: null,
   activeSDLCanvas: null,
   loadedPackages: new Set(),
+  pyodideInstanceState: new WeakMap(),
 };
+
+/**
+ * Returns the mutable state associated with one concrete Pyodide instance.
+ * @param {object} pyodide - Pyodide instance.
+ * @returns {{compatibilityPromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, loadedPackages: Set<string>}} Instance state.
+ */
+export function getPyodideInstanceState(pyodide) {
+  let instanceState = sharedPyodideRuntimeState.pyodideInstanceState.get(pyodide);
+
+  if (!instanceState) {
+    instanceState = {
+      compatibilityPromise: null,
+      inputOverridePromise: null,
+      loadedPackages: new Set(),
+    };
+    sharedPyodideRuntimeState.pyodideInstanceState.set(pyodide, instanceState);
+  }
+
+  return instanceState;
+}
+
+/**
+ * Returns the package registry for one concrete Pyodide instance.
+ * @param {object} pyodide - Pyodide instance.
+ * @returns {Set<string>} Loaded package names.
+ */
+export function getLoadedPyodidePackages(pyodide) {
+  return getPyodideInstanceState(pyodide).loadedPackages;
+}
 
 /**
  * Resets shared runtime state for tests or hard reloads.
@@ -32,6 +63,7 @@ export function resetSharedPyodideRuntimeState() {
   sharedPyodideRuntimeState.activeRuntime = null;
   sharedPyodideRuntimeState.activeSDLCanvas = null;
   sharedPyodideRuntimeState.loadedPackages.clear();
+  sharedPyodideRuntimeState.pyodideInstanceState = new WeakMap();
 }
 
 /**
@@ -124,15 +156,18 @@ export function ensurePyodideScript(url) {
  * @param {boolean} [isError] - Whether the text is stderr.
  * @returns {void}
  */
-export function writePyodideRuntimeOutput(text, isError = false) {
-  const activeRuntime = sharedPyodideRuntimeState.activeRuntime;
+export function writePyodideRuntimeOutput(text, runtimeOrIsError = false, isError = false) {
+  const activeRuntime = (runtimeOrIsError && typeof runtimeOrIsError === 'object')
+    ? runtimeOrIsError
+    : sharedPyodideRuntimeState.activeRuntime;
+  const treatAsError = typeof runtimeOrIsError === 'boolean' ? runtimeOrIsError : isError;
 
   if (activeRuntime?.outputHandler) {
     activeRuntime.outputHandler(text);
     return;
   }
 
-  if (isError) {
+  if (treatAsError) {
     console.error(text);
   }
 }
@@ -142,9 +177,9 @@ export function writePyodideRuntimeOutput(text, isError = false) {
  * @param {string} [promptText] - Prompt shown to the learner.
  * @returns {Promise<string>} User input string.
  */
-export function getPyodideRuntimeInput(promptText = '') {
-  const activeRuntime = sharedPyodideRuntimeState.activeRuntime;
-  const l10n = getActivePyodideL10n();
+export function getPyodideRuntimeInput(promptText = '', runtime = null) {
+  const activeRuntime = runtime || sharedPyodideRuntimeState.activeRuntime;
+  const l10n = activeRuntime?.l10n || getActivePyodideL10n();
 
   if (activeRuntime?.inputHandler) {
     return Promise.resolve(
@@ -160,14 +195,14 @@ export function getPyodideRuntimeInput(promptText = '') {
  * @param {object} pyodide - Shared Pyodide instance.
  * @returns {Promise<void>} Resolves when the override is installed.
  */
-export function installPyodideInputOverride(pyodide) {
-  const state = sharedPyodideRuntimeState;
+export function installPyodideInputOverride(pyodide, runtime = null) {
+  const state = getPyodideInstanceState(pyodide);
 
   if (state.inputOverridePromise) {
     return state.inputOverridePromise;
   }
 
-  pyodide.globals.set('input_handler', (prompt) => getPyodideRuntimeInput(prompt));
+  pyodide.globals.set('input_handler', (prompt) => getPyodideRuntimeInput(prompt, runtime));
 
   state.inputOverridePromise = pyodide.runPythonAsync(`
 import builtins
@@ -190,7 +225,7 @@ builtins.input = _h5p_input
  * @returns {Promise<void>} Resolves when compatibility helpers are installed.
  */
 export function installPyodideRuntimeCompatibility(pyodide) {
-  const state = sharedPyodideRuntimeState;
+  const state = getPyodideInstanceState(pyodide);
 
   if (state.compatibilityPromise) {
     return state.compatibilityPromise;
@@ -442,34 +477,24 @@ export async function clearPyodideExecutionLimit(pyodide) {
 }
 
 /**
- * Returns the shared Pyodide instance, creating it lazily on first use.
+ * Returns a fresh Pyodide instance while sharing only the loader script.
  * @param {object} [options] - Runtime options.
  * @param {string} [options.pyodideCdnUrl] - Optional CDN override.
- * @returns {Promise<object>} Shared Pyodide instance.
+ * @param {object|null} [runtime] - Owning runtime for bound IO handlers.
+ * @returns {Promise<object>} Isolated Pyodide instance.
  */
-export function getSharedPyodide(options = {}) {
-  const state = sharedPyodideRuntimeState;
+export async function getSharedPyodide(options = {}, runtime = null) {
+  const cdnUrl = options.pyodideCdnUrl || 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js';
 
-  if (!state.sharedPyodidePromise) {
-    const cdnUrl = options.pyodideCdnUrl || 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js';
+  await ensurePyodideScript(cdnUrl);
 
-    state.sharedPyodidePromise = (async () => {
-      await ensurePyodideScript(cdnUrl);
+  const pyodide = await loadPyodide({
+    stdout: (text) => writePyodideRuntimeOutput(text, runtime),
+    stderr: (text) => writePyodideRuntimeOutput(text, runtime, true),
+    stdin: () => '\n',
+  });
 
-      const pyodide = await loadPyodide({
-        stdout: (text) => writePyodideRuntimeOutput(text),
-        stderr: (text) => writePyodideRuntimeOutput(text, true),
-        stdin: () => '\n',
-      });
+  await installPyodideInputOverride(pyodide, runtime);
 
-      await installPyodideInputOverride(pyodide);
-
-      return pyodide;
-    })().catch((error) => {
-      state.sharedPyodidePromise = null;
-      throw error;
-    });
-  }
-
-  return state.sharedPyodidePromise;
+  return pyodide;
 }

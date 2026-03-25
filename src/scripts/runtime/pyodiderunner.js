@@ -19,7 +19,6 @@ import {
   installPyodideInputOverride,
   installPyodideRuntimeCompatibility,
   resetPyodideBackgroundTaskState,
-  setActivePyodideRuntime,
   setActivePyodideSDLCanvas,
   setPyodideExecutionLimit,
   sharedPyodideRuntimeState,
@@ -215,23 +214,21 @@ export default class PyodideRunner {
    * @returns {Promise<void>} Resolves when initialization is complete.
    */
   async _setupInternal() {
-    setActivePyodideRuntime(this.runtime);
-
     if (!this.pyodide) {
-      const isFirstSharedLoad = !sharedPyodideRuntimeState.sharedPyodidePromise;
+      const isFirstLoaderRequest = !sharedPyodideRuntimeState.loadPyodidePromise;
 
-      if (isFirstSharedLoad) {
+      if (isFirstLoaderRequest) {
         this.runtime.outputHandler(getPythonL10nValue(this.l10n, 'pyodideLoading'), false);
       }
 
-      this.pyodide = await getSharedPyodide(this.options);
+      this.pyodide = await getSharedPyodide(this.options, this.runtime);
 
-      if (isFirstSharedLoad) {
+      if (isFirstLoaderRequest) {
         this.runtime.outputHandler(getPythonL10nValue(this.l10n, 'pyodideReady'), false);
       }
     }
 
-    await installPyodideInputOverride(this.pyodide);
+    await installPyodideInputOverride(this.pyodide, this.runtime);
     await installPyodideRuntimeCompatibility(this.pyodide);
     await loadMissingPyodidePackages(this.pyodide, this.options.packages);
 
@@ -249,8 +246,6 @@ export default class PyodideRunner {
    * @returns {Promise<*>} Python result value or undefined on handled errors.
    */
   async execute(code, canvasDiv = null) {
-    setActivePyodideRuntime(this.runtime);
-
     const activeCanvasDiv = canvasDiv || this.canvasDiv;
     const shouldShowCanvasLoading = Boolean(activeCanvasDiv && this.runtime.containsCanvasCode?.());
 
