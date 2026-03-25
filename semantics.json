@@ -188,7 +188,7 @@
         "name": "contents",
         "type": "list",
         "label": "Content",
-        "widget": "pythonQuestionShowWhen",
+        "widget": "showWhen",
         "showWhen": {
             "rules": [
                 {
