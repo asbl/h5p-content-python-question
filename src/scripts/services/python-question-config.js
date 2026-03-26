@@ -52,13 +52,14 @@ export function normalizePythonSourceFiles(entries = []) {
   const usedNames = new Set(['main.py']);
 
   (Array.isArray(entries) ? entries : []).forEach((entry, index) => {
-    // Skip empty placeholder entries created by the H5P editor list widget
-    // (no filename and no code means the user never configured this slot).
-    const rawName = entry?.fileName || entry?.name || '';
-    const rawCode = entry?.code || '';
-    if (!rawName.trim() && !rawCode.trim()) return;
+    const rawCode = decodeHtmlCode(entry?.code || '');
+    const rawName = String(entry?.fileName || entry?.name || '').trim();
 
-    let candidate = normalizePythonSourceFileName(entry?.fileName || entry?.name, index);
+    if (!rawName && !rawCode.trim()) {
+      return;
+    }
+
+    let candidate = normalizePythonSourceFileName(rawName, index);
     let suffix = 2;
 
     while (usedNames.has(candidate)) {
@@ -72,7 +73,7 @@ export function normalizePythonSourceFiles(entries = []) {
     const visible = entry?.visibleToLearner !== false;
     files.push({
       name: candidate,
-      code: decodeHtmlCode(entry?.code || ''),
+      code: rawCode,
       visible,
       editable: visible && entry?.learnerEditable !== false,
     });
@@ -105,6 +106,10 @@ export function getPyodideSourceFileEntriesFromParams(params = {}) {
     return params.pyodideOptions.sourceFiles;
   }
 
+  if (Array.isArray(params?.editorSettings?.options?.sourceFiles)) {
+    return params.editorSettings.options.sourceFiles;
+  }
+
   return Array.isArray(params?.editorSettings?.sourceFiles)
     ? params.editorSettings.sourceFiles
     : [];
@@ -122,7 +127,7 @@ export function normalizePythonRunner(runner) {
 /**
  * Normalizes advanced runtime options from semantics.
  * @param {object} [advancedOptions] - Raw advanced options.
- * @returns {{showConsole: boolean, disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}} Normalized options.
+ * @returns {{disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}} Normalized options.
  */
 export function normalizePythonAdvancedOptions(advancedOptions = {}) {
   return {
@@ -140,7 +145,7 @@ export function normalizePythonAdvancedOptions(advancedOptions = {}) {
  * Per-editor fields (sourceFiles, allowAddingFiles) are NOT included here;
  * they are resolved per-container via buildPythonCodeContainerOptions.
  * @param {object} [params] - Raw PythonQuestion params.
- * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], advancedOptions: {showConsole: boolean, disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}}} Normalized config.
+ * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], advancedOptions: {disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}}} Normalized config.
  */
 export function normalizePythonQuestionConfig(params = {}) {
   const runner = normalizePythonRunner(params.pythonRunner);
@@ -180,8 +185,8 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
   return {
     ...baseOptions,
     hasConsole: config?.advancedOptions?.showConsole !== false,
-    enableImageUploads: config?.advancedOptions?.enableImageUploads === true,
-    enableSoundUploads: config?.advancedOptions?.enableSoundUploads === true,
+    enableImageUploads: editorParams?.enableImageUploads === true || config?.advancedOptions?.enableImageUploads === true,
+    enableSoundUploads: editorParams?.enableSoundUploads === true || config?.advancedOptions?.enableSoundUploads === true,
     showSaveLoadButtons: config?.advancedOptions?.enableSaveLoadButtons !== false,
     projectStorageEnabled: config?.runner === 'pyodide',
     entryFileName: 'main.py',
@@ -191,8 +196,8 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     projectDownloadFilename: 'python-project.h5pproject',
     projectBundleType: 'h5p-python-question-project',
     editorMode: normalizePythonEditorMode(editorParams?.editorMode),
-    blocklyCategories: editorParams?.blocklyCategories ?? null,
-    blocklyPackages: config?.runner === 'pyodide' ? [...(config?.packages || [])] : [],
+    blocklyCategories: editorParams?.blocklyCategories || null,
+    blocklyPackages: config?.runner === 'pyodide' && Array.isArray(config?.packages) ? [...config.packages] : [],
   };
 }
 

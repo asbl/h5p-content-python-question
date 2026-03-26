@@ -26,14 +26,7 @@ export default class PythonQuestion extends H5P.CodeQuestion {
     this.l10n = createPythonL10n({}, sharedL10n);
 
     // Recreate tester so it also uses the updated localization chain.
-    this.codeTester = this.gradingMethod
-      ? this.getCodeTesterFactory().create()
-      : null;
-
-    if (this.gradingMethod && !this.codeTester) {
-      this.gradingMethod = null;
-    }
-    this.hasConsole = this.shouldShowConsole();
+    this.codeTester = this.getCodeTesterFactory().create();
 
     this.pythonRunner = this.pythonConfig.runner;
   }
@@ -76,7 +69,8 @@ export default class PythonQuestion extends H5P.CodeQuestion {
    * @returns {boolean} True if image uploads are enabled.
    */
   shouldEnableImageUploads() {
-    return this.getAdvancedOption('enableImageUploads');
+    const editorEnabled = this.params?.editorSettings?.options?.enableImageUploads;
+    return editorEnabled === true || this.getAdvancedOption('enableImageUploads');
   }
 
   /**
@@ -84,7 +78,8 @@ export default class PythonQuestion extends H5P.CodeQuestion {
    * @returns {boolean} True if sound uploads are enabled.
    */
   shouldEnableSoundUploads() {
-    return this.getAdvancedOption('enableSoundUploads');
+    const editorEnabled = this.params?.editorSettings?.options?.enableSoundUploads;
+    return editorEnabled === true || this.getAdvancedOption('enableSoundUploads');
   }
 
   /**
@@ -93,14 +88,6 @@ export default class PythonQuestion extends H5P.CodeQuestion {
    */
   shouldEnableSaveLoadButtons() {
     return this.getAdvancedOption('enableSaveLoadButtons');
-  }
-
-  /**
-   * Indicates whether the integrated console should be visible.
-   * @returns {boolean} True if the console should be shown.
-   */
-  shouldShowConsole() {
-    return this.getAdvancedOption('showConsole');
   }
 
   /**
@@ -114,15 +101,22 @@ export default class PythonQuestion extends H5P.CodeQuestion {
     // For the main assignment editor contentParams is null → use editorSettings.
     // For content-part editors contentParams is the content item object.
     const editorParams = contentParams !== null
-      ? contentParams
+      ? {
+        ...(contentParams || {}),
+        ...(contentParams?.options || {}),
+      }
       : {
-        // Prefer the new editorSettings location; fall back to old pyodideOptions for existing content.
-        sourceFiles: Array.isArray(this.params.editorSettings?.sourceFiles)
-          ? this.params.editorSettings.sourceFiles
-          : this.params.pyodideOptions?.sourceFiles,
-        allowAddingFiles: this.params.editorSettings?.allowAddingFiles,
-        editorMode: this.params.editorSettings?.editorMode,
-        blocklyCategories: this.params.editorSettings?.blocklyCategories ?? null,
+        // Prefer nested editorSettings.options; keep top-level fallbacks for old content.
+        sourceFiles: Array.isArray(this.params.editorSettings?.options?.sourceFiles)
+          ? this.params.editorSettings.options.sourceFiles
+          : (Array.isArray(this.params.editorSettings?.sourceFiles)
+            ? this.params.editorSettings.sourceFiles
+            : this.params.pyodideOptions?.sourceFiles),
+        allowAddingFiles: this.params.editorSettings?.options?.allowAddingFiles ?? this.params.editorSettings?.allowAddingFiles,
+        editorMode: this.params.editorSettings?.options?.editorMode ?? this.params.editorSettings?.editorMode,
+        enableImageUploads: this.params.editorSettings?.options?.enableImageUploads,
+        enableSoundUploads: this.params.editorSettings?.options?.enableSoundUploads,
+        blocklyCategories: this.params.editorSettings?.blocklyCategories,
       };
 
     return buildPythonCodeContainerOptions(
