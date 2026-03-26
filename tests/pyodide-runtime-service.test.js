@@ -92,7 +92,7 @@ describe('Pyodide runtime service', () => {
     );
   });
 
-  it('creates isolated Pyodide instances with runtime-bound output handlers', async () => {
+  it('reuses one shared Pyodide instance and routes output through the active runtime', async () => {
     const runtimeA = { outputHandler: vi.fn(), inputHandler: vi.fn(() => 'A'), l10n: {} };
     const runtimeB = { outputHandler: vi.fn(), inputHandler: vi.fn(() => 'B'), l10n: {} };
 
@@ -108,8 +108,10 @@ describe('Pyodide runtime service', () => {
     const firstPyodide = await getSharedPyodide({}, runtimeA);
     const secondPyodide = await getSharedPyodide({}, runtimeB);
 
-    expect(firstPyodide).not.toBe(secondPyodide);
+    expect(firstPyodide).toBe(secondPyodide);
+    setActivePyodideRuntime(runtimeA);
     firstPyodide._stdout('first');
+    setActivePyodideRuntime(runtimeB);
     secondPyodide._stdout('second');
 
     expect(runtimeA.outputHandler).toHaveBeenCalledWith('first');

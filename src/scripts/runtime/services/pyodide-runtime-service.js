@@ -195,14 +195,14 @@ export function getPyodideRuntimeInput(promptText = '', runtime = null) {
  * @param {object} pyodide - Shared Pyodide instance.
  * @returns {Promise<void>} Resolves when the override is installed.
  */
-export function installPyodideInputOverride(pyodide, runtime = null) {
+export function installPyodideInputOverride(pyodide) {
   const state = getPyodideInstanceState(pyodide);
 
   if (state.inputOverridePromise) {
     return state.inputOverridePromise;
   }
 
-  pyodide.globals.set('input_handler', (prompt) => getPyodideRuntimeInput(prompt, runtime));
+  pyodide.globals.set('input_handler', (prompt) => getPyodideRuntimeInput(prompt));
 
   state.inputOverridePromise = pyodide.runPythonAsync(`
 import builtins
@@ -477,24 +477,36 @@ export async function clearPyodideExecutionLimit(pyodide) {
 }
 
 /**
- * Returns a fresh Pyodide instance while sharing only the loader script.
+ * Returns a shared Pyodide instance across all runner instances.
  * @param {object} [options] - Runtime options.
  * @param {string} [options.pyodideCdnUrl] - Optional CDN override.
- * @param {object|null} [runtime] - Owning runtime for bound IO handlers.
- * @returns {Promise<object>} Isolated Pyodide instance.
+ * @param {object|null} [runtime] - Active runtime for IO routing.
+ * @returns {Promise<object>} Shared Pyodide instance.
  */
 export async function getSharedPyodide(options = {}, runtime = null) {
+  const state = sharedPyodideRuntimeState;
   const cdnUrl = options.pyodideCdnUrl || 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js';
+
+  if (runtime) {
+    setActivePyodideRuntime(runtime);
+  }
 
   await ensurePyodideScript(cdnUrl);
 
-  const pyodide = await loadPyodide({
-    stdout: (text) => writePyodideRuntimeOutput(text, runtime),
-    stderr: (text) => writePyodideRuntimeOutput(text, runtime, true),
-    stdin: () => '\n',
-  });
+  if (!state.sharedPyodidePromise) {
+    state.sharedPyodidePromise = loadPyodide({
+      stdout: (text) => writePyodideRuntimeOutput(text),
+      stderr: (text) => writePyodideRuntimeOutput(text, true),
+      stdin: () => '\n',
+    }).catch((error) => {
+      state.sharedPyodidePromise = null;
+      throw error;
+    });
+  }
 
-  await installPyodideInputOverride(pyodide, runtime);
+  const pyodide = await state.sharedPyodidePromise;
+
+  await installPyodideInputOverride(pyodide);
 
   return pyodide;
 }

@@ -19,6 +19,7 @@ import {
   installPyodideInputOverride,
   installPyodideRuntimeCompatibility,
   resetPyodideBackgroundTaskState,
+  setActivePyodideRuntime,
   setActivePyodideSDLCanvas,
   setPyodideExecutionLimit,
   sharedPyodideRuntimeState,
@@ -214,6 +215,8 @@ export default class PyodideRunner {
    * @returns {Promise<void>} Resolves when initialization is complete.
    */
   async _setupInternal() {
+    setActivePyodideRuntime(this.runtime);
+
     if (!this.pyodide) {
       const isFirstLoaderRequest = !sharedPyodideRuntimeState.loadPyodidePromise;
 
@@ -246,6 +249,8 @@ export default class PyodideRunner {
    * @returns {Promise<*>} Python result value or undefined on handled errors.
    */
   async execute(code, canvasDiv = null) {
+    setActivePyodideRuntime(this.runtime);
+
     const activeCanvasDiv = canvasDiv || this.canvasDiv;
     const shouldShowCanvasLoading = Boolean(activeCanvasDiv && this.runtime.containsCanvasCode?.());
 
