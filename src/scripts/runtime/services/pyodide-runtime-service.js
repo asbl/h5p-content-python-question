@@ -9,7 +9,7 @@ import { normalizePythonExecutionLimit } from '../../services/python-execution-l
 /**
  * Shared Pyodide loader state across all runner instances.
  * Per-instance Pyodide state is stored in a WeakMap keyed by the Pyodide object.
- * @type {{loadPyodidePromise: Promise<*>|null, sharedPyodidePromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, compatibilityPromise: Promise<*>|null, activeRuntime: object|null, activeSDLCanvas: HTMLCanvasElement|null, loadedPackages: Set<string>, pyodideInstanceState: WeakMap<object, {compatibilityPromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, loadedPackages: Set<string>}>, fetchCacheInstalled: boolean}}
+ * @type {{loadPyodidePromise: Promise<*>|null, sharedPyodidePromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, compatibilityPromise: Promise<*>|null, activeRuntime: object|null, activeSDLCanvas: HTMLCanvasElement|null, loadedPackages: Set<string>, pyodideInstanceState: WeakMap<object, {compatibilityPromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, loadedPackages: Set<string>}>}}
  */
 export const sharedPyodideRuntimeState = {
   compatibilityPromise: null,
@@ -20,10 +20,7 @@ export const sharedPyodideRuntimeState = {
   activeSDLCanvas: null,
   loadedPackages: new Set(),
   pyodideInstanceState: new WeakMap(),
-  fetchCacheInstalled: false,
 };
-
-const PYODIDE_FETCH_CACHE_NAME = 'h5p-pythonquestion-pyodide-fetch-v1';
 
 /**
  * Returns the mutable state associated with one concrete Pyodide instance.
@@ -67,89 +64,6 @@ export function resetSharedPyodideRuntimeState() {
   sharedPyodideRuntimeState.activeSDLCanvas = null;
   sharedPyodideRuntimeState.loadedPackages.clear();
   sharedPyodideRuntimeState.pyodideInstanceState = new WeakMap();
-  sharedPyodideRuntimeState.fetchCacheInstalled = false;
-}
-
-/**
- * Returns whether a request URL should be persisted in the Pyodide cache.
- * @param {string} url - Absolute request URL.
- * @param {string} pyodideCdnUrl - Configured Pyodide CDN script URL.
- * @returns {boolean} True when the request should be cached.
- */
-function shouldCachePyodideFetch(url, pyodideCdnUrl) {
-  try {
-    const requestUrl = new URL(url);
-    const pyodideOrigin = new URL(pyodideCdnUrl).origin;
-
-    if (requestUrl.origin === pyodideOrigin) {
-      return true;
-    }
-
-    return requestUrl.hostname === 'pypi.org'
-      || requestUrl.hostname === 'files.pythonhosted.org';
-  }
-  catch (_) {
-    return false;
-  }
-}
-
-/**
- * Installs a persistent fetch cache for Pyodide assets and wheel downloads.
- * @param {string} pyodideCdnUrl - Configured Pyodide CDN script URL.
- * @returns {void}
- */
-function installPyodideFetchCache(pyodideCdnUrl) {
-  const state = sharedPyodideRuntimeState;
-
-  if (state.fetchCacheInstalled) {
-    return;
-  }
-
-  if (typeof window === 'undefined' || typeof window.fetch !== 'function' || typeof window.caches === 'undefined') {
-    return;
-  }
-
-  const nativeFetch = window.fetch.bind(window);
-
-  const cachedFetch = async (input, init = undefined) => {
-    const request = new Request(input, init);
-
-    if ((request.method || 'GET').toUpperCase() !== 'GET') {
-      return nativeFetch(input, init);
-    }
-
-    if (!shouldCachePyodideFetch(request.url, pyodideCdnUrl)) {
-      return nativeFetch(input, init);
-    }
-
-    try {
-      const cache = await window.caches.open(PYODIDE_FETCH_CACHE_NAME);
-      const cachedResponse = await cache.match(request);
-
-      if (cachedResponse) {
-        return cachedResponse.clone();
-      }
-
-      const response = await nativeFetch(input, init);
-
-      if (response?.ok) {
-        try {
-          await cache.put(request, response.clone());
-        }
-        catch (_) {
-          // Ignore cache write failures and return the network response.
-        }
-      }
-
-      return response;
-    }
-    catch (_) {
-      return nativeFetch(input, init);
-    }
-  };
-
-  window.fetch = cachedFetch;
-  state.fetchCacheInstalled = true;
 }
 
 /**
@@ -576,8 +490,6 @@ export async function getSharedPyodide(options = {}, runtime = null) {
   if (runtime) {
     setActivePyodideRuntime(runtime);
   }
-
-  installPyodideFetchCache(cdnUrl);
 
   await ensurePyodideScript(cdnUrl);
 

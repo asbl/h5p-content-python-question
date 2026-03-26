@@ -616,6 +616,8 @@ export default class PyodideRunner {
 
   /**
    * Mounts and activates the SDL canvas used by pygame-ce and miniworlds.
+   * Reuses an existing canvas element when re-running so that SDL does not
+   * need to re-bind to a freshly created element, which causes a black screen.
    * @param {HTMLElement|null} canvasDiv - Canvas mount target.
    * @returns {HTMLCanvasElement|null} The mounted canvas element.
    */
@@ -628,8 +630,26 @@ export default class PyodideRunner {
       return null;
     }
 
-    canvasDiv.innerHTML = '';
     this.canvasDiv = canvasDiv;
+
+    // Reuse the existing canvas if the correct one is already in the div.
+    // Destroying and recreating the element causes SDL to render to an orphaned
+    // surface, leaving the visible canvas permanently black.
+    const existing = canvasDiv.querySelector('canvas.pyodide-sdl-canvas');
+    if (existing) {
+      const canvas = existing;
+
+      if (this.pyodide?._api) {
+        this.pyodide._api._skip_unwind_fatal_error = true;
+      }
+
+      this.sdlCanvas = canvas;
+      this.acquireInputFocus();
+      this.triggerResizeAfterCanvasUpdate();
+      return canvas;
+    }
+
+    canvasDiv.innerHTML = '';
 
     const canvas = document.createElement('canvas');
     canvas.classList.add('pyodide-sdl-canvas');
