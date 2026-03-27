@@ -319,4 +319,29 @@ describe('PyodideRunner', () => {
 
     canvasDiv.remove();
   });
+
+  it('rebinds SDL canvas during execute to avoid stale inactive bindings', async () => {
+    const runtime = createRuntime();
+    runtime.containsCanvasCode.mockReturnValue(true);
+    runtime.containsSDLCode.mockReturnValue(true);
+
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+    document.body.appendChild(canvasDiv);
+
+    runner.pyodide = {
+      runPythonAsync: vi.fn(() => Promise.resolve('ok')),
+      canvas: {
+        setCanvas2D: vi.fn(),
+      },
+      _api: {},
+    };
+    runner._isInitialized = true;
+
+    await runner.execute('print(1)', canvasDiv);
+
+    expect(runner.pyodide.canvas.setCanvas2D.mock.calls.length).toBeGreaterThanOrEqual(2);
+
+    canvasDiv.remove();
+  });
 });

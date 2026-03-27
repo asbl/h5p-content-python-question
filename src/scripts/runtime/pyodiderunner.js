@@ -291,6 +291,13 @@ export default class PyodideRunner {
       }
       else if (activeCanvasDiv && this.runtime.containsSDLCode()) {
         this.setupSDLCanvas(activeCanvasDiv);
+
+        // Firefox can occasionally keep SDL bound to the previous inert canvas
+        // after stop->run. Rebind once more immediately and on the next frame.
+        this.bindSDLCanvas();
+        if (typeof window?.requestAnimationFrame === 'function') {
+          window.requestAnimationFrame(() => this.bindSDLCanvas());
+        }
       }
 
       if (shouldShowCanvasLoading) {
@@ -504,9 +511,25 @@ export default class PyodideRunner {
       return;
     }
 
+    this.bindSDLCanvas(true);
+  }
+
+  /**
+   * Binds SDL rendering to the current visible canvas.
+   * @param {boolean} [focus=false] - Whether keyboard focus should be moved to the canvas.
+   * @returns {void}
+   */
+  bindSDLCanvas(focus = false) {
+    if (!this.sdlCanvas) {
+      return;
+    }
+
     setActivePyodideSDLCanvas(this.sdlCanvas);
     this.pyodide?.canvas?.setCanvas2D?.(this.sdlCanvas);
-    this.sdlCanvas.focus();
+
+    if (focus && this.sdlCanvas.isConnected && typeof this.sdlCanvas.focus === 'function') {
+      this.sdlCanvas.focus();
+    }
   }
 
   /**
