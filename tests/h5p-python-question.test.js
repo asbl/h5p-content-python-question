@@ -43,6 +43,14 @@ describe('PythonQuestion', () => {
       editorSettings: {
         startingCode: '',
         allowAddingFiles: true,
+        options: {
+          defaultImages: [
+            {
+              image: { path: 'uploads/background.png' },
+              fileName: 'background.png',
+            },
+          ],
+        },
         sourceFiles: [
           {
             fileName: 'helper.py',
@@ -91,6 +99,12 @@ describe('PythonQuestion', () => {
           editable: true,
         },
       ],
+      defaultImages: [
+        {
+          path: 'uploads/background.png',
+          fileName: 'background.png',
+        },
+      ],
       downloadFilename: 'main.py',
       projectDownloadFilename: 'python-project.h5pproject',
       projectBundleType: 'h5p-python-question-project',
@@ -129,6 +143,7 @@ describe('PythonQuestion', () => {
       entryFileName: 'main.py',
       allowAddingFiles: false,
       sourceFiles: [],
+      defaultImages: [],
       downloadFilename: 'main.py',
       projectDownloadFilename: 'python-project.h5pproject',
       projectBundleType: 'h5p-python-question-project',

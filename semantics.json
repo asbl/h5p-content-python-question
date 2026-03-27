@@ -333,7 +333,7 @@
                             "name": "showEditor",
                             "label": "Show Editor?",
                             "description": "Should an editor displayed to the user",
-                            "default": false
+                            "default": true
                         },
                         {
                             "name": "enableImageUploads",
@@ -341,6 +341,33 @@
                             "label": "Enable image uploads",
                             "description": "If enabled for this content item, learners can upload images during runtime and access them in their code.",
                             "default": false
+                        },
+                        {
+                            "name": "defaultImages",
+                            "type": "list",
+                            "label": "Default Images",
+                            "entity": "image",
+                            "optional": true,
+                            "description": "Images that are preloaded into the Images tab for this content item.",
+                            "field": {
+                                "name": "defaultImage",
+                                "type": "group",
+                                "label": "Default Image",
+                                "fields": [
+                                    {
+                                        "name": "image",
+                                        "type": "image",
+                                        "label": "Image"
+                                    },
+                                    {
+                                        "name": "fileName",
+                                        "type": "text",
+                                        "label": "File Name",
+                                        "optional": true,
+                                        "description": "Optional file name shown in the Images tab (for example background.png)."
+                                    }
+                                ]
+                            }
                         },
                         {
                             "name": "enableSoundUploads",
@@ -583,6 +610,33 @@
                         "label": "Enable image uploads",
                         "description": "If enabled for this editor, learners can upload images during runtime and access them in their code.",
                         "default": false
+                    },
+                    {
+                        "name": "defaultImages",
+                        "type": "list",
+                        "label": "Default Images",
+                        "entity": "image",
+                        "optional": true,
+                        "description": "Images that are preloaded into the Images tab for this editor.",
+                        "field": {
+                            "name": "defaultImage",
+                            "type": "group",
+                            "label": "Default Image",
+                            "fields": [
+                                {
+                                    "name": "image",
+                                    "type": "image",
+                                    "label": "Image"
+                                },
+                                {
+                                    "name": "fileName",
+                                    "type": "text",
+                                    "label": "File Name",
+                                    "optional": true,
+                                    "description": "Optional file name shown in the Images tab (for example background.png)."
+                                }
+                            ]
+                        }
                     },
                     {
                         "name": "enableSoundUploads",

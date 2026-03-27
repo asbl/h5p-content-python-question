@@ -115,6 +115,7 @@ export default class PythonQuestion extends H5P.CodeQuestion {
         allowAddingFiles: this.params.editorSettings?.options?.allowAddingFiles ?? this.params.editorSettings?.allowAddingFiles,
         editorMode: this.params.editorSettings?.options?.editorMode ?? this.params.editorSettings?.editorMode,
         enableImageUploads: this.params.editorSettings?.options?.enableImageUploads,
+        defaultImages: this.params.editorSettings?.options?.defaultImages,
         enableSoundUploads: this.params.editorSettings?.options?.enableSoundUploads,
         blocklyCategories: this.params.editorSettings?.blocklyCategories,
       };

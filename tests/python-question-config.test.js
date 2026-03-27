@@ -7,6 +7,7 @@ import {
   getPyodidePackageEntriesFromParams,
   getPyodideSourceFileEntriesFromParams,
   normalizePythonAdvancedOptions,
+  normalizePythonDefaultImages,
   normalizePythonExecutionLimit,
   normalizePythonQuestionConfig,
   normalizePythonRunner,
@@ -108,6 +109,12 @@ describe('Python question config', () => {
       allowAddingFiles: true,
       editorMode: 'blocks',
       blocklyCategories: { variables: true, logic: false, loops: true, math: false, text: true, lists: false, functions: false },
+      defaultImages: [
+        {
+          image: { path: 'images/background.png' },
+          fileName: 'bg.png',
+        },
+      ],
       sourceFiles: [
         {
           fileName: 'helper.py',
@@ -133,6 +140,12 @@ describe('Python question config', () => {
           code: 'VALUE = 1',
           visible: true,
           editable: true,
+        },
+      ],
+      defaultImages: [
+        {
+          path: 'images/background.png',
+          fileName: 'bg.png',
         },
       ],
       downloadFilename: 'main.py',
@@ -214,6 +227,24 @@ describe('Python question config', () => {
       { code: 'x = 1', visibleToLearner: true, learnerEditable: true },
     ])).toEqual([
       { name: 'module_1.py', code: 'x = 1', visible: true, editable: true },
+    ]);
+  });
+
+  it('normalizes default image entries and file names', () => {
+    expect(normalizePythonDefaultImages([
+      {
+        image: { path: 'uploads/bg image.png' },
+        fileName: 'Background Image',
+      },
+      {
+        image: { path: 'uploads/bg image.png' },
+      },
+      {
+        image: { path: '' },
+      },
+    ])).toEqual([
+      { path: 'uploads/bg image.png', fileName: 'Background_Image.png' },
+      { path: 'uploads/bg image.png', fileName: 'image_2.png' },
     ]);
   });
 });

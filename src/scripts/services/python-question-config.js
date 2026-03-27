@@ -83,6 +83,67 @@ export function normalizePythonSourceFiles(entries = []) {
 }
 
 /**
+ * Normalizes one default image file name.
+ * @param {string} [fileName] - Author-provided file name.
+ * @param {string} [fallbackPath] - Asset path used to derive an extension fallback.
+ * @param {number} [index] - Entry index used for generated names.
+ * @returns {string} Normalized image file name.
+ */
+export function normalizePythonDefaultImageFileName(fileName = '', fallbackPath = '', index = 0) {
+  const fallbackBaseName = `image_${index + 1}`;
+  const pathSegment = String(fallbackPath || '').split('/').pop() || '';
+  const pathExtensionMatch = pathSegment.match(/\.[A-Za-z0-9]+$/);
+  const pathExtension = pathExtensionMatch ? pathExtensionMatch[0].toLowerCase() : '.png';
+
+  const rawName = String(fileName || '').trim();
+  const lastSegment = rawName.split(/[\\/]/).pop()?.trim() || '';
+  const hasExtension = /\.[A-Za-z0-9]+$/.test(lastSegment);
+  const baseName = (hasExtension ? lastSegment.replace(/\.[A-Za-z0-9]+$/, '') : lastSegment)
+    .replace(/[^A-Za-z0-9_-]/g, '_')
+    .replace(/^_+/, '')
+    .replace(/_+/g, '_')
+    .replace(/^$/, fallbackBaseName);
+  const extension = hasExtension
+    ? (lastSegment.match(/\.[A-Za-z0-9]+$/)?.[0] || pathExtension).toLowerCase()
+    : pathExtension;
+
+  return `${baseName}${extension}`;
+}
+
+/**
+ * Normalizes author-configured default image assets.
+ * @param {Array<*>} [entries] - Raw default image entries from semantics.
+ * @returns {Array<{path: string, fileName: string}>} Normalized default image entries.
+ */
+export function normalizePythonDefaultImages(entries = []) {
+  const images = [];
+  const usedNames = new Set();
+
+  (Array.isArray(entries) ? entries : []).forEach((entry, index) => {
+    const path = String(entry?.image?.path || entry?.path || '').trim();
+
+    if (!path) {
+      return;
+    }
+
+    let fileName = normalizePythonDefaultImageFileName(entry?.fileName || entry?.name || '', path, index);
+    let suffix = 2;
+
+    while (usedNames.has(fileName)) {
+      const extension = fileName.match(/\.[A-Za-z0-9]+$/)?.[0] || '.png';
+      const baseName = fileName.replace(/\.[A-Za-z0-9]+$/, '');
+      fileName = `${baseName}_${suffix}${extension}`;
+      suffix += 1;
+    }
+
+    usedNames.add(fileName);
+    images.push({ path, fileName });
+  });
+
+  return images;
+}
+
+/**
  * Resolves the raw Pyodide package entries from semantics params.
  * @param {object} [params] - PythonQuestion params.
  * @returns {Array<*>} Raw package entries.
@@ -181,6 +242,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     : {};
 
   const rawSourceFiles = Array.isArray(editorParams?.sourceFiles) ? editorParams.sourceFiles : [];
+  const rawDefaultImages = Array.isArray(editorParams?.defaultImages) ? editorParams.defaultImages : [];
 
   return {
     ...baseOptions,
@@ -192,6 +254,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     entryFileName: 'main.py',
     allowAddingFiles: config?.runner === 'pyodide' && editorParams?.allowAddingFiles === true,
     sourceFiles: config?.runner === 'pyodide' ? normalizePythonSourceFiles(rawSourceFiles) : [],
+    defaultImages: normalizePythonDefaultImages(rawDefaultImages),
     downloadFilename: 'main.py',
     projectDownloadFilename: 'python-project.h5pproject',
     projectBundleType: 'h5p-python-question-project',
