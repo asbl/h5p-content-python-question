@@ -250,7 +250,6 @@ export default class PyodideRunner {
    * @returns {Promise<*>} Python result value or undefined on handled errors.
    */
   async execute(code, canvasDiv = null) {
-    this.scheduleBackgroundTaskCancellation();
     await this.waitForBackgroundTaskCancellation();
 
     setActivePyodideRuntime(this.runtime);
@@ -268,8 +267,7 @@ export default class PyodideRunner {
       }
 
       // A stop() call can arrive while setup is still running.
-      // Schedule and await cancellation once more to serialize stop->run.
-      this.scheduleBackgroundTaskCancellation();
+      // Await cancellation once more to serialize stop->run.
       await this.waitForBackgroundTaskCancellation();
 
       await resetPyodideBackgroundTaskState(this.pyodide);
@@ -386,13 +384,20 @@ export default class PyodideRunner {
    * @returns {void}
    */
   scheduleBackgroundTaskCancellation() {
-    if (!this.pyodide || this._cancelPromise) {
+    if (!this.pyodide) {
       return;
     }
 
-    const cancelPromise = cancelPyodideBackgroundTask(this.pyodide).catch((error) => {
-      console.warn('Could not cancel background SDL task', error);
-    });
+    const currentPromise = this._cancelPromise || Promise.resolve();
+
+    const cancelPromise = currentPromise
+      .catch(() => {
+        // Keep cancellation sequencing alive even if a prior cancellation failed.
+      })
+      .then(() => cancelPyodideBackgroundTask(this.pyodide))
+      .catch((error) => {
+        console.warn('Could not cancel background SDL task', error);
+      });
 
     this._cancelPromise = cancelPromise;
 
