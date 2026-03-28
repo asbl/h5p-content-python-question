@@ -62,6 +62,7 @@ export default class PyodideRunner {
     this.p5Instance = null;
     this._isInitialized = false;
     this._setupPromise = null;
+    this._cancelPromise = null;
     this.imageService = new PyodideImageService(this);
     this.soundService = new PyodideSoundService(this);
     this.sourceService = new PyodideSourceService(this);
@@ -249,6 +250,18 @@ export default class PyodideRunner {
    * @returns {Promise<*>} Python result value or undefined on handled errors.
    */
   async execute(code, canvasDiv = null) {
+    // Wait for any in-progress stop cancellation before starting new code.
+    // Without this, the old miniworlds task may still be tearing down while
+    // the new code starts, causing SDL display state corruption (black screen).
+    if (this._cancelPromise) {
+      try {
+        await this._cancelPromise;
+      }
+      catch (error) {
+        console.warn('Could not finish pending stop cleanup', error);
+      }
+    }
+
     setActivePyodideRuntime(this.runtime);
 
     const activeCanvasDiv = canvasDiv || this.canvasDiv;
@@ -371,9 +384,18 @@ export default class PyodideRunner {
     }
 
     if (this.hasBackgroundTask && this.pyodide) {
-      cancelPyodideBackgroundTask(this.pyodide).catch((error) => {
+      const cancelPromise = cancelPyodideBackgroundTask(this.pyodide).catch((error) => {
         console.warn('Could not cancel background SDL task', error);
       });
+
+      this._cancelPromise = cancelPromise;
+
+      cancelPromise.finally(() => {
+        if (this._cancelPromise === cancelPromise) {
+          this._cancelPromise = null;
+        }
+      });
+
       this.hasBackgroundTask = false;
     }
 
