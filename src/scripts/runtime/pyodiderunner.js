@@ -300,13 +300,7 @@ export default class PyodideRunner {
       }
       else if (activeCanvasDiv && this.runtime.containsSDLCode()) {
         this.setupSDLCanvas(activeCanvasDiv);
-
-        // Firefox can occasionally keep SDL bound to the previous inert canvas
-        // after stop->run. Rebind once more immediately and on the next frame.
-        this.bindSDLCanvas();
-        if (typeof window?.requestAnimationFrame === 'function') {
-          window.requestAnimationFrame(() => this.bindSDLCanvas());
-        }
+        this.scheduleSDLCanvasRebind();
       }
 
       if (shouldShowCanvasLoading) {
@@ -574,6 +568,27 @@ export default class PyodideRunner {
 
     if (focus && this.sdlCanvas.isConnected && typeof this.sdlCanvas.focus === 'function') {
       this.sdlCanvas.focus();
+    }
+  }
+
+  /**
+   * Rebinds SDL canvas over multiple ticks to avoid browser-specific timing
+   * races where SDL still targets the previously detached canvas.
+   * @returns {void}
+   */
+  scheduleSDLCanvasRebind() {
+    this.bindSDLCanvas();
+
+    if (typeof window?.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => this.bindSDLCanvas());
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => this.bindSDLCanvas());
+      });
+    }
+
+    if (typeof window?.setTimeout === 'function') {
+      window.setTimeout(() => this.bindSDLCanvas(), 0);
+      window.setTimeout(() => this.bindSDLCanvas(), 40);
     }
   }
 
