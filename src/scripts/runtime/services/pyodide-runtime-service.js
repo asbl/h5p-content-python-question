@@ -381,9 +381,12 @@ if not globals().get('_h5p_runtime_compat_installed', False):
   async def _h5p_cancel_background_task():
     global _h5p_background_task, _h5p_background_task_started
 
+    miniworlds_app = None
+
     try:
       import miniworlds
       running_app = getattr(miniworlds.App, 'running_app', None)
+      miniworlds_app = getattr(miniworlds, 'App', None)
       if running_app is not None:
         running_app.quit()
     except Exception:
@@ -391,10 +394,20 @@ if not globals().get('_h5p_runtime_compat_installed', False):
 
     task = _h5p_background_task
     if task is None:
+      try:
+        if miniworlds_app is not None and hasattr(miniworlds_app, 'reset'):
+          miniworlds_app.reset()
+      except Exception:
+        pass
       _h5p_background_task_started = False
       return False
 
     if task.done():
+      try:
+        if miniworlds_app is not None and hasattr(miniworlds_app, 'reset'):
+          miniworlds_app.reset()
+      except Exception:
+        pass
       _h5p_background_task = None
       _h5p_background_task_started = False
       return False
@@ -405,6 +418,12 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     except asyncio.CancelledError:
       pass
     except BaseException:
+      pass
+
+    try:
+      if miniworlds_app is not None and hasattr(miniworlds_app, 'reset'):
+        miniworlds_app.reset()
+    except Exception:
       pass
 
     _h5p_background_task = None
