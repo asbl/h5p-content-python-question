@@ -631,6 +631,13 @@ export default class PyodideRunner {
       this.sdlCanvas.blur();
     }
 
+    // Firefox can keep SDL pinned to the detached fallback canvas across
+    // stop->run boundaries. In Firefox, only release keyboard focus here and
+    // keep the active canvas binding until the cooperative shutdown finishes.
+    if (typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '')) {
+      return;
+    }
+
     const inactiveCanvas = this.getInactiveSDLCanvas();
     if (inactiveCanvas) {
       setActivePyodideSDLCanvas(inactiveCanvas);
