@@ -250,17 +250,8 @@ export default class PyodideRunner {
    * @returns {Promise<*>} Python result value or undefined on handled errors.
    */
   async execute(code, canvasDiv = null) {
-    // Wait for any in-progress stop cancellation before starting new code.
-    // Without this, the old miniworlds task may still be tearing down while
-    // the new code starts, causing SDL display state corruption (black screen).
-    if (this._cancelPromise) {
-      try {
-        await this._cancelPromise;
-      }
-      catch (error) {
-        console.warn('Could not finish pending stop cleanup', error);
-      }
-    }
+    this.scheduleBackgroundTaskCancellation();
+    await this.waitForBackgroundTaskCancellation();
 
     setActivePyodideRuntime(this.runtime);
 
@@ -275,6 +266,11 @@ export default class PyodideRunner {
       if (!this._isInitialized) {
         await this.setup();
       }
+
+      // A stop() call can arrive while setup is still running.
+      // Schedule and await cancellation once more to serialize stop->run.
+      this.scheduleBackgroundTaskCancellation();
+      await this.waitForBackgroundTaskCancellation();
 
       await resetPyodideBackgroundTaskState(this.pyodide);
       this.hasBackgroundTask = false;
@@ -383,24 +379,51 @@ export default class PyodideRunner {
       this._resizeTimeout = null;
     }
 
-    if (this.hasBackgroundTask && this.pyodide) {
-      const cancelPromise = cancelPyodideBackgroundTask(this.pyodide).catch((error) => {
-        console.warn('Could not cancel background SDL task', error);
-      });
-
-      this._cancelPromise = cancelPromise;
-
-      cancelPromise.finally(() => {
-        if (this._cancelPromise === cancelPromise) {
-          this._cancelPromise = null;
-        }
-      });
-
-      this.hasBackgroundTask = false;
-    }
+    this.scheduleBackgroundTaskCancellation();
+    this.hasBackgroundTask = false;
 
     this.runtime.codeContainer.getStateManager()?.stop();
     return true;
+  }
+
+  /**
+   * Starts cooperative cancellation of a running background task if possible.
+   * Cancellation is intentionally idempotent and safe when no task exists.
+   * @returns {void}
+   */
+  scheduleBackgroundTaskCancellation() {
+    if (!this.pyodide || this._cancelPromise) {
+      return;
+    }
+
+    const cancelPromise = cancelPyodideBackgroundTask(this.pyodide).catch((error) => {
+      console.warn('Could not cancel background SDL task', error);
+    });
+
+    this._cancelPromise = cancelPromise;
+
+    cancelPromise.finally(() => {
+      if (this._cancelPromise === cancelPromise) {
+        this._cancelPromise = null;
+      }
+    });
+  }
+
+  /**
+   * Waits for a pending stop/cancel sequence to finish.
+   * @returns {Promise<void>} Resolves once cancellation cleanup completed.
+   */
+  async waitForBackgroundTaskCancellation() {
+    if (!this._cancelPromise) {
+      return;
+    }
+
+    try {
+      await this._cancelPromise;
+    }
+    catch (error) {
+      console.warn('Could not finish pending stop cleanup', error);
+    }
   }
 
   /**
