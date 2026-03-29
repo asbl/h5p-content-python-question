@@ -247,11 +247,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
   return {
     ...baseOptions,
     hasConsole: config?.advancedOptions?.showConsole !== false,
-    // Legacy content may still have enableImageUploads=true in global advanced
-    // options. Respect an explicit per-item disable in editor params.
-    enableImageUploads: editorParams?.enableImageUploads === false
-      ? false
-      : (editorParams?.enableImageUploads === true || config?.advancedOptions?.enableImageUploads === true),
+    enableImageUploads: editorParams?.enableImageUploads === true || config?.advancedOptions?.enableImageUploads === true,
     enableSoundUploads: editorParams?.enableSoundUploads === true || config?.advancedOptions?.enableSoundUploads === true,
     showSaveLoadButtons: config?.advancedOptions?.enableSaveLoadButtons !== false,
     projectStorageEnabled: config?.runner === 'pyodide',
