@@ -297,6 +297,7 @@ export default class PyodideRunner {
       }
       else if (activeCanvasDiv && this.runtime.containsSDLCode()) {
         this.setupSDLCanvas(activeCanvasDiv);
+        this.clearSDLCanvas();
         this.scheduleSDLCanvasRebind();
       }
 
@@ -600,6 +601,26 @@ export default class PyodideRunner {
 
     if (typeof this.sdlCanvas.blur === 'function') {
       this.sdlCanvas.blur();
+    }
+  }
+
+  /**
+   * Clears the SDL canvas to remove artifacts from previous executions.
+   * @returns {void}
+   */
+  clearSDLCanvas() {
+    if (!this.sdlCanvas) {
+      return;
+    }
+
+    try {
+      const ctx = this.sdlCanvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, this.sdlCanvas.width, this.sdlCanvas.height);
+      }
+    }
+    catch (error) {
+      console.warn('Could not clear SDL canvas', error);
     }
   }
 
