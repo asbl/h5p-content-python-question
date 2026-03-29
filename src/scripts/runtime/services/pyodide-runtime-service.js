@@ -485,6 +485,17 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     exec(compile(module, '<h5p-learner-code>', 'exec'), namespace, namespace)
     return await namespace['_h5p_main']()
 
+  async def _h5p_wrap_background_coro(coro):
+    try:
+      return await coro
+    except SystemExit as error:
+      # miniworlds exits with sys.exit(0) after normal shutdown.
+      # In Pyodide background tasks this must not surface as uncaught error.
+      code = getattr(error, 'code', 0)
+      if code in (0, None):
+        return code
+      raise
+
   def _h5p_asyncio_run(main, *args, **kwargs):
     global _h5p_background_task, _h5p_background_task_started
 
@@ -493,6 +504,11 @@ if not globals().get('_h5p_runtime_compat_installed', False):
 
     try:
       return _h5p_original_asyncio_run(main, *args, **kwargs)
+    except SystemExit as error:
+      code = getattr(error, 'code', 0)
+      if code in (0, None):
+        return code
+      raise
     except RuntimeError as error:
       try:
         loop = asyncio.get_running_loop()
@@ -508,7 +524,7 @@ if not globals().get('_h5p_runtime_compat_installed', False):
         else:
           raise
 
-      task = loop.create_task(main)
+      task = loop.create_task(_h5p_wrap_background_coro(main))
       _h5p_background_task = task
       _h5p_background_task_started = True
       return task
