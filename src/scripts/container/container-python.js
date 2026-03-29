@@ -1,5 +1,25 @@
 export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
 
+  /**
+   * Re-synchronizes canvas sizing/binding after page visibility changes.
+   * @returns {void}
+   */
+  syncCanvasLayout() {
+    const runner = this._runtime?.runner;
+
+    runner?.scheduleSDLCanvasRebind?.();
+    runner?.triggerResizeAfterCanvasUpdate?.();
+    this.resizeActionHandler?.();
+
+    if (typeof window?.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => {
+        runner?.scheduleSDLCanvasRebind?.();
+        runner?.triggerResizeAfterCanvasUpdate?.();
+        this.resizeActionHandler?.();
+      });
+    }
+  }
+
   async setup() {
     await super.setup();
   }
@@ -62,6 +82,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
   onCanvasPageShown() {
     this._runtime?.runner?.acquireInputFocus?.();
     this.hideCanvasButton();
+    this.syncCanvasLayout();
   }
 
   /**
@@ -72,7 +93,6 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
     this._runtime?.runner?.releaseInputFocus?.();
     if (!this.getPageManager().isEmpty('canvas')) {
       this.getButtonManager().showButton('canvas');
-      this.registerDOM();
     }
   }
 
@@ -83,7 +103,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
   showCanvasPage() {
     this.getPageManager().showPage('canvas');
     this.hideCanvasButton();
-    this.registerDOM();
+    this.syncCanvasLayout();
   }
 
   /**
