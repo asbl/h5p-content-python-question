@@ -50,7 +50,6 @@ export default class PyodideRunner {
     this.canvasWrapper = null;
     this.canvasDiv = null;
     this.sdlCanvas = null;
-    this._inactiveSDLCanvas = null;
     this.hasBackgroundTask = false;
     this._resizeTimeout = null;
     this._p5WindowBindings = new Map();
@@ -518,7 +517,7 @@ export default class PyodideRunner {
   /**
    * Binds one p5 function to window while tracking the previous binding.
    * @param {string} name - Global function name.
-   * @param {Function} fn - Function implementation.
+   * @param {function} fn - Function implementation.
    * @returns {void}
    */
   bindP5WindowFunction(name, fn) {
@@ -538,7 +537,8 @@ export default class PyodideRunner {
     this._p5WindowBindings.forEach((binding, name) => {
       if (binding?.existed) {
         window[name] = binding.value;
-      } else {
+      }
+      else {
         delete window[name];
       }
     });
@@ -560,7 +560,7 @@ export default class PyodideRunner {
 
   /**
    * Binds SDL rendering to the current visible canvas.
-   * @param {boolean} [focus=false] - Whether keyboard focus should be moved to the canvas.
+   * @param {boolean} [focus] - Whether keyboard focus should be moved to the canvas.
    * @returns {void}
    */
   bindSDLCanvas(focus = false) {
@@ -586,36 +586,7 @@ export default class PyodideRunner {
 
     if (typeof window?.requestAnimationFrame === 'function') {
       window.requestAnimationFrame(() => this.bindSDLCanvas());
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => this.bindSDLCanvas());
-      });
     }
-
-    if (typeof window?.setTimeout === 'function') {
-      window.setTimeout(() => this.bindSDLCanvas(), 0);
-      window.setTimeout(() => this.bindSDLCanvas(), 40);
-    }
-  }
-
-  /**
-   * Returns a detached fallback canvas used when SDL should stop targeting the
-   * visible learner canvas.
-   * @returns {HTMLCanvasElement|null} Detached fallback canvas.
-   */
-  getInactiveSDLCanvas() {
-    if (typeof document === 'undefined') {
-      return null;
-    }
-
-    if (!this._inactiveSDLCanvas) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1;
-      canvas.height = 1;
-      canvas.tabIndex = -1;
-      this._inactiveSDLCanvas = canvas;
-    }
-
-    return this._inactiveSDLCanvas;
   }
 
   /**
@@ -629,19 +600,6 @@ export default class PyodideRunner {
 
     if (typeof this.sdlCanvas.blur === 'function') {
       this.sdlCanvas.blur();
-    }
-
-    // Firefox can keep SDL pinned to the detached fallback canvas across
-    // stop->run boundaries. In Firefox, only release keyboard focus here and
-    // keep the active canvas binding until the cooperative shutdown finishes.
-    if (typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent || '')) {
-      return;
-    }
-
-    const inactiveCanvas = this.getInactiveSDLCanvas();
-    if (inactiveCanvas) {
-      setActivePyodideSDLCanvas(inactiveCanvas);
-      this.pyodide?.canvas?.setCanvas2D?.(inactiveCanvas);
     }
   }
 
