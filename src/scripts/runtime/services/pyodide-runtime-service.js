@@ -554,7 +554,10 @@ if not globals().get('_h5p_runtime_compat_installed', False):
       # should be surfaced to the caller.
       if loop is None:
         message = str(error)
-        if 'WebAssembly stack switching not supported' in message:
+        if (
+          'event loop is running' in message
+          or 'WebAssembly stack switching not supported' in message
+        ):
           loop = asyncio.get_event_loop()
         else:
           raise
