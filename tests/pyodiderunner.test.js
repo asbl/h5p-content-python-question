@@ -268,7 +268,7 @@ describe('PyodideRunner', () => {
     expect(focus).toHaveBeenCalledTimes(1);
   });
 
-  it('rebinds SDL rendering to an inert canvas when releasing input focus', () => {
+  it('releases SDL input focus without rebinding canvas target', () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
     const canvas = document.createElement('canvas');
@@ -287,14 +287,48 @@ describe('PyodideRunner', () => {
     runner.releaseInputFocus();
 
     expect(blur).toHaveBeenCalledTimes(1);
-    expect(runner.pyodide.canvas.setCanvas2D).toHaveBeenCalledTimes(1);
+    expect(runner.pyodide.canvas.setCanvas2D).not.toHaveBeenCalled();
+    expect(mocks.setActivePyodideSDLCanvas).not.toHaveBeenCalled();
+  });
 
-    const [[inactiveCanvas]] = runner.pyodide.canvas.setCanvas2D.mock.calls;
-    expect(inactiveCanvas).toBeInstanceOf(HTMLCanvasElement);
-    expect(inactiveCanvas).not.toBe(canvas);
-    expect(inactiveCanvas.width).toBe(1);
-    expect(inactiveCanvas.height).toBe(1);
-    expect(mocks.setActivePyodideSDLCanvas).toHaveBeenCalledWith(inactiveCanvas);
+  it('synchronizes SDL canvas dimensions with the visible canvas container', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+    const canvas = document.createElement('canvas');
+
+    Object.defineProperty(canvasDiv, 'clientWidth', { value: 960, configurable: true });
+    Object.defineProperty(canvasDiv, 'clientHeight', { value: 540, configurable: true });
+
+    canvas.width = 320;
+    canvas.height = 240;
+    runner.canvasDiv = canvasDiv;
+    runner.sdlCanvas = canvas;
+
+    runner.syncSDLCanvasSize();
+
+    expect(canvas.width).toBe(960);
+    expect(canvas.height).toBe(540);
+  });
+
+  it('resizes before and during scheduled SDL canvas rebinds', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const syncSDLCanvasSize = vi.spyOn(runner, 'syncSDLCanvasSize').mockImplementation(() => {});
+    const bindSDLCanvas = vi.spyOn(runner, 'bindSDLCanvas').mockImplementation(() => {});
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+
+    window.requestAnimationFrame = vi.fn((callback) => {
+      callback();
+      return 1;
+    });
+
+    runner.scheduleSDLCanvasRebind();
+
+    expect(syncSDLCanvasSize).toHaveBeenCalledTimes(2);
+    expect(bindSDLCanvas).toHaveBeenCalledTimes(2);
+
+    window.requestAnimationFrame = originalRequestAnimationFrame;
   });
 
   it('binds the visible SDL canvas only once during setup', () => {
