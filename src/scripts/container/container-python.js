@@ -61,6 +61,8 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
    */
   onCanvasPageShown() {
     this._runtime?.runner?.acquireInputFocus?.();
+    this._runtime?.runner?.scheduleSDLCanvasRebind?.();
+    this._runtime?.runner?.triggerResizeAfterCanvasUpdate?.();
     this.hideCanvasButton();
   }
 
@@ -96,7 +98,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
 
   /**
    * Return CodeMirror mode for Python
-   * @returns {string}
+   * @returns {string} CodeMirror mode identifier.
    */
   getMode() {
     return 'python';

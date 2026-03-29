@@ -578,15 +578,42 @@ export default class PyodideRunner {
   }
 
   /**
+   * Synchronizes the SDL canvas pixel size with its current host dimensions.
+   * @returns {void}
+   */
+  syncSDLCanvasSize() {
+    if (!this.sdlCanvas || !this.canvasDiv) {
+      return;
+    }
+
+    const width = this.canvasDiv.clientWidth;
+    const height = this.canvasDiv.clientHeight;
+
+    if (width > 0 && height > 0) {
+      if (this.sdlCanvas.width !== width) {
+        this.sdlCanvas.width = width;
+      }
+
+      if (this.sdlCanvas.height !== height) {
+        this.sdlCanvas.height = height;
+      }
+    }
+  }
+
+  /**
    * Rebinds SDL canvas over multiple ticks to avoid browser-specific timing
    * races where SDL still targets the previously detached canvas.
    * @returns {void}
    */
   scheduleSDLCanvasRebind() {
+    this.syncSDLCanvasSize();
     this.bindSDLCanvas();
 
     if (typeof window?.requestAnimationFrame === 'function') {
-      window.requestAnimationFrame(() => this.bindSDLCanvas());
+      window.requestAnimationFrame(() => {
+        this.syncSDLCanvasSize();
+        this.bindSDLCanvas();
+      });
     }
   }
 
@@ -718,6 +745,7 @@ export default class PyodideRunner {
       }
 
       this.sdlCanvas = canvas;
+      this.syncSDLCanvasSize();
       this.acquireInputFocus();
       this.triggerResizeAfterCanvasUpdate();
       return canvas;
@@ -740,6 +768,7 @@ export default class PyodideRunner {
     }
 
     this.sdlCanvas = canvas;
+    this.syncSDLCanvasSize();
     this.acquireInputFocus();
     this.triggerResizeAfterCanvasUpdate();
 
