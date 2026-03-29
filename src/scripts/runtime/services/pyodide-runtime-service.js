@@ -9,7 +9,7 @@ import { normalizePythonExecutionLimit } from '../../services/python-execution-l
 /**
  * Shared Pyodide loader state across all runner instances.
  * Per-instance Pyodide state is stored in a WeakMap keyed by the Pyodide object.
- * @type {{loadPyodidePromise: Promise<*>|null, sharedPyodidePromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, compatibilityPromise: Promise<*>|null, activeRuntime: object|null, activeSDLCanvas: HTMLCanvasElement|null, loadedPackages: Set<string>, pyodideInstanceState: WeakMap<object, {compatibilityPromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, loadedPackages: Set<string>}>, fetchCacheInstalled: boolean}}
+ * @type {{loadPyodidePromise: Promise<*>|null, sharedPyodidePromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, compatibilityPromise: Promise<*>|null, activeRuntime: object|null, activeSDLCanvas: HTMLCanvasElement|null, activeSDLRunner: object|null, loadedPackages: Set<string>, pyodideInstanceState: WeakMap<object, {compatibilityPromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, loadedPackages: Set<string>}>, fetchCacheInstalled: boolean}}
  */
 export const sharedPyodideRuntimeState = {
   compatibilityPromise: null,
@@ -18,6 +18,7 @@ export const sharedPyodideRuntimeState = {
   inputOverridePromise: null,
   activeRuntime: null,
   activeSDLCanvas: null,
+  activeSDLRunner: null,
   loadedPackages: new Set(),
   pyodideInstanceState: new WeakMap(),
   fetchCacheInstalled: false,
@@ -65,6 +66,7 @@ export function resetSharedPyodideRuntimeState() {
   sharedPyodideRuntimeState.inputOverridePromise = null;
   sharedPyodideRuntimeState.activeRuntime = null;
   sharedPyodideRuntimeState.activeSDLCanvas = null;
+  sharedPyodideRuntimeState.activeSDLRunner = null;
   sharedPyodideRuntimeState.loadedPackages.clear();
   sharedPyodideRuntimeState.pyodideInstanceState = new WeakMap();
   sharedPyodideRuntimeState.fetchCacheInstalled = false;

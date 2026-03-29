@@ -251,6 +251,18 @@ export default class PyodideRunner {
   async execute(code, canvasDiv = null) {
     await this.waitForBackgroundTaskCancellation();
 
+    // When this instance is about to use SDL, stop any other runner that
+    // currently owns the SDL canvas so its background animation loop cannot
+    // draw artefacts onto this instance's canvas after the canvas target
+    // switches.
+    if (this.runtime.containsSDLCode?.()) {
+      const prevSDLRunner = sharedPyodideRuntimeState.activeSDLRunner;
+      if (prevSDLRunner && prevSDLRunner !== this) {
+        prevSDLRunner.stop();
+        await prevSDLRunner.waitForBackgroundTaskCancellation();
+      }
+    }
+
     setActivePyodideRuntime(this.runtime);
 
     const activeCanvasDiv = canvasDiv || this.canvasDiv;
@@ -296,6 +308,7 @@ export default class PyodideRunner {
         this.setupP5(canvasDiv);
       }
       else if (activeCanvasDiv && this.runtime.containsSDLCode()) {
+        sharedPyodideRuntimeState.activeSDLRunner = this;
         this.setupSDLCanvas(activeCanvasDiv);
         this.clearSDLCanvas();
         this.scheduleSDLCanvasRebind();
@@ -364,6 +377,10 @@ export default class PyodideRunner {
     if (this.sdlCanvas) {
       this.releaseInputFocus();
       this.sdlCanvas = null;
+    }
+
+    if (sharedPyodideRuntimeState.activeSDLRunner === this) {
+      sharedPyodideRuntimeState.activeSDLRunner = null;
     }
 
     if (this._resizeTimeout !== null && typeof window?.clearTimeout === 'function') {
