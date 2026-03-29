@@ -496,6 +496,38 @@ if not globals().get('_h5p_runtime_compat_installed', False):
         return code
       raise
 
+  def _h5p_track_background_task(task):
+    global _h5p_background_task, _h5p_background_task_started
+
+    _h5p_background_task = task
+    _h5p_background_task_started = True
+
+    def _h5p_finalize_background_task(done_task):
+      try:
+        error = done_task.exception()
+      except asyncio.CancelledError:
+        return
+      except BaseException:
+        return
+
+      if isinstance(error, SystemExit):
+        code = getattr(error, 'code', 0)
+        if code in (0, None):
+          return
+
+      if error is not None:
+        try:
+          done_task.get_loop().call_exception_handler({
+            'message': 'Unhandled exception in H5P background task',
+            'exception': error,
+            'task': done_task,
+          })
+        except Exception:
+          pass
+
+    task.add_done_callback(_h5p_finalize_background_task)
+    return task
+
   def _h5p_asyncio_run(main, *args, **kwargs):
     global _h5p_background_task, _h5p_background_task_started
 
@@ -503,7 +535,10 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     _h5p_background_task_started = False
 
     try:
-      return _h5p_original_asyncio_run(main, *args, **kwargs)
+      result = _h5p_original_asyncio_run(main, *args, **kwargs)
+      if isinstance(result, asyncio.Task):
+        return _h5p_track_background_task(result)
+      return result
     except SystemExit as error:
       code = getattr(error, 'code', 0)
       if code in (0, None):
@@ -525,9 +560,7 @@ if not globals().get('_h5p_runtime_compat_installed', False):
           raise
 
       task = loop.create_task(_h5p_wrap_background_coro(main))
-      _h5p_background_task = task
-      _h5p_background_task_started = True
-      return task
+      return _h5p_track_background_task(task)
 
   asyncio.run = _h5p_asyncio_run
   globals()['_h5p_runtime_compat_installed'] = True
