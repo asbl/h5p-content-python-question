@@ -494,17 +494,19 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     try:
       return _h5p_original_asyncio_run(main, *args, **kwargs)
     except RuntimeError as error:
-      message = str(error)
-      if (
-        'event loop is running' not in message
-        and 'WebAssembly stack switching not supported' not in message
-      ):
-        raise
-
       try:
         loop = asyncio.get_running_loop()
       except RuntimeError:
-        loop = asyncio.get_event_loop()
+        loop = None
+
+      # If no running loop is available, this RuntimeError was unrelated and
+      # should be surfaced to the caller.
+      if loop is None:
+        message = str(error)
+        if 'WebAssembly stack switching not supported' in message:
+          loop = asyncio.get_event_loop()
+        else:
+          raise
 
       task = loop.create_task(main)
       _h5p_background_task = task
