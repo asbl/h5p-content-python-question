@@ -253,12 +253,8 @@ export function writePyodideRuntimeOutput(text, runtimeOrIsError = false, isErro
   const treatAsError = typeof runtimeOrIsError === 'boolean' ? runtimeOrIsError : isError;
 
   if (activeRuntime?.outputHandler) {
-    if (sharedPyodideRuntimeState.packageLoadDepth > 0) {
-      // During package loading, keep messages off the learner-visible console.
-      console.log('[pyodide]', text);
-      return;
-    }
-    activeRuntime.outputHandler(text);
+    // During package loading, show in console but suppress the popup dialog.
+    activeRuntime.outputHandler(text, sharedPyodideRuntimeState.packageLoadDepth === 0);
     return;
   }
 

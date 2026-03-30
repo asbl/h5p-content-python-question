@@ -31,7 +31,7 @@ describe('Pyodide runtime service', () => {
 
     writePyodideRuntimeOutput('ready');
 
-    expect(outputHandler).toHaveBeenCalledWith('ready');
+    expect(outputHandler).toHaveBeenCalledWith('ready', true);
     expect(await getPyodideRuntimeInput()).toBe('42');
     expect(inputHandler).toHaveBeenCalledWith('Input:');
   });
@@ -114,8 +114,8 @@ describe('Pyodide runtime service', () => {
     setActivePyodideRuntime(runtimeB);
     secondPyodide._stdout('second');
 
-    expect(runtimeA.outputHandler).toHaveBeenCalledWith('first');
-    expect(runtimeB.outputHandler).toHaveBeenCalledWith('second');
+    expect(runtimeA.outputHandler).toHaveBeenCalledWith('first', true);
+    expect(runtimeB.outputHandler).toHaveBeenCalledWith('second', true);
   });
 
   it('tracks loaded packages per Pyodide instance', () => {
