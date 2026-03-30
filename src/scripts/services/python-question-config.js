@@ -256,7 +256,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     sourceFiles: config?.runner === 'pyodide' ? normalizePythonSourceFiles(rawSourceFiles) : [],
     defaultImages: normalizePythonDefaultImages(rawDefaultImages),
     downloadFilename: 'main.py',
-    projectDownloadFilename: 'python-project.h5pproject',
+    projectDownloadFilename: 'python-project.zip',
     projectBundleType: 'h5p-python-question-project',
     editorMode: normalizePythonEditorMode(editorParams?.editorMode),
     blocklyCategories: editorParams?.blocklyCategories || null,

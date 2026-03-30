@@ -149,7 +149,7 @@ describe('Python question config', () => {
         },
       ],
       downloadFilename: 'main.py',
-      projectDownloadFilename: 'python-project.h5pproject',
+      projectDownloadFilename: 'python-project.zip',
       projectBundleType: 'h5p-python-question-project',
       editorMode: 'blocks',
       blocklyCategories: { variables: true, logic: false, loops: true, math: false, text: true, lists: false, functions: false },
