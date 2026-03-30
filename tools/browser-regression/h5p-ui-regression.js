@@ -250,6 +250,35 @@ async function clickVisibleButtons(page, matcher) {
   }, matcher.source);
 }
 
+async function findQuestionRootButton(questionRoot, matcher, timeout = 30000) {
+  const regex = (matcher instanceof RegExp)
+    ? matcher
+    : new RegExp(String(matcher), 'i');
+  const selector = '.h5p-question-buttons .button, .h5p-question-buttons button';
+  const endTime = Date.now() + timeout;
+
+  while (Date.now() < endTime) {
+    const buttons = questionRoot.locator(selector);
+    const count = await buttons.count();
+
+    for (let index = 0; index < count; index += 1) {
+      const candidate = buttons.nth(index);
+      if (!(await candidate.isVisible())) {
+        continue;
+      }
+
+      const text = normalizeText(await candidate.innerText());
+      if (regex.test(text)) {
+        return candidate;
+      }
+    }
+
+    await questionRoot.page().waitForTimeout(200);
+  }
+
+  throw new Error(`Question-scoped button not found for matcher: ${regex.toString()}`);
+}
+
 async function checkSamePageMultiInstanceCanvas(page) {
   const payload = await getSamePageHarnessPayload(page, MULTI_INSTANCE_CONTENT_ID);
 
@@ -316,6 +345,117 @@ async function checkSamePageMultiInstanceCanvas(page) {
 
   if (diagnostics.canvases.some((canvas) => canvas.width < 50 || canvas.height < 50)) {
     throw new Error(`SDL canvases were mounted with unexpected dimensions: ${JSON.stringify(diagnostics.canvases)}`);
+  }
+}
+
+async function checkSamePageMultiInstanceArrowFocus(page) {
+  const payload = await getSamePageHarnessPayload(page, MULTI_INSTANCE_CONTENT_ID);
+
+  payload.integration.contents = {
+    'cid-multi-a': JSON.parse(JSON.stringify(payload.integration.contents[payload.originalKey])),
+    'cid-multi-b': JSON.parse(JSON.stringify(payload.integration.contents[payload.originalKey])),
+  };
+
+  await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'networkidle' });
+
+  const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script>window.H5PIntegration=${JSON.stringify(payload.integration)};</script>
+    ${payload.styles.map((href) => `<link rel="stylesheet" href="${href}">`).join('\n    ')}
+    ${payload.scripts.map((src) => `<script src="${src}"></script>`).join('\n    ')}
+  </head>
+  <body>
+    <div class="h5p-content" data-content-id="multi-a" data-content-library="${MACHINE_NAME} 6.0"></div>
+    <div class="h5p-content" data-content-id="multi-b" data-content-library="${MACHINE_NAME} 6.0"></div>
+    <script>
+      const boot = () => {
+        if (window.H5P && typeof window.H5P.init === 'function') {
+          window.H5P.init(document.body);
+          return;
+        }
+
+        window.setTimeout(boot, 50);
+      };
+
+      boot();
+    </script>
+  </body>
+</html>`;
+
+  await page.setContent(html, { waitUntil: 'load' });
+  await page.waitForFunction(() => document.querySelectorAll('.h5p-codequestion').length >= 2, null, { timeout: 30000 });
+
+  const questions = page.locator('.h5p-codequestion');
+  const questionA = questions.nth(0);
+  const questionB = questions.nth(1);
+
+  const runA = await findQuestionRootButton(questionA, /ausf|run/i, 30000);
+  const runB = await findQuestionRootButton(questionB, /ausf|run/i, 30000);
+  await runA.click();
+  await runB.click();
+
+  const canvasA = await findVisibleLocator(
+    questionA.locator('canvas.pyodide-sdl-canvas'),
+    30000,
+    'Visible SDL canvas in first instance not found.'
+  );
+  const canvasB = await findVisibleLocator(
+    questionB.locator('canvas.pyodide-sdl-canvas'),
+    30000,
+    'Visible SDL canvas in second instance not found.'
+  );
+
+  await canvasA.waitFor({ state: 'visible', timeout: 30000 });
+  await canvasB.waitFor({ state: 'visible', timeout: 30000 });
+
+  // Trigger deferred editor-focus callbacks in instance A while interacting with instance B.
+  const showCodeA = await findQuestionRootButton(questionA, /show\s*code|\bcode\b/i, 20000);
+  await showCodeA.click();
+  await questionA.locator('.page-code.active').first().waitFor({ state: 'visible', timeout: 20000 });
+
+  await canvasB.click();
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(320);
+  await page.keyboard.press('ArrowRight');
+
+  const diagnostics = await page.evaluate(() => {
+    const roots = Array.from(document.querySelectorAll('.h5p-codequestion'));
+    const rootA = roots[0] || null;
+    const rootB = roots[1] || null;
+    const activeElement = document.activeElement;
+
+    const activePageClass = (root) => root?.querySelector('.page.active')?.className || '';
+    const snapshotTarget = (node) => ({
+      tag: node?.tagName || '',
+      id: node?.id || '',
+      className: typeof node?.className === 'string' ? node.className : '',
+    });
+
+    return {
+      activeElement: snapshotTarget(activeElement),
+      activeInA: !!(rootA && activeElement && rootA.contains(activeElement)),
+      activeInB: !!(rootB && activeElement && rootB.contains(activeElement)),
+      pageA: activePageClass(rootA),
+      pageB: activePageClass(rootB),
+      canvasAFocus: !!rootA?.querySelector('canvas.pyodide-sdl-canvas:focus'),
+      canvasBFocus: !!rootB?.querySelector('canvas.pyodide-sdl-canvas:focus'),
+      editorAFocus: !!rootA?.querySelector('.editor_container .cm-editor.cm-focused, .editor_container .cm-content:focus'),
+      editorBFocus: !!rootB?.querySelector('.editor_container .cm-editor.cm-focused, .editor_container .cm-content:focus'),
+    };
+  });
+
+  if (!diagnostics.activeInB) {
+    throw new Error(`Arrow-key interaction lost focus in instance B: ${JSON.stringify(diagnostics)}`);
+  }
+
+  if (diagnostics.activeInA && diagnostics.editorAFocus) {
+    throw new Error(`Instance A stole editor focus during arrow-key input in instance B: ${JSON.stringify(diagnostics)}`);
+  }
+
+  if (!/page-canvas\s+active|page-canvas\b.*\bactive/.test(diagnostics.pageB)) {
+    throw new Error(`Instance B is no longer on canvas page after arrow-key input: ${JSON.stringify(diagnostics)}`);
   }
 }
 
@@ -602,6 +742,7 @@ async function main() {
   results.push(await executeCheck(browser, 'miniworlds preserves editor typing across run/code/stop', checkMiniworldsEditorFocus));
   results.push(await executeCheck(browser, 'miniworlds canvas renders on second run after stop', checkMiniworldsRerun));
   results.push(await executeCheck(browser, 'same-page miniworlds instances mount separate SDL canvases', checkSamePageMultiInstanceCanvas));
+  results.push(await executeCheck(browser, 'same-page miniworlds arrow keys do not steal focus across instances', checkSamePageMultiInstanceArrowFocus));
   results.push(await executeCheck(browser, 'console output visible after run', checkConsoleOutput));
   results.push(await executeCheck(browser, 'run/stop toggles on infinite loop', checkRunStop));
 
