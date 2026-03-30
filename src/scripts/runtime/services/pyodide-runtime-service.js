@@ -22,8 +22,9 @@ export const sharedPyodideRuntimeState = {
   loadedPackages: new Set(),
   pyodideInstanceState: new WeakMap(),
   fetchCacheInstalled: false,
+  /** While > 0, Python stdout/stderr is routed to browser console only. */
+  packageLoadDepth: 0,
 };
-
 const PYODIDE_FETCH_CACHE_NAME = 'h5p-pythonquestion-pyodide-fetch-v2';
 
 /**
@@ -70,6 +71,7 @@ export function resetSharedPyodideRuntimeState() {
   sharedPyodideRuntimeState.loadedPackages.clear();
   sharedPyodideRuntimeState.pyodideInstanceState = new WeakMap();
   sharedPyodideRuntimeState.fetchCacheInstalled = false;
+  sharedPyodideRuntimeState.packageLoadDepth = 0;
 }
 
 /**
@@ -251,6 +253,11 @@ export function writePyodideRuntimeOutput(text, runtimeOrIsError = false, isErro
   const treatAsError = typeof runtimeOrIsError === 'boolean' ? runtimeOrIsError : isError;
 
   if (activeRuntime?.outputHandler) {
+    if (sharedPyodideRuntimeState.packageLoadDepth > 0) {
+      // During package loading, keep messages off the learner-visible console.
+      console.log('[pyodide]', text);
+      return;
+    }
     activeRuntime.outputHandler(text);
     return;
   }

@@ -107,12 +107,18 @@ export async function loadMissingPyodidePackages(pyodide, packages = []) {
 
   const { pyodidePackages, micropipPackages } = splitPythonPackages(missingPackages);
 
-  if (pyodidePackages.length) {
-    await pyodide.loadPackage(pyodidePackages);
-    markLoadedPyodidePackages(pyodide, pyodidePackages);
-  }
+  sharedPyodideRuntimeState.packageLoadDepth++;
+  try {
+    if (pyodidePackages.length) {
+      await pyodide.loadPackage(pyodidePackages);
+      markLoadedPyodidePackages(pyodide, pyodidePackages);
+    }
 
-  if (micropipPackages.length) {
-    await installPyodideMicropipPackages(pyodide, micropipPackages);
+    if (micropipPackages.length) {
+      await installPyodideMicropipPackages(pyodide, micropipPackages);
+    }
+  }
+  finally {
+    sharedPyodideRuntimeState.packageLoadDepth--;
   }
 }
