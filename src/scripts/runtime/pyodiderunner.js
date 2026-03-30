@@ -59,6 +59,8 @@ export default class PyodideRunner {
     ]);
 
     this.p5Instance = null;
+    this._sdlKeyboardCaptureBound = null;
+    this._sdlKeyboardCaptureInstalled = false;
     this._isInitialized = false;
     this._setupPromise = null;
     this._cancelPromise = null;
@@ -359,6 +361,7 @@ export default class PyodideRunner {
   stop() {
     this.stopped = true;
     this.setCanvasLoading(false);
+    this.uninstallSDLKeyboardCapture();
 
     // Pyodide itself offers no hard stop, so active integrations are torn down
     // and background tasks are cancelled cooperatively where possible.
@@ -573,7 +576,102 @@ export default class PyodideRunner {
       return;
     }
 
+    this.installSDLKeyboardCapture();
     this.bindSDLCanvas(true);
+  }
+
+  /**
+   * Returns whether the event key should be treated as SDL gameplay input.
+   * @param {KeyboardEvent} event - Keyboard event.
+   * @returns {boolean} True for keys that should not leak to editors.
+   */
+  isSDLControlKey(event) {
+    const key = String(event?.key || '');
+
+    return key === 'ArrowUp'
+      || key === 'ArrowDown'
+      || key === 'ArrowLeft'
+      || key === 'ArrowRight'
+      || key === ' ';
+  }
+
+  /**
+   * Determines if this runner should capture and consume a key event.
+   * @param {KeyboardEvent} event - Keyboard event.
+   * @returns {boolean} True when the active SDL canvas owns keyboard input.
+   */
+  shouldCaptureSDLKeyboard(event) {
+    if (!this.runtime.containsSDLCode?.()) {
+      return false;
+    }
+
+    if (!this.sdlCanvas?.isConnected) {
+      return false;
+    }
+
+    const pageName = this.runtime.codeContainer?.getPageManager?.().activePageName;
+    if (pageName && pageName !== 'canvas') {
+      return false;
+    }
+
+    if (sharedPyodideRuntimeState.activeSDLRunner && sharedPyodideRuntimeState.activeSDLRunner !== this) {
+      return false;
+    }
+
+    return this.isSDLControlKey(event);
+  }
+
+  /**
+   * Installs capture-phase key handling so arrow keys target SDL only.
+   * @returns {void}
+   */
+  installSDLKeyboardCapture() {
+    if (this._sdlKeyboardCaptureInstalled || typeof document?.addEventListener !== 'function') {
+      return;
+    }
+
+    this._sdlKeyboardCaptureBound = (event) => {
+      if (!this.shouldCaptureSDLKeyboard(event)) {
+        return;
+      }
+
+      const activeElement = document.activeElement;
+      const ownCanvasScope = this.canvasWrapper || this.canvasDiv || this.sdlCanvas;
+      const focusIsInsideOwnCanvas = Boolean(
+        ownCanvasScope
+        && activeElement
+        && typeof ownCanvasScope.contains === 'function'
+        && ownCanvasScope.contains(activeElement),
+      ) || activeElement === this.sdlCanvas;
+
+      if (!focusIsInsideOwnCanvas && typeof this.sdlCanvas?.focus === 'function') {
+        this.sdlCanvas.focus({ preventScroll: true });
+      }
+
+      if (typeof event.preventDefault === 'function') {
+        event.preventDefault();
+      }
+      if (typeof event.stopPropagation === 'function') {
+        event.stopPropagation();
+      }
+    };
+
+    document.addEventListener('keydown', this._sdlKeyboardCaptureBound, true);
+    this._sdlKeyboardCaptureInstalled = true;
+  }
+
+  /**
+   * Removes capture-phase SDL keyboard handling.
+   * @returns {void}
+   */
+  uninstallSDLKeyboardCapture() {
+    if (!this._sdlKeyboardCaptureInstalled || !this._sdlKeyboardCaptureBound || typeof document?.removeEventListener !== 'function') {
+      return;
+    }
+
+    document.removeEventListener('keydown', this._sdlKeyboardCaptureBound, true);
+    this._sdlKeyboardCaptureBound = null;
+    this._sdlKeyboardCaptureInstalled = false;
   }
 
   /**
@@ -590,7 +688,7 @@ export default class PyodideRunner {
     this.pyodide?.canvas?.setCanvas2D?.(this.sdlCanvas);
 
     if (focus && this.sdlCanvas.isConnected && typeof this.sdlCanvas.focus === 'function') {
-      this.sdlCanvas.focus();
+      this.sdlCanvas.focus({ preventScroll: true });
     }
   }
 
@@ -639,6 +737,8 @@ export default class PyodideRunner {
    * @returns {void}
    */
   releaseInputFocus() {
+    this.uninstallSDLKeyboardCapture();
+
     if (!this.sdlCanvas) {
       return;
     }

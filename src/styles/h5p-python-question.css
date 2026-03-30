@@ -12,6 +12,10 @@
     min-width: 0;
 }
 
+canvas.pyodide-sdl-canvas:focus {
+    outline: none;
+}
+
 .h5p-codequestion .page-canvas .canvas-wrapper .turtle-content{
     position: relative;
     width: 100%;
