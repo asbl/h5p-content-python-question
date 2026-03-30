@@ -254,29 +254,47 @@ async function findQuestionRootButton(questionRoot, matcher, timeout = 30000) {
   const regex = (matcher instanceof RegExp)
     ? matcher
     : new RegExp(String(matcher), 'i');
-  const selector = '.h5p-question-buttons .button, .h5p-question-buttons button';
+  const selectors = [
+    '.h5p-question-buttons .button',
+    '.h5p-question-buttons button',
+    '.h5p-question button',
+    '.h5p-question .button',
+    'button',
+    '.button',
+  ];
   const endTime = Date.now() + timeout;
 
   while (Date.now() < endTime) {
-    const buttons = questionRoot.locator(selector);
-    const count = await buttons.count();
+    for (const selector of selectors) {
+      const buttons = questionRoot.locator(selector);
+      const count = await buttons.count();
 
-    for (let index = 0; index < count; index += 1) {
-      const candidate = buttons.nth(index);
-      if (!(await candidate.isVisible())) {
-        continue;
-      }
+      for (let index = 0; index < count; index += 1) {
+        const candidate = buttons.nth(index);
+        if (!(await candidate.isVisible())) {
+          continue;
+        }
 
-      const text = normalizeText(await candidate.innerText());
-      if (regex.test(text)) {
-        return candidate;
+        const text = normalizeText(await candidate.innerText());
+        if (regex.test(text)) {
+          return candidate;
+        }
       }
     }
 
     await questionRoot.page().waitForTimeout(200);
   }
 
-  throw new Error(`Question-scoped button not found for matcher: ${regex.toString()}`);
+  const visibleTexts = await questionRoot.locator('button, .button')
+    .evaluateAll((elements) => elements
+      .filter((element) => element.offsetParent !== null)
+      .map((element) => (element.innerText || element.textContent || '').replace(/\s+/g, ' ').trim())
+      .filter(Boolean));
+
+  throw new Error(
+    `Question-scoped button not found for matcher: ${regex.toString()}. `
+    + `Visible texts in this root: ${visibleTexts.join(', ')}`
+  );
 }
 
 async function checkSamePageMultiInstanceCanvas(page) {
