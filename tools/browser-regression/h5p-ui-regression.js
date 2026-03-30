@@ -9,6 +9,7 @@ const FOCUS_CONTENT_ID = process.env.H5P_FOCUS_CONTENT_ID || 'miniworlds-basic';
 const CONSOLE_CONTENT_ID = process.env.H5P_CONSOLE_CONTENT_ID || 'Imported---First-Task';
 const RUNSTOP_CONTENT_ID = process.env.H5P_RUNSTOP_CONTENT_ID || 'Endlosschleife';
 const MULTI_INSTANCE_CONTENT_ID = process.env.H5P_MULTI_INSTANCE_CONTENT_ID || FOCUS_CONTENT_ID;
+const ZIP_ROUNDTRIP_CONTENT_ID = process.env.H5P_ZIP_ROUNDTRIP_CONTENT_ID || 'miniworlds-basic';
 const HEADED = process.env.H5P_HEADED === '1';
 const FOCUS_DEBUG = process.env.H5P_FOCUS_DEBUG === '1';
 const ARTIFACTS_DIR = process.env.H5P_BROWSER_REGRESSION_ARTIFACTS_DIR || path.join(process.cwd(), 'audit', 'browser-regression');
@@ -214,6 +215,154 @@ async function checkRunStop(page) {
   await stopButton.click();
 
   await runButton.waitFor({ state: 'visible', timeout: 15000 });
+}
+
+async function checkZipProjectRoundtrip(page) {
+  const payload = await getSamePageHarnessPayload(page, ZIP_ROUNDTRIP_CONTENT_ID);
+
+  payload.integration.contents = {
+    'cid-zip-a': JSON.parse(JSON.stringify(payload.integration.contents[payload.originalKey])),
+    'cid-zip-b': JSON.parse(JSON.stringify(payload.integration.contents[payload.originalKey])),
+  };
+
+  await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'networkidle' });
+
+  const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script>window.H5PIntegration=${JSON.stringify(payload.integration)};</script>
+    ${payload.styles.map((href) => `<link rel="stylesheet" href="${href}">`).join('\n    ')}
+    ${payload.scripts.map((src) => `<script src="${src}"></script>`).join('\n    ')}
+  </head>
+  <body>
+    <div class="h5p-content" data-content-id="zip-a" data-content-library="${MACHINE_NAME} 6.0"></div>
+    <div class="h5p-content" data-content-id="zip-b" data-content-library="${MACHINE_NAME} 6.0"></div>
+    <script>
+      const boot = () => {
+        if (window.H5P && typeof window.H5P.init === 'function') {
+          window.H5P.init(document.body);
+          return;
+        }
+
+        window.setTimeout(boot, 50);
+      };
+
+      boot();
+    </script>
+  </body>
+</html>`;
+
+  await page.setContent(html, { waitUntil: 'load' });
+  await page.waitForFunction(() => document.querySelectorAll('.h5p-codequestion').length >= 2, null, { timeout: 30000 });
+
+  const questions = page.locator('.h5p-codequestion');
+  const questionA = questions.nth(0);
+  const questionB = questions.nth(1);
+
+  const fileManagerToggleA = questionA.locator('.editor-file-tab-add').first();
+  await fileManagerToggleA.waitFor({ state: 'visible', timeout: 30000 });
+  await fileManagerToggleA.click();
+
+  const addFileInputA = questionA.locator('.editor-fm-input').first();
+  await addFileInputA.waitFor({ state: 'visible', timeout: 20000 });
+  await addFileInputA.fill('helper.py');
+  await questionA.locator('.editor-fm-add').first().click();
+
+  await page.waitForFunction(() => {
+    const firstQuestion = document.querySelectorAll('.h5p-codequestion')[0];
+    return !!firstQuestion
+      && Array.from(firstQuestion.querySelectorAll('.editor-fm-item-name'))
+        .some((item) => (item.textContent || '').trim() === 'helper.py');
+  }, null, { timeout: 20000 });
+
+  await questionA.locator('.editor-fm-close').first().click();
+
+  await questionA.locator('#images').first().click();
+  const imageInputA = questionA.locator('.page-images input[type="file"]').first();
+  await imageInputA.setInputFiles({
+    name: 'sprite.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+  });
+
+  await page.waitForFunction(() => {
+    const firstQuestion = document.querySelectorAll('.h5p-codequestion')[0];
+    const activePage = firstQuestion?.querySelector('.page-images.active');
+    return !!activePage && (activePage.textContent || '').includes('sprite.png');
+  }, null, { timeout: 20000 });
+
+  await questionA.locator('#sounds').first().click();
+  const soundInputA = questionA.locator('.page-sounds input[type="file"]').first();
+  await soundInputA.setInputFiles({
+    name: 'beep.wav',
+    mimeType: 'audio/wav',
+    buffer: Buffer.from([82, 73, 70, 70, 0, 0, 0, 0, 87, 65, 86, 69]),
+  });
+
+  await page.waitForFunction(() => {
+    const firstQuestion = document.querySelectorAll('.h5p-codequestion')[0];
+    const activePage = firstQuestion?.querySelector('.page-sounds.active');
+    return !!activePage && (activePage.textContent || '').includes('beep.wav');
+  }, null, { timeout: 20000 });
+
+  const saveButtonA = questionA.locator('#saveButton').first();
+  await saveButtonA.waitFor({ state: 'visible', timeout: 20000 });
+  const [download] = await Promise.all([
+    page.waitForEvent('download', { timeout: 30000 }),
+    saveButtonA.click(),
+  ]);
+
+  const suggestedName = download.suggestedFilename();
+  if (!/\.zip$/i.test(suggestedName)) {
+    throw new Error(`Expected ZIP download, got: ${suggestedName}`);
+  }
+
+  const downloadTargetPath = path.join(
+    ARTIFACTS_DIR,
+    `zip-roundtrip-${Date.now()}-${sanitizeFileName(suggestedName)}.zip`
+  );
+  fs.mkdirSync(path.dirname(downloadTargetPath), { recursive: true });
+  await download.saveAs(downloadTargetPath);
+
+  const downloadHeader = fs.readFileSync(downloadTargetPath).subarray(0, 2);
+  if (!(downloadHeader[0] === 0x50 && downloadHeader[1] === 0x4b)) {
+    throw new Error('Downloaded project file does not appear to be a ZIP archive.');
+  }
+
+  const loadButtonB = questionB.locator('#loadButton').first();
+  await loadButtonB.waitFor({ state: 'visible', timeout: 20000 });
+  const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 30000 });
+  await loadButtonB.click();
+  const chooser = await fileChooserPromise;
+  await chooser.setFiles(downloadTargetPath);
+
+  const fileManagerToggleB = questionB.locator('.editor-file-tab-add').first();
+  await fileManagerToggleB.waitFor({ state: 'visible', timeout: 30000 });
+  await fileManagerToggleB.click();
+
+  await page.waitForFunction(() => {
+    const secondQuestion = document.querySelectorAll('.h5p-codequestion')[1];
+    return !!secondQuestion
+      && Array.from(secondQuestion.querySelectorAll('.editor-fm-item-name'))
+        .some((item) => (item.textContent || '').trim() === 'helper.py');
+  }, null, { timeout: 30000 });
+
+  await questionB.locator('.editor-fm-close').first().click();
+
+  await questionB.locator('#images').first().click();
+  await page.waitForFunction(() => {
+    const secondQuestion = document.querySelectorAll('.h5p-codequestion')[1];
+    const activePage = secondQuestion?.querySelector('.page-images.active');
+    return !!activePage && (activePage.textContent || '').includes('sprite.png');
+  }, null, { timeout: 20000 });
+
+  await questionB.locator('#sounds').first().click();
+  await page.waitForFunction(() => {
+    const secondQuestion = document.querySelectorAll('.h5p-codequestion')[1];
+    const activePage = secondQuestion?.querySelector('.page-sounds.active');
+    return !!activePage && (activePage.textContent || '').includes('beep.wav');
+  }, null, { timeout: 20000 });
 }
 
 async function getSamePageHarnessPayload(page, contentId) {
@@ -839,6 +988,7 @@ async function main() {
   results.push(await executeCheck(browser, 'same-page miniworlds instances mount separate SDL canvases', checkSamePageMultiInstanceCanvas));
   results.push(await executeCheck(browser, 'same-page miniworlds arrow keys do not steal focus across instances', checkSamePageMultiInstanceArrowFocus));
   results.push(await executeCheck(browser, 'same-page swal popup is anchored to triggering instance', checkSamePagePopupTargets));
+  results.push(await executeCheck(browser, 'zip save/load roundtrip preserves root files and assets', checkZipProjectRoundtrip));
   results.push(await executeCheck(browser, 'console output visible after run', checkConsoleOutput));
   results.push(await executeCheck(browser, 'run/stop toggles on infinite loop', checkRunStop));
 
