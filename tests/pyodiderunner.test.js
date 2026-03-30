@@ -68,6 +68,9 @@ function createRuntime() {
   const stateManager = {
     stop: vi.fn(),
   };
+  const pageManager = {
+    activePageName: 'canvas',
+  };
 
   return {
     l10n: {},
@@ -82,6 +85,7 @@ function createRuntime() {
     getLocalModuleNames: vi.fn(() => []),
     codeContainer: {
       getStateManager: () => stateManager,
+      getPageManager: () => pageManager,
     },
   };
 }
@@ -266,6 +270,75 @@ describe('PyodideRunner', () => {
     expect(runner.pyodide.canvas.setCanvas2D).toHaveBeenCalledWith(canvas);
     expect(mocks.setActivePyodideSDLCanvas).toHaveBeenCalledWith(canvas);
     expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('captures SDL arrow keys and prevents editor-side cursor movement in other instances', () => {
+    const runtime = createRuntime();
+    runtime.containsSDLCode.mockReturnValue(true);
+    const runner = new PyodideRunner(runtime, {});
+    const canvasWrapper = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    const focus = vi.fn();
+
+    canvas.focus = focus;
+    canvasWrapper.appendChild(canvas);
+    document.body.appendChild(canvasWrapper);
+
+    const foreignEditor = document.createElement('div');
+    foreignEditor.tabIndex = 0;
+    document.body.appendChild(foreignEditor);
+    foreignEditor.focus();
+
+    runner.canvasWrapper = canvasWrapper;
+    runner.canvasDiv = canvasWrapper;
+    runner.sdlCanvas = canvas;
+    mocks.sharedPyodideRuntimeState.activeSDLRunner = runner;
+
+    runner.installSDLKeyboardCapture();
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'ArrowRight',
+      bubbles: true,
+      cancelable: true,
+    });
+
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(focus).toHaveBeenCalledTimes(1);
+
+    runner.uninstallSDLKeyboardCapture();
+    canvasWrapper.remove();
+    foreignEditor.remove();
+    mocks.sharedPyodideRuntimeState.activeSDLRunner = null;
+  });
+
+  it('does not capture SDL arrow keys when the instance is not on canvas page', () => {
+    const runtime = createRuntime();
+    runtime.containsSDLCode.mockReturnValue(true);
+    runtime.codeContainer.getPageManager().activePageName = 'code';
+
+    const runner = new PyodideRunner(runtime, {});
+    const canvas = document.createElement('canvas');
+    document.body.appendChild(canvas);
+
+    runner.sdlCanvas = canvas;
+    mocks.sharedPyodideRuntimeState.activeSDLRunner = runner;
+    runner.installSDLKeyboardCapture();
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'ArrowLeft',
+      bubbles: true,
+      cancelable: true,
+    });
+
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+
+    runner.uninstallSDLKeyboardCapture();
+    canvas.remove();
+    mocks.sharedPyodideRuntimeState.activeSDLRunner = null;
   });
 
   it('releases SDL input focus without rebinding canvas target', () => {

@@ -477,6 +477,83 @@ async function checkSamePageMultiInstanceArrowFocus(page) {
   }
 }
 
+async function checkSamePagePopupTargets(page) {
+  const payload = await getSamePageHarnessPayload(page, CONSOLE_CONTENT_ID);
+
+  payload.integration.contents = {
+    'cid-popup-a': JSON.parse(JSON.stringify(payload.integration.contents[payload.originalKey])),
+    'cid-popup-b': JSON.parse(JSON.stringify(payload.integration.contents[payload.originalKey])),
+  };
+
+  await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'networkidle' });
+
+  const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script>window.H5PIntegration=${JSON.stringify(payload.integration)};</script>
+    ${payload.styles.map((href) => `<link rel="stylesheet" href="${href}">`).join('\n    ')}
+    ${payload.scripts.map((src) => `<script src="${src}"></script>`).join('\n    ')}
+  </head>
+  <body>
+    <div class="h5p-content" data-content-id="popup-a" data-content-library="${MACHINE_NAME} 6.0"></div>
+    <div class="h5p-content" data-content-id="popup-b" data-content-library="${MACHINE_NAME} 6.0"></div>
+    <script>
+      const boot = () => {
+        if (window.H5P && typeof window.H5P.init === 'function') {
+          window.H5P.init(document.body);
+          return;
+        }
+
+        window.setTimeout(boot, 50);
+      };
+
+      boot();
+    </script>
+  </body>
+</html>`;
+
+  await page.setContent(html, { waitUntil: 'load' });
+  await page.waitForFunction(() => document.querySelectorAll('.h5p-codequestion').length >= 2, null, { timeout: 30000 });
+
+  const questions = page.locator('.h5p-codequestion');
+  const questionA = questions.nth(0);
+  const questionB = questions.nth(1);
+
+  const runB = await findQuestionRootButton(questionB, /ausf|run/i, 30000);
+  await runB.click();
+
+  const popupInB = questionB.locator('.swal2-container').first();
+  await popupInB.waitFor({ state: 'visible', timeout: 30000 });
+
+  const diagnostics = await page.evaluate(() => {
+    const roots = Array.from(document.querySelectorAll('.h5p-codequestion'));
+    const rootA = roots[0] || null;
+    const rootB = roots[1] || null;
+    const popup = document.querySelector('.swal2-container.swal2-backdrop-show, .swal2-container');
+
+    return {
+      popupFound: !!popup,
+      popupInA: !!(rootA && popup && rootA.contains(popup)),
+      popupInB: !!(rootB && popup && rootB.contains(popup)),
+      popupParentClass: popup?.parentElement?.className || '',
+    };
+  });
+
+  if (!diagnostics.popupFound) {
+    throw new Error('Expected SweetAlert popup was not rendered.');
+  }
+
+  if (!diagnostics.popupInB || diagnostics.popupInA) {
+    throw new Error(`SweetAlert popup was not anchored to the triggering instance: ${JSON.stringify(diagnostics)}`);
+  }
+
+  const confirmButton = questionB.locator('.swal2-confirm').first();
+  if (await confirmButton.isVisible().catch(() => false)) {
+    await confirmButton.click();
+  }
+}
+
 async function appendEditorComment(questionRoot, page, marker) {
   const editor = questionRoot.locator('.editor_container .cm-content').first();
   await editor.waitFor({ state: 'visible', timeout: 30000 });
@@ -761,6 +838,7 @@ async function main() {
   results.push(await executeCheck(browser, 'miniworlds canvas renders on second run after stop', checkMiniworldsRerun));
   results.push(await executeCheck(browser, 'same-page miniworlds instances mount separate SDL canvases', checkSamePageMultiInstanceCanvas));
   results.push(await executeCheck(browser, 'same-page miniworlds arrow keys do not steal focus across instances', checkSamePageMultiInstanceArrowFocus));
+  results.push(await executeCheck(browser, 'same-page swal popup is anchored to triggering instance', checkSamePagePopupTargets));
   results.push(await executeCheck(browser, 'console output visible after run', checkConsoleOutput));
   results.push(await executeCheck(browser, 'run/stop toggles on infinite loop', checkRunStop));
 
