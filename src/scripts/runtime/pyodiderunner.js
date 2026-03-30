@@ -646,13 +646,19 @@ export default class PyodideRunner {
 
       if (!focusIsInsideOwnCanvas && typeof this.sdlCanvas?.focus === 'function') {
         this.sdlCanvas.focus({ preventScroll: true });
+
+        if (typeof event.preventDefault === 'function') {
+          event.preventDefault();
+        }
+        if (typeof event.stopPropagation === 'function') {
+          event.stopPropagation();
+        }
+
+        return;
       }
 
       if (typeof event.preventDefault === 'function') {
         event.preventDefault();
-      }
-      if (typeof event.stopPropagation === 'function') {
-        event.stopPropagation();
       }
     };
 

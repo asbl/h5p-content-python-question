@@ -313,6 +313,43 @@ describe('PyodideRunner', () => {
     mocks.sharedPyodideRuntimeState.activeSDLRunner = null;
   });
 
+  it('allows SDL arrow keys to continue to the canvas when the canvas already has focus', () => {
+    const runtime = createRuntime();
+    runtime.containsSDLCode.mockReturnValue(true);
+    const runner = new PyodideRunner(runtime, {});
+    const canvasWrapper = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    const stopPropagation = vi.fn();
+
+    canvas.tabIndex = 0;
+    canvasWrapper.appendChild(canvas);
+    document.body.appendChild(canvasWrapper);
+
+    runner.canvasWrapper = canvasWrapper;
+    runner.canvasDiv = canvasWrapper;
+    runner.sdlCanvas = canvas;
+    mocks.sharedPyodideRuntimeState.activeSDLRunner = runner;
+
+    runner.installSDLKeyboardCapture();
+    canvas.focus();
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'ArrowUp',
+      bubbles: true,
+      cancelable: true,
+    });
+    event.stopPropagation = stopPropagation;
+
+    canvas.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(stopPropagation).not.toHaveBeenCalled();
+
+    runner.uninstallSDLKeyboardCapture();
+    canvasWrapper.remove();
+    mocks.sharedPyodideRuntimeState.activeSDLRunner = null;
+  });
+
   it('does not capture SDL arrow keys when the instance is not on canvas page', () => {
     const runtime = createRuntime();
     runtime.containsSDLCode.mockReturnValue(true);
