@@ -90,6 +90,8 @@ export default class PyodideRunner {
    */
   getExecutionLimitMessage() {
     return getPythonL10nValue(this.l10n, 'executionLimitExceeded');
+     // Debug mouse event support (will log to console)
+     setTimeout(() => this.debugEmscriptenMouseSupport(), 100);
   }
 
   /**
@@ -784,6 +786,49 @@ export default class PyodideRunner {
     }
   }
 
+    /**
+     * Debug Emscripten module configuration for mouse event support.
+     * @returns {void}
+     */
+    debugEmscriptenMouseSupport() {
+      if (!this.pyodide) {
+        console.log('[Emscripten Debug] Pyodide not initialized');
+        return;
+      }
+
+      const mod = window.Module || this.pyodide._module || this.pyodide;
+      console.log('[Emscripten Debug] Module object:', mod);
+
+      if (mod.SDL2) {
+        console.log('[Emscripten Debug] SDL2 object found:', Object.keys(mod.SDL2));
+      } else {
+        console.log('[Emscripten Debug] No SDL2 object found');
+      }
+
+      if (mod.canvas) {
+        console.log('[Emscripten Debug] Canvas found in Module:', mod.canvas);
+        console.log('[Emscripten Debug] Canvas listeners:', {
+          onload: mod.canvas.onload,
+          onmousedown: mod.canvas.onmousedown,
+          onmouseup: mod.canvas.onmouseup,
+          onmousemove: mod.canvas.onmousemove,
+        });
+      }
+
+      // Check for existing event listeners
+      if (this.sdlCanvas) {
+        const getEventListeners = (el, eventType) => {
+          try {
+            return window.getEventListeners(el, eventType) || [];
+          } catch (e) {
+            return '[not available]';
+          }
+        };
+
+        console.log('[Emscripten Debug] Canvas listeners (mousedown):', getEventListeners(this.sdlCanvas, 'mousedown'));
+        console.log('[Emscripten Debug] Canvas document listeners (mousedown):', getEventListeners(document, 'mousedown'));
+      }
+    }
   /**
    * Synchronizes the SDL canvas pixel size with its current host dimensions.
    * @returns {void}
