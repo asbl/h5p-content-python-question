@@ -90,8 +90,6 @@ export default class PyodideRunner {
    */
   getExecutionLimitMessage() {
     return getPythonL10nValue(this.l10n, 'executionLimitExceeded');
-     // Debug mouse event support (will log to console)
-     setTimeout(() => this.debugEmscriptenMouseSupport(), 100);
   }
 
   /**
@@ -687,18 +685,12 @@ export default class PyodideRunner {
 
   /**
    * Installs mouse event handling for SDL canvas.
-   * Emscripten requires mouse events to be captured directly on the canvas.
    * @returns {void}
    */
-
-  /**
   installSDLMouseCapture() {
     if (this._sdlMouseCaptureInstalled || typeof document?.addEventListener !== 'function') {
       return;
     }
-
-    // Track what events we receive for debugging
-    let eventLog = [];
 
     this._sdlMouseCaptureBound = (event) => {
       if (!this.sdlCanvas?.isConnected) {
@@ -714,38 +706,26 @@ export default class PyodideRunner {
       if (!isOverCanvas) {
         return;
       }
-
-      const relX = event.clientX - rect.left;
-      const relY = event.clientY - rect.top;
-
-      console.log('[SDL Canvas Event]', event.type, {
-        clientX: event.clientX,
-        clientY: event.clientY,
-        relX,
-        relY,
-        canvasW: this.sdlCanvas.width,
-        canvasH: this.sdlCanvas.height,
-        rectW: rect.width,
-        rectH: rect.height,
-      });
-
-      eventLog.push({ type: event.type, time: Date.now(), x: relX, y: relY });
-      if (eventLog.length > 100) eventLog.shift();
-
-      // Make event log accessible from console
-      window.__sdlEventLog = eventLog;
     };
 
-    // Listen on both document and canvas
-    const eventTypes = ['mousedown', 'mouseup', 'mousemove', 'click', 'pointerdown', 'pointerup', 'pointermove', 'touchstart', 'touchend', 'touchmove'];
+    const eventTypes = [
+      'mousedown',
+      'mouseup',
+      'mousemove',
+      'click',
+      'pointerdown',
+      'pointerup',
+      'pointermove',
+      'touchstart',
+      'touchend',
+      'touchmove',
+    ];
+
     eventTypes.forEach(type => {
       document.addEventListener(type, this._sdlMouseCaptureBound, true);
       this.sdlCanvas.addEventListener(type, this._sdlMouseCaptureBound, true);
     });
 
-    console.log('[SDL] Mouse/Pointer/Touch event capture installed');
-    console.log('[SDL] Check window.__sdlEventLog in console for event history');
-    
     this._sdlMouseCaptureInstalled = true;
   }
 
@@ -758,7 +738,19 @@ export default class PyodideRunner {
       return;
     }
 
-    const eventTypes = ['mousedown', 'mouseup', 'mousemove', 'click', 'pointerdown', 'pointerup', 'pointermove', 'touchstart', 'touchend', 'touchmove'];
+    const eventTypes = [
+      'mousedown',
+      'mouseup',
+      'mousemove',
+      'click',
+      'pointerdown',
+      'pointerup',
+      'pointermove',
+      'touchstart',
+      'touchend',
+      'touchmove',
+    ];
+
     eventTypes.forEach(type => {
       document.removeEventListener(type, this._sdlMouseCaptureBound, true);
       if (this.sdlCanvas?.isConnected) {
