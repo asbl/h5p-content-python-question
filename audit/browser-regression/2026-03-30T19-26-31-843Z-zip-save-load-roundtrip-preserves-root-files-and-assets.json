@@ -1,0 +1,4 @@
+{
+  "name": "zip save/load roundtrip preserves root files and assets",
+  "error": "page.waitForFunction: Timeout 30000ms exceeded."
+}

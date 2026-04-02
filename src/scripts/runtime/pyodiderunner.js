@@ -61,6 +61,8 @@ export default class PyodideRunner {
     this.p5Instance = null;
     this._sdlKeyboardCaptureBound = null;
     this._sdlKeyboardCaptureInstalled = false;
+    this._sdlMouseCaptureBound = null;
+    this._sdlMouseCaptureInstalled = false;
     this._isInitialized = false;
     this._setupPromise = null;
     this._cancelPromise = null;
@@ -577,6 +579,7 @@ export default class PyodideRunner {
     }
 
     this.installSDLKeyboardCapture();
+    this.installSDLMouseCapture();
     this.bindSDLCanvas(true);
   }
 
@@ -681,6 +684,66 @@ export default class PyodideRunner {
   }
 
   /**
+   * Installs capture-phase mouse event handling for SDL canvas.
+   * @returns {void}
+   */
+  installSDLMouseCapture() {
+    if (this._sdlMouseCaptureInstalled || typeof document?.addEventListener !== 'function' || !this.sdlCanvas?.isConnected) {
+      return;
+    }
+
+    this._sdlMouseCaptureBound = (event) => {
+      if (!this.sdlCanvas?.isConnected) {
+        return;
+      }
+
+      // Forward mouse events to the SDL canvas
+      if (typeof this.sdlCanvas.dispatchEvent === 'function') {
+        const mouseEvent = new MouseEvent(event.type, {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          clientX: event.clientX,
+          clientY: event.clientY,
+          screenX: event.screenX,
+          screenY: event.screenY,
+          button: event.button,
+          buttons: event.buttons,
+        });
+        this.sdlCanvas.dispatchEvent(mouseEvent);
+      }
+
+      if (typeof event.preventDefault === 'function') {
+        event.preventDefault();
+      }
+    };
+
+    // Listen to mouse events on the document in capture phase
+    document.addEventListener('mousedown', this._sdlMouseCaptureBound, true);
+    document.addEventListener('mouseup', this._sdlMouseCaptureBound, true);
+    document.addEventListener('mousemove', this._sdlMouseCaptureBound, true);
+    document.addEventListener('click', this._sdlMouseCaptureBound, true);
+    this._sdlMouseCaptureInstalled = true;
+  }
+
+  /**
+   * Removes capture-phase SDL mouse event handling.
+   * @returns {void}
+   */
+  uninstallSDLMouseCapture() {
+    if (!this._sdlMouseCaptureInstalled || !this._sdlMouseCaptureBound || typeof document?.removeEventListener !== 'function') {
+      return;
+    }
+
+    document.removeEventListener('mousedown', this._sdlMouseCaptureBound, true);
+    document.removeEventListener('mouseup', this._sdlMouseCaptureBound, true);
+    document.removeEventListener('mousemove', this._sdlMouseCaptureBound, true);
+    document.removeEventListener('click', this._sdlMouseCaptureBound, true);
+    this._sdlMouseCaptureBound = null;
+    this._sdlMouseCaptureInstalled = false;
+  }
+
+  /**
    * Binds SDL rendering to the current visible canvas.
    * @param {boolean} [focus] - Whether keyboard focus should be moved to the canvas.
    * @returns {void}
@@ -744,6 +807,7 @@ export default class PyodideRunner {
    */
   releaseInputFocus() {
     this.uninstallSDLKeyboardCapture();
+    this.uninstallSDLMouseCapture();
 
     if (!this.sdlCanvas) {
       return;
