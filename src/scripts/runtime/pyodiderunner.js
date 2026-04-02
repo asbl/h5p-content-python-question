@@ -684,61 +684,54 @@ export default class PyodideRunner {
   }
 
   /**
-   * Installs capture-phase mouse event handling for SDL canvas.
+   * Installs mouse event handling for SDL canvas.
+   * Emscripten requires mouse events to be captured directly on the canvas.
    * @returns {void}
    */
   installSDLMouseCapture() {
-    if (this._sdlMouseCaptureInstalled || typeof document?.addEventListener !== 'function' || !this.sdlCanvas?.isConnected) {
+    if (this._sdlMouseCaptureInstalled || !this.sdlCanvas?.isConnected) {
       return;
     }
 
     this._sdlMouseCaptureBound = (event) => {
-      if (!this.sdlCanvas?.isConnected) {
-        return;
-      }
-
-      // Forward mouse events to the SDL canvas
-      if (typeof this.sdlCanvas.dispatchEvent === 'function') {
-        const mouseEvent = new MouseEvent(event.type, {
-          bubbles: true,
-          cancelable: true,
-          view: window,
-          clientX: event.clientX,
-          clientY: event.clientY,
-          screenX: event.screenX,
-          screenY: event.screenY,
-          button: event.button,
-          buttons: event.buttons,
-        });
-        this.sdlCanvas.dispatchEvent(mouseEvent);
-      }
-
+      // Let Emscripten/miniworlds handle the event naturally
+      // Just prevent default to ensure full capture by SDL
       if (typeof event.preventDefault === 'function') {
         event.preventDefault();
       }
     };
 
-    // Listen to mouse events on the document in capture phase
-    document.addEventListener('mousedown', this._sdlMouseCaptureBound, true);
-    document.addEventListener('mouseup', this._sdlMouseCaptureBound, true);
-    document.addEventListener('mousemove', this._sdlMouseCaptureBound, true);
-    document.addEventListener('click', this._sdlMouseCaptureBound, true);
+    // Attach listeners directly to the canvas in capture phase
+    // This ensures Emscripten receives the events on the canvas element
+    this.sdlCanvas.addEventListener('mousedown', this._sdlMouseCaptureBound, true);
+    this.sdlCanvas.addEventListener('mouseup', this._sdlMouseCaptureBound, true);
+    this.sdlCanvas.addEventListener('mousemove', this._sdlMouseCaptureBound, true);
+    this.sdlCanvas.addEventListener('click', this._sdlMouseCaptureBound, true);
+    this.sdlCanvas.addEventListener('wheel', this._sdlMouseCaptureBound, true);
+    
+    // Also ensure the canvas accepts focus for mouse event delivery
+    if (typeof this.sdlCanvas?.focus === 'function') {
+      // Don't force focus here, just ensure it can receive it
+    }
+    
     this._sdlMouseCaptureInstalled = true;
   }
 
   /**
-   * Removes capture-phase SDL mouse event handling.
+   * Removes mouse event handling from SDL canvas.
    * @returns {void}
    */
   uninstallSDLMouseCapture() {
-    if (!this._sdlMouseCaptureInstalled || !this._sdlMouseCaptureBound || typeof document?.removeEventListener !== 'function') {
+    if (!this._sdlMouseCaptureInstalled || !this._sdlMouseCaptureBound || !this.sdlCanvas?.isConnected) {
       return;
     }
 
-    document.removeEventListener('mousedown', this._sdlMouseCaptureBound, true);
-    document.removeEventListener('mouseup', this._sdlMouseCaptureBound, true);
-    document.removeEventListener('mousemove', this._sdlMouseCaptureBound, true);
-    document.removeEventListener('click', this._sdlMouseCaptureBound, true);
+    this.sdlCanvas.removeEventListener('mousedown', this._sdlMouseCaptureBound, true);
+    this.sdlCanvas.removeEventListener('mouseup', this._sdlMouseCaptureBound, true);
+    this.sdlCanvas.removeEventListener('mousemove', this._sdlMouseCaptureBound, true);
+    this.sdlCanvas.removeEventListener('click', this._sdlMouseCaptureBound, true);
+    this.sdlCanvas.removeEventListener('wheel', this._sdlMouseCaptureBound, true);
+    
     this._sdlMouseCaptureBound = null;
     this._sdlMouseCaptureInstalled = false;
   }
