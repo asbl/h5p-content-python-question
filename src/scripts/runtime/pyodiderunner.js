@@ -748,11 +748,11 @@ export default class PyodideRunner {
     
     this._sdlMouseCaptureInstalled = true;
   }
+
+  /**
    * Removes mouse event handling from SDL canvas.
    * @returns {void}
    */
-
-  /**
   uninstallSDLMouseCapture() {
     if (!this._sdlMouseCaptureInstalled || !this._sdlMouseCaptureBound || typeof document?.removeEventListener !== 'function') {
       return;
@@ -769,6 +769,8 @@ export default class PyodideRunner {
     this._sdlMouseCaptureBound = null;
     this._sdlMouseCaptureInstalled = false;
   }
+
+  /**
    * Binds SDL rendering to the current visible canvas.
    * @param {boolean} [focus] - Whether keyboard focus should be moved to the canvas.
    * @returns {void}
