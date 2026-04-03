@@ -36,6 +36,18 @@ canvas.pyodide-sdl-canvas:focus {
     margin-top: 12px;
 }
 
+.h5p-fullscreen .h5p-codequestion .codequestion-fullscreen-host .page.page-canvas.active,
+.h5p-semi-fullscreen .h5p-codequestion .codequestion-fullscreen-host .page.page-canvas.active {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.h5p-fullscreen .h5p-codequestion .codequestion-fullscreen-host .page.page-canvas.active .console_wrapper,
+.h5p-semi-fullscreen .h5p-codequestion .codequestion-fullscreen-host .page.page-canvas.active .console_wrapper {
+    flex: 0 0 auto;
+    width: 100%;
+}
+
 
 .h5p-codequestion .testcases-area td.expected,
 .h5p-codequestion .testcases-area td.user-output {
