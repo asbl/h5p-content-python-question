@@ -63,6 +63,7 @@ export default class PyodideRunner {
     this._sdlKeyboardCaptureInstalled = false;
     this._sdlMouseCaptureBound = null;
     this._sdlMouseCaptureInstalled = false;
+    this._sdlEventPumpInterval = null;
     this._isInitialized = false;
     this._setupPromise = null;
     this._cancelPromise = null;
@@ -237,11 +238,14 @@ export default class PyodideRunner {
 
     await installPyodideInputOverride(this.pyodide, this.runtime);
     await installPyodideRuntimeCompatibility(this.pyodide);
-    await loadMissingPyodidePackages(this.pyodide, this.options.packages);
 
+    // SDL packages (pygame/miniworlds) require the canvas binding before use.
     if (this.canvasDiv && this.runtime.containsSDLCode()) {
       this.setupSDLCanvas(this.canvasDiv);
+      this.scheduleSDLCanvasRebind();
     }
+
+    await loadMissingPyodidePackages(this.pyodide, this.options.packages);
 
     this._isInitialized = true;
   }
@@ -288,6 +292,14 @@ export default class PyodideRunner {
       await resetPyodideBackgroundTaskState(this.pyodide);
       this.hasBackgroundTask = false;
 
+      // Keep SDL canvas binding up to date before importing SDL-based modules.
+      if (activeCanvasDiv && this.runtime.containsSDLCode()) {
+        sharedPyodideRuntimeState.activeSDLRunner = this;
+        this.setupSDLCanvas(activeCanvasDiv);
+        this.clearSDLCanvas();
+        this.scheduleSDLCanvasRebind();
+      }
+
       const analysisCode = this.runtime.getAnalysisCode?.() || code;
       const localModuleNames = this.runtime.getLocalModuleNames?.() || [];
 
@@ -310,12 +322,6 @@ export default class PyodideRunner {
       // Prepare canvas integrations before executing user code.
       if (canvasDiv && this.runtime.containsP5Code()) {
         this.setupP5(canvasDiv);
-      }
-      else if (activeCanvasDiv && this.runtime.containsSDLCode()) {
-        sharedPyodideRuntimeState.activeSDLRunner = this;
-        this.setupSDLCanvas(activeCanvasDiv);
-        this.clearSDLCanvas();
-        this.scheduleSDLCanvasRebind();
       }
 
       if (shouldShowCanvasLoading) {
@@ -364,6 +370,7 @@ export default class PyodideRunner {
     this.stopped = true;
     this.setCanvasLoading(false);
     this.uninstallSDLKeyboardCapture();
+    this.stopSDLEventPumpLoop();
 
     // Pyodide itself offers no hard stop, so active integrations are torn down
     // and background tasks are cancelled cooperatively where possible.
@@ -580,7 +587,41 @@ export default class PyodideRunner {
 
     this.installSDLKeyboardCapture();
     this.installSDLMouseCapture();
+    this.startSDLEventPumpLoop();
     this.bindSDLCanvas(true);
+  }
+
+  /**
+   * Starts a periodic pygame.event.pump() loop while SDL canvas is active.
+   * @returns {void}
+   */
+  startSDLEventPumpLoop() {
+    if (this._sdlEventPumpInterval !== null || typeof window?.setInterval !== 'function') {
+      return;
+    }
+
+    this._sdlEventPumpInterval = window.setInterval(() => {
+      if (!this.pyodide || this.stopped || !this.sdlCanvas?.isConnected) {
+        return;
+      }
+
+      this.pyodide.runPythonAsync('import pygame\\npygame.event.pump()').catch(() => {
+        // Keep loop alive even if pygame is temporarily unavailable.
+      });
+    }, 50);
+  }
+
+  /**
+   * Stops the periodic pygame.event.pump() loop.
+   * @returns {void}
+   */
+  stopSDLEventPumpLoop() {
+    if (this._sdlEventPumpInterval === null || typeof window?.clearInterval !== 'function') {
+      return;
+    }
+
+    window.clearInterval(this._sdlEventPumpInterval);
+    this._sdlEventPumpInterval = null;
   }
 
   /**
@@ -692,6 +733,10 @@ export default class PyodideRunner {
       return;
     }
 
+    if (typeof window !== 'undefined') {
+      window.__h5pInstallMouseCaptureRuns = (window.__h5pInstallMouseCaptureRuns || 0) + 1;
+    }
+
     this._sdlMouseCaptureBound = (event) => {
       if (!this.sdlCanvas?.isConnected) {
         return;
@@ -706,6 +751,25 @@ export default class PyodideRunner {
       if (!isOverCanvas) {
         return;
       }
+
+      // Keep SDL bound to the visible canvas right before input is processed.
+      this.bindSDLCanvas();
+
+      const activeElement = document.activeElement;
+      const ownCanvasScope = this.canvasWrapper || this.canvasDiv || this.sdlCanvas;
+      const focusIsInsideOwnCanvas = Boolean(
+        ownCanvasScope
+        && activeElement
+        && typeof ownCanvasScope.contains === 'function'
+        && ownCanvasScope.contains(activeElement),
+      ) || activeElement === this.sdlCanvas;
+
+      if (!focusIsInsideOwnCanvas && typeof this.sdlCanvas?.focus === 'function') {
+        this.sdlCanvas.focus({ preventScroll: true });
+      }
+
+      // Fallback bridge: feed pygame queue from DOM events.
+      this.postSyntheticPygameMouseEvent(event, rect);
     };
 
     const eventTypes = [
@@ -727,6 +791,56 @@ export default class PyodideRunner {
     });
 
     this._sdlMouseCaptureInstalled = true;
+  }
+
+  /**
+   * Posts a synthetic pygame mouse event as fallback for missing SDL bridges.
+   * @param {MouseEvent|PointerEvent|TouchEvent} event - Browser input event.
+   * @param {DOMRect} rect - Canvas client rect.
+   * @returns {void}
+   */
+  postSyntheticPygameMouseEvent(event, rect) {
+    if (!this.pyodide || !this.sdlCanvas || !rect) {
+      return;
+    }
+
+    const hasPointerSupport = typeof window?.PointerEvent === 'function';
+    if (hasPointerSupport && String(event.type || '').startsWith('mouse')) {
+      return;
+    }
+
+    const eventTypeMap = {
+      mousedown: 'MOUSEBUTTONDOWN',
+      mouseup: 'MOUSEBUTTONUP',
+      mousemove: 'MOUSEMOTION',
+      pointerdown: 'MOUSEBUTTONDOWN',
+      pointerup: 'MOUSEBUTTONUP',
+      pointermove: 'MOUSEMOTION',
+    };
+
+    const pygameEventType = eventTypeMap[event.type];
+    if (!pygameEventType) {
+      return;
+    }
+
+    const relClientX = event.clientX - rect.left;
+    const relClientY = event.clientY - rect.top;
+    const x = Math.max(0, Math.min(this.sdlCanvas.width - 1, Math.round((relClientX / Math.max(1, rect.width)) * this.sdlCanvas.width)));
+    const y = Math.max(0, Math.min(this.sdlCanvas.height - 1, Math.round((relClientY / Math.max(1, rect.height)) * this.sdlCanvas.height)));
+    const button = Number.isFinite(event.button) ? (event.button + 1) : 1;
+    const buttons = Number.isFinite(event.buttons) ? event.buttons : 0;
+
+    const pythonCode = pygameEventType === 'MOUSEMOTION'
+      ? `import pygame\npygame.event.post(pygame.event.Event(pygame.MOUSEMOTION, {'pos': (${x}, ${y}), 'rel': (0, 0), 'buttons': (${buttons & 1}, ${Boolean(buttons & 4) ? 1 : 0}, ${Boolean(buttons & 2) ? 1 : 0}), 'touch': False}))`
+      : `import pygame\npygame.event.post(pygame.event.Event(pygame.${pygameEventType}, {'pos': (${x}, ${y}), 'button': ${button}, 'touch': False}))`;
+
+    if (typeof window !== 'undefined') {
+      window.__h5pSyntheticMousePosted = (window.__h5pSyntheticMousePosted || 0) + 1;
+    }
+
+    this.pyodide.runPythonAsync(pythonCode).catch(() => {
+      // Ignore fallback posting failures to avoid interrupting execution.
+    });
   }
 
   /**
@@ -780,49 +894,6 @@ export default class PyodideRunner {
     }
   }
 
-    /**
-     * Debug Emscripten module configuration for mouse event support.
-     * @returns {void}
-     */
-    debugEmscriptenMouseSupport() {
-      if (!this.pyodide) {
-        console.log('[Emscripten Debug] Pyodide not initialized');
-        return;
-      }
-
-      const mod = window.Module || this.pyodide._module || this.pyodide;
-      console.log('[Emscripten Debug] Module object:', mod);
-
-      if (mod.SDL2) {
-        console.log('[Emscripten Debug] SDL2 object found:', Object.keys(mod.SDL2));
-      } else {
-        console.log('[Emscripten Debug] No SDL2 object found');
-      }
-
-      if (mod.canvas) {
-        console.log('[Emscripten Debug] Canvas found in Module:', mod.canvas);
-        console.log('[Emscripten Debug] Canvas listeners:', {
-          onload: mod.canvas.onload,
-          onmousedown: mod.canvas.onmousedown,
-          onmouseup: mod.canvas.onmouseup,
-          onmousemove: mod.canvas.onmousemove,
-        });
-      }
-
-      // Check for existing event listeners
-      if (this.sdlCanvas) {
-        const getEventListeners = (el, eventType) => {
-          try {
-            return window.getEventListeners(el, eventType) || [];
-          } catch (e) {
-            return '[not available]';
-          }
-        };
-
-        console.log('[Emscripten Debug] Canvas listeners (mousedown):', getEventListeners(this.sdlCanvas, 'mousedown'));
-        console.log('[Emscripten Debug] Canvas document listeners (mousedown):', getEventListeners(document, 'mousedown'));
-      }
-    }
   /**
    * Synchronizes the SDL canvas pixel size with its current host dimensions.
    * @returns {void}
@@ -870,6 +941,7 @@ export default class PyodideRunner {
   releaseInputFocus() {
     this.uninstallSDLKeyboardCapture();
     this.uninstallSDLMouseCapture();
+    this.stopSDLEventPumpLoop();
 
     if (!this.sdlCanvas) {
       return;
