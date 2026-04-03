@@ -217,6 +217,49 @@ async function checkRunStop(page) {
   await runButton.waitFor({ state: 'visible', timeout: 15000 });
 }
 
+async function checkConsoleBelowCanvasPlacement(page) {
+  const frame = await getH5pFrame(page, getViewUrl(FOCUS_CONTENT_ID));
+
+  const runButton = await findQuestionButton(frame, 'run');
+  await runButton.click();
+
+  const activeCanvasPage = frame.locator('.page.page-canvas.active').first();
+  await activeCanvasPage.waitFor({ state: 'visible', timeout: 30000 });
+
+  await frame.waitForFunction(() => {
+    const activeCanvasPageNode = document.querySelector('.page.page-canvas.active');
+    if (!activeCanvasPageNode) {
+      return false;
+    }
+
+    const canvasWrapper = activeCanvasPageNode.querySelector('.canvas-wrapper');
+    const consoleWrapper = activeCanvasPageNode.querySelector('.console_wrapper');
+    if (!canvasWrapper || !consoleWrapper) {
+      return false;
+    }
+
+    const canvasRect = canvasWrapper.getBoundingClientRect();
+    const consoleRect = consoleWrapper.getBoundingClientRect();
+    return consoleRect.top >= canvasRect.bottom - 1;
+  }, { timeout: 30000 });
+
+  const showCodeButton = await findQuestionButton(frame, 'code');
+  await showCodeButton.click();
+
+  const activeCodePage = frame.locator('.page.page-code.active').first();
+  await activeCodePage.waitFor({ state: 'visible', timeout: 20000 });
+
+  await frame.waitForFunction(() => {
+    const activeCodePageNode = document.querySelector('.page.page-code.active');
+    const activeCanvasPageNode = document.querySelector('.page.page-canvas.active');
+
+    const consoleInCode = !!activeCodePageNode?.querySelector('.console_wrapper');
+    const consoleInActiveCanvas = !!activeCanvasPageNode?.querySelector('.console_wrapper');
+
+    return consoleInCode && !consoleInActiveCanvas;
+  }, { timeout: 20000 });
+}
+
 async function checkZipProjectRoundtrip(page) {
   const payload = await getSamePageHarnessPayload(page, ZIP_ROUNDTRIP_CONTENT_ID);
 
@@ -990,6 +1033,7 @@ async function main() {
   results.push(await executeCheck(browser, 'same-page swal popup is anchored to triggering instance', checkSamePagePopupTargets));
   results.push(await executeCheck(browser, 'zip save/load roundtrip preserves root files and assets', checkZipProjectRoundtrip));
   results.push(await executeCheck(browser, 'console output visible after run', checkConsoleOutput));
+  results.push(await executeCheck(browser, 'console is placed below canvas and restored on code page', checkConsoleBelowCanvasPlacement));
   results.push(await executeCheck(browser, 'run/stop toggles on infinite loop', checkRunStop));
 
   await browser.close();
