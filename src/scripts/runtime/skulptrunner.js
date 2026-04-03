@@ -4,6 +4,7 @@ import {
   getPythonL10nValue,
   tPython,
 } from '../services/python-l10n';
+import { addPythonErrorHint } from '../services/python-error-hints';
 import { normalizePythonExecutionLimit } from '../services/python-execution-limit';
 
 export default class SkulptRunner {
@@ -301,11 +302,11 @@ export default class SkulptRunner {
       this.errorLineNumber = trace?.lineno ?? null;
 
       this.runtime.onError(
-        tPython(this.l10n, 'skulptRuntimeError', {
+        addPythonErrorHint(this.l10n, tPython(this.l10n, 'skulptRuntimeError', {
           message,
           line: trace?.lineno ?? '?',
           column: trace?.colno ?? '?',
-        })
+        }))
       );
     }
     catch {

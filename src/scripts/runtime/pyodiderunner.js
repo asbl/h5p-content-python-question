@@ -3,6 +3,7 @@
 import {
   getPythonL10nValue,
 } from '../services/python-l10n';
+import { addPythonErrorHint } from '../services/python-error-hints';
 import { normalizePythonExecutionLimit } from '../services/python-execution-limit';
 import {
   getImportedPyodidePackages,
@@ -466,7 +467,7 @@ export default class PyodideRunner {
     this.runtime.onError(
       this.isExecutionLimitError(error)
         ? this.getExecutionLimitMessage()
-        : String(error?.message || error?.toString?.() || error),
+        : addPythonErrorHint(this.l10n, String(error?.message || error?.toString?.() || error)),
     );
   }
 

@@ -133,6 +133,20 @@ describe('PyodideRunner', () => {
     expect(mocks.clearPyodideExecutionLimit).toHaveBeenCalledWith(runner.pyodide);
   });
 
+  it('appends a student-friendly hint for known runtime errors', async () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, { executionLimit: 1600, packages: [] });
+
+    runner.pyodide = {
+      runPythonAsync: vi.fn(() => Promise.reject(new Error("NameError: name 'score' is not defined"))),
+    };
+    runner._isInitialized = true;
+
+    await runner.execute('print(score)');
+
+    expect(runtime.onError).toHaveBeenCalledWith(expect.stringContaining('Hint: This name is unknown.'));
+  });
+
   it('stops the runtime state after a successful execution', async () => {
     const runtime = createRuntime();
     const stateManager = runtime.codeContainer.getStateManager();

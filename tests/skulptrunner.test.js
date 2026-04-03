@@ -105,4 +105,18 @@ describe('SkulptRunner', () => {
 
     expect(stateManager.stop).toHaveBeenCalled();
   });
+
+  it('appends a student-friendly hint for NameError runtime failures', () => {
+    const runtime = createRuntime();
+    const runner = new SkulptRunner(runtime, {});
+
+    runner.onError({
+      args: {
+        v: [{ $mangled: "NameError: name 'total' is not defined" }],
+      },
+      traceback: [{ lineno: 4, colno: 3 }],
+    });
+
+    expect(runtime.onError).toHaveBeenCalledWith(expect.stringContaining('Hint: This name is unknown.'));
+  });
 });
