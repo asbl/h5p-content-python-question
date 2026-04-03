@@ -1,5 +1,55 @@
 export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
 
+  shouldShowConsoleBelowCanvas() {
+    return this.options?.consoleBelowCanvas === true && this.options?.hasConsole !== false;
+  }
+
+  getConsoleWrapper() {
+    const consoleUID = this.getConsoleManager?.()?.consoleUID;
+    if (!consoleUID) {
+      return null;
+    }
+
+    const consoleBody = document.getElementById(consoleUID);
+    return consoleBody?.closest('.console_wrapper') || null;
+  }
+
+  moveConsoleBelowCanvas() {
+    if (!this.shouldShowConsoleBelowCanvas()) {
+      return;
+    }
+
+    const wrapper = this.getConsoleWrapper();
+    const canvasPage = this.getPageManager().getPage('canvas');
+
+    if (!wrapper || !canvasPage) {
+      return;
+    }
+
+    const canvasWrapper = canvasPage.querySelector('.canvas-wrapper');
+    if (canvasWrapper) {
+      canvasWrapper.insertAdjacentElement('afterend', wrapper);
+    }
+    else {
+      canvasPage.appendChild(wrapper);
+    }
+  }
+
+  restoreConsoleToCodePage() {
+    if (!this.shouldShowConsoleBelowCanvas()) {
+      return;
+    }
+
+    const wrapper = this.getConsoleWrapper();
+    const codePage = this.getPageManager().getPage('code');
+
+    if (!wrapper || !codePage) {
+      return;
+    }
+
+    codePage.appendChild(wrapper);
+  }
+
   async setup() {
     await super.setup();
   }
@@ -60,6 +110,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
    * @returns {void}
    */
   onCanvasPageShown() {
+    this.moveConsoleBelowCanvas();
     this._runtime?.runner?.acquireInputFocus?.();
     this._runtime?.runner?.scheduleSDLCanvasRebind?.();
     this._runtime?.runner?.triggerResizeAfterCanvasUpdate?.();
@@ -71,6 +122,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
    * @returns {void}
    */
   onCanvasPageHidden() {
+    this.restoreConsoleToCodePage();
     this._runtime?.runner?.releaseInputFocus?.();
     if (!this.getPageManager().isEmpty('canvas')) {
       this.getButtonManager().showButton('canvas');
@@ -86,6 +138,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
     this.getPageManager().showPage('canvas');
     this.hideCanvasButton();
     this.registerDOM();
+    this.moveConsoleBelowCanvas();
   }
 
   /**

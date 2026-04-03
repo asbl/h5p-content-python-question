@@ -247,6 +247,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
   return {
     ...baseOptions,
     hasConsole: config?.advancedOptions?.showConsole !== false,
+    consoleBelowCanvas: config?.advancedOptions?.showConsole !== false,
     enableImageUploads: editorParams?.enableImageUploads === true || config?.advancedOptions?.enableImageUploads === true,
     enableSoundUploads: editorParams?.enableSoundUploads === true || config?.advancedOptions?.enableSoundUploads === true,
     showSaveLoadButtons: config?.advancedOptions?.enableSaveLoadButtons !== false,
