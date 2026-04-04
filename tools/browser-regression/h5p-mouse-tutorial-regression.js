@@ -7,14 +7,30 @@ const MACHINE_NAME = process.env.H5P_MACHINE_NAME || 'H5P.PythonQuestion';
 const TUTORIAL_CONTENT_ID = process.env.H5P_TUTORIAL_CONTENT_ID || 'miniworlds-tutorial';
 const HEADED = process.env.H5P_HEADED === '1';
 
+/**
+ * Builds the H5P view URL for a content id.
+ * @param {string} contentId - Content identifier.
+ * @returns {string} Absolute view URL.
+ */
 function getViewUrl(contentId) {
   return `${BASE_URL}/view/${MACHINE_NAME}/${contentId}`;
 }
 
+/**
+ * Normalizes text content for robust matcher checks.
+ * @param {*} value - Input value.
+ * @returns {string} Collapsed single-line text.
+ */
 function normalizeText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Opens an H5P content page and resolves the iframe context.
+ * @param {import('playwright').Page} page - Playwright page.
+ * @param {string} url - Target URL.
+ * @returns {Promise<import('playwright').Frame>} Resolved H5P frame.
+ */
 async function getH5pFrame(page, url) {
   await page.goto(url, { waitUntil: 'load' });
   const iframeElement = await page.waitForSelector('iframe.h5p-iframe', {
@@ -32,6 +48,12 @@ async function getH5pFrame(page, url) {
   return frame;
 }
 
+/**
+ * Finds the first visible question root inside the H5P frame.
+ * @param {import('playwright').Frame} frame - H5P frame.
+ * @param {number} [timeout] - Timeout in ms.
+ * @returns {Promise<import('playwright').Locator>} Visible question locator.
+ */
 async function findVisibleQuestionRoot(frame, timeout = 30000) {
   const questions = frame.locator('.h5p-codequestion');
   const endTime = Date.now() + timeout;
@@ -52,6 +74,13 @@ async function findVisibleQuestionRoot(frame, timeout = 30000) {
   throw new Error('Visible H5P code question root not found.');
 }
 
+/**
+ * Finds a visible button inside one question root.
+ * @param {import('playwright').Locator} questionRoot - Root question locator.
+ * @param {RegExp|string} matcher - Button label matcher.
+ * @param {number} [timeout] - Timeout in ms.
+ * @returns {Promise<import('playwright').Locator>} Matching button locator.
+ */
 async function findQuestionRootButton(questionRoot, matcher, timeout = 30000) {
   const regex = (matcher instanceof RegExp)
     ? matcher
@@ -91,6 +120,10 @@ async function findQuestionRootButton(questionRoot, matcher, timeout = 30000) {
   throw new Error(`Button not found for matcher: ${regex.toString()}`);
 }
 
+/**
+ * Loads mouse tutorial examples from content JSON.
+ * @returns {{clickExample: string, followExample: string}} Extracted code samples.
+ */
 function loadTutorialMouseExamples() {
   const tutorialPath = path.resolve(
     __dirname,
@@ -113,6 +146,13 @@ function loadTutorialMouseExamples() {
   };
 }
 
+/**
+ * Replaces the complete editor content of a question.
+ * @param {import('playwright').Locator} questionRoot - Question root locator.
+ * @param {import('playwright').Page} page - Playwright page.
+ * @param {string} code - Replacement code.
+ * @returns {Promise<void>} Resolves when editor content is replaced.
+ */
 async function replaceEditorCode(questionRoot, page, code) {
   const editorContent = questionRoot.locator('.editor_container .cm-content').first();
   await editorContent.waitFor({ state: 'visible', timeout: 30000 });
@@ -123,6 +163,13 @@ async function replaceEditorCode(questionRoot, page, code) {
   await page.waitForTimeout(400);
 }
 
+/**
+ * Waits until console-like output contains a matching string.
+ * @param {import('playwright').Locator} questionRoot - Question root locator.
+ * @param {RegExp|string} matcher - Expected text matcher.
+ * @param {number} [timeout] - Timeout in ms.
+ * @returns {Promise<string>} Captured console text.
+ */
 async function waitForConsoleText(questionRoot, matcher, timeout = 5000) {
   const regex = matcher instanceof RegExp ? matcher : new RegExp(String(matcher), 'i');
   const endTime = Date.now() + timeout;
@@ -146,31 +193,12 @@ async function waitForConsoleText(questionRoot, matcher, timeout = 5000) {
   throw new Error(`Console text did not match ${regex.toString()} within ${timeout}ms.`);
 }
 
-async function getCanvasPixelAtWorld(questionRoot, worldX, worldY, worldWidth = 400, worldHeight = 300) {
-  const canvas = questionRoot.locator('canvas.pyodide-sdl-canvas').first();
-  await canvas.waitFor({ state: 'visible', timeout: 30000 });
-
-  return canvas.evaluate((el, args) => {
-    const ctx = el.getContext('2d');
-    if (!ctx) {
-      return null;
-    }
-
-    const px = Math.max(0, Math.min(el.width - 1, Math.round((args.worldX / args.worldWidth) * el.width)));
-    const py = Math.max(0, Math.min(el.height - 1, Math.round((args.worldY / args.worldHeight) * el.height)));
-    const data = ctx.getImageData(px, py, 1, 1).data;
-
-    return {
-      px,
-      py,
-      r: data[0],
-      g: data[1],
-      b: data[2],
-      a: data[3],
-    };
-  }, { worldX, worldY, worldWidth, worldHeight });
-}
-
+/**
+ * Waits until the SDL canvas is visible and interaction-ready.
+ * @param {import('playwright').Locator} questionRoot - Question root locator.
+ * @param {number} [timeout] - Timeout in ms.
+ * @returns {Promise<object>} Canvas readiness diagnostics.
+ */
 async function waitForCanvasInteractable(questionRoot, timeout = 30000) {
   const canvas = questionRoot.locator('canvas.pyodide-sdl-canvas').first();
   await canvas.waitFor({ state: 'visible', timeout });
@@ -203,17 +231,11 @@ async function waitForCanvasInteractable(questionRoot, timeout = 30000) {
   throw new Error('Canvas did not become interactable before timeout.');
 }
 
-function colorDistance(a, b) {
-  if (!a || !b) {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  const dr = a.r - b.r;
-  const dg = a.g - b.g;
-  const db = a.b - b.b;
-  return Math.sqrt(dr * dr + dg * dg + db * db);
-}
-
+/**
+ * Clicks the center of the active SDL canvas and returns diagnostics.
+ * @param {import('playwright').Locator} questionRoot - Question root locator.
+ * @returns {Promise<object>} Canvas placement diagnostics.
+ */
 async function clickCanvasCenter(questionRoot) {
   const canvas = questionRoot.locator('canvas.pyodide-sdl-canvas').first();
   await canvas.waitFor({ state: 'visible', timeout: 30000 });
@@ -249,6 +271,11 @@ async function clickCanvasCenter(questionRoot) {
   return diag;
 }
 
+/**
+ * Installs lightweight DOM mouse probes for debugging diagnostics.
+ * @param {import('playwright').Locator} questionRoot - Question root locator.
+ * @returns {Promise<void>} Resolves when probe is installed.
+ */
 async function installDomMouseProbe(questionRoot) {
   await questionRoot.evaluate((root) => {
     const canvas = root.querySelector('canvas.pyodide-sdl-canvas');
@@ -279,6 +306,11 @@ async function installDomMouseProbe(questionRoot) {
   });
 }
 
+/**
+ * Reads current probe diagnostics from browser globals.
+ * @param {import('playwright').Locator} questionRoot - Question root locator.
+ * @returns {Promise<object>} Probe state snapshot.
+ */
 async function readDomMouseProbe(questionRoot) {
   return questionRoot.evaluate(() => ({
     domProbe: window.__h5pMouseProbe || null,
@@ -287,6 +319,11 @@ async function readDomMouseProbe(questionRoot) {
   }));
 }
 
+/**
+ * Clicks stop button when a run is currently active.
+ * @param {import('playwright').Locator} questionRoot - Question root locator.
+ * @returns {Promise<void>} Resolves after optional stop.
+ */
 async function stopIfRunning(questionRoot) {
   try {
     const stopButton = await findQuestionRootButton(questionRoot, /stop|stopp/i, 1200);
@@ -298,31 +335,13 @@ async function stopIfRunning(questionRoot) {
   }
 }
 
-async function runMouseExampleCheck(frame, page, code, expectedOutput) {
-  const questionRoot = await findVisibleQuestionRoot(frame);
-
-  await stopIfRunning(questionRoot);
-  await replaceEditorCode(questionRoot, page, code);
-
-  const runButton = await findQuestionRootButton(questionRoot, /run|ausf/i, 20000);
-  await runButton.click();
-
-  await installDomMouseProbe(questionRoot);
-
-  const canvasDiag = await clickCanvasCenter(questionRoot);
-  const probeAfterClick = await readDomMouseProbe(questionRoot);
-
-  const _unused = expectedOutput;
-
-  await stopIfRunning(questionRoot);
-
-  return {
-    canvasDiag,
-    domProbe: probeAfterClick,
-    marker: _unused,
-  };
-}
-
+/**
+ * Validates tutorial click callback wiring by injecting a JS marker.
+ * @param {import('playwright').Frame} frame - H5P frame.
+ * @param {import('playwright').Page} page - Playwright page.
+ * @param {string} code - Learner code sample.
+ * @returns {Promise<object>} Diagnostic result.
+ */
 async function runClickColorChangeCheck(frame, page, code) {
   const instrumentedCode = code
     .replace('import miniworlds', 'import miniworlds\nfrom js import window')
@@ -366,6 +385,13 @@ async function runClickColorChangeCheck(frame, page, code) {
   };
 }
 
+/**
+ * Validates tutorial follow callback wiring by injecting a JS marker.
+ * @param {import('playwright').Frame} frame - H5P frame.
+ * @param {import('playwright').Page} page - Playwright page.
+ * @param {string} code - Learner code sample.
+ * @returns {Promise<object>} Diagnostic result.
+ */
 async function runFollowMovementCheck(frame, page, code) {
   const instrumentedCode = code
     .replace('import miniworlds', 'import miniworlds\nfrom js import window')
@@ -412,8 +438,38 @@ async function runFollowMovementCheck(frame, page, code) {
   };
 }
 
+/**
+ * Runs a queue-level diagnostic to verify mouse and keyboard events reach pygame.
+ * @param {import('playwright').Frame} frame - H5P frame.
+ * @param {import('playwright').Page} page - Playwright page.
+ * @returns {Promise<object>} Queue diagnostic result.
+ */
 async function runPygameMouseQueueDiagnostic(frame, page) {
-  const diagnosticCode = `import miniworlds\nimport pygame\n\nworld = miniworlds.World(400, 300)\nworld.add_background((0, 0, 0))\nprobe = miniworlds.Circle((200, 150), 20)\nprobe.color = (255, 255, 0)\n\n@probe.register\ndef act(self):\n    events = pygame.event.get()\n    for event in events:\n        if event.type == pygame.MOUSEBUTTONDOWN:\n            print('MOUSEBUTTONDOWN', getattr(event, 'pos', None))\n        if event.type == pygame.MOUSEBUTTONUP:\n            print('MOUSEBUTTONUP', getattr(event, 'pos', None))\n        if event.type == pygame.MOUSEMOTION:\n            print('MOUSEMOTION', getattr(event, 'pos', None))\n        if event.type == pygame.KEYDOWN:\n            print('KEYDOWN', getattr(event, 'key', None))\n\nworld.run()\n`;
+  const diagnosticCode = [
+    'import miniworlds',
+    'import pygame',
+    '',
+    'world = miniworlds.World(400, 300)',
+    'world.add_background((0, 0, 0))',
+    'probe = miniworlds.Circle((200, 150), 20)',
+    'probe.color = (255, 255, 0)',
+    '',
+    '@probe.register',
+    'def act(self):',
+    '    events = pygame.event.get()',
+    '    for event in events:',
+    '        if event.type == pygame.MOUSEBUTTONDOWN:',
+    '            print(\'MOUSEBUTTONDOWN\', getattr(event, \'pos\', None))',
+    '        if event.type == pygame.MOUSEBUTTONUP:',
+    '            print(\'MOUSEBUTTONUP\', getattr(event, \'pos\', None))',
+    '        if event.type == pygame.MOUSEMOTION:',
+    '            print(\'MOUSEMOTION\', getattr(event, \'pos\', None))',
+    '        if event.type == pygame.KEYDOWN:',
+    '            print(\'KEYDOWN\', getattr(event, \'key\', None))',
+    '',
+    'world.run()',
+    '',
+  ].join('\n');
 
   const questionRoot = await findVisibleQuestionRoot(frame);
   await stopIfRunning(questionRoot);
@@ -457,6 +513,10 @@ async function runPygameMouseQueueDiagnostic(frame, page) {
   };
 }
 
+/**
+ * Executes mouse regression checks against tutorial examples.
+ * @returns {Promise<void>} Resolves when script exits.
+ */
 async function main() {
   const examples = loadTutorialMouseExamples();
 
@@ -512,7 +572,7 @@ async function main() {
     await browser.close();
   }
 
-  console.log(JSON.stringify(results, null, 2));
+  process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
 
   if (
     results.clickExample.status !== 'PASS'
