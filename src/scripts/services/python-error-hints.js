@@ -1,9 +1,19 @@
 import { tPython } from './python-l10n';
 
+/**
+ * Normalizes runtime error text for pattern matching.
+ * @param {string} message - Raw runtime error text.
+ * @returns {string} Lower-cased normalized text.
+ */
 function normalizeErrorMessage(message) {
   return String(message || '').toLowerCase();
 }
 
+/**
+ * Resolves a localized hint key for known Python error patterns.
+ * @param {string} message - Runtime error text.
+ * @returns {string|null} Hint key or null when no match exists.
+ */
 function resolveHintKey(message) {
   const normalized = normalizeErrorMessage(message);
 
@@ -35,7 +45,7 @@ function resolveHintKey(message) {
   if (
     normalized.includes('syntaxerror')
     || normalized.includes('invalid syntax')
-    || normalized.includes("expected ':'")
+    || normalized.includes('expected \':\'')
     || normalized.includes('unterminated string literal')
     || normalized.includes('eol while scanning string literal')
   ) {

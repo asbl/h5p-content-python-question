@@ -243,6 +243,7 @@ export function ensurePyodideScript(url) {
 /**
  * Writes runtime output to the active runtime, or stderr if no runtime exists.
  * @param {string} text - Output text.
+ * @param {object|boolean} [runtimeOrIsError] - Runtime override or legacy stderr flag.
  * @param {boolean} [isError] - Whether the text is stderr.
  * @returns {void}
  */
@@ -266,6 +267,7 @@ export function writePyodideRuntimeOutput(text, runtimeOrIsError = false, isErro
 /**
  * Reads runtime input from the active runtime input handler.
  * @param {string} [promptText] - Prompt shown to the learner.
+ * @param {object|null} [runtime] - Optional runtime override.
  * @returns {Promise<string>} User input string.
  */
 export function getPyodideRuntimeInput(promptText = '', runtime = null) {

@@ -786,7 +786,7 @@ export default class PyodideRunner {
       'touchmove',
     ];
 
-    eventTypes.forEach(type => {
+    eventTypes.forEach((type) => {
       document.addEventListener(type, this._sdlMouseCaptureBound, true);
       this.sdlCanvas.addEventListener(type, this._sdlMouseCaptureBound, true);
     });
@@ -866,7 +866,7 @@ export default class PyodideRunner {
       'touchmove',
     ];
 
-    eventTypes.forEach(type => {
+    eventTypes.forEach((type) => {
       document.removeEventListener(type, this._sdlMouseCaptureBound, true);
       if (this.sdlCanvas?.isConnected) {
         this.sdlCanvas.removeEventListener(type, this._sdlMouseCaptureBound, true);

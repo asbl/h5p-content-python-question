@@ -123,6 +123,29 @@ async function replaceEditorCode(questionRoot, page, code) {
   await page.waitForTimeout(400);
 }
 
+async function waitForConsoleText(questionRoot, matcher, timeout = 5000) {
+  const regex = matcher instanceof RegExp ? matcher : new RegExp(String(matcher), 'i');
+  const endTime = Date.now() + timeout;
+
+  while (Date.now() < endTime) {
+    const text = await questionRoot.evaluate((root) => {
+      const nodes = root.querySelectorAll('.console_wrapper, .page-code.active, .h5p-question');
+      return Array.from(nodes)
+        .map((node) => (node.innerText || node.textContent || '').replace(/\s+/g, ' ').trim())
+        .filter(Boolean)
+        .join('\n');
+    });
+
+    if (regex.test(text)) {
+      return text;
+    }
+
+    await questionRoot.page().waitForTimeout(200);
+  }
+
+  throw new Error(`Console text did not match ${regex.toString()} within ${timeout}ms.`);
+}
+
 async function getCanvasPixelAtWorld(questionRoot, worldX, worldY, worldWidth = 400, worldHeight = 300) {
   const canvas = questionRoot.locator('canvas.pyodide-sdl-canvas').first();
   await canvas.waitFor({ state: 'visible', timeout: 30000 });
