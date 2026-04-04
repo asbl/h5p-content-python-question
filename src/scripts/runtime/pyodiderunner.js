@@ -13,6 +13,21 @@ import PyodideImageService from './services/pyodide-image-service';
 import PyodideSourceService from './services/pyodide-source-service';
 import PyodideSoundService from './services/pyodide-sound-service';
 import {
+  bindSDLCanvas as bindSDLCanvasService,
+  syncSDLCanvasSize as syncSDLCanvasSizeService,
+} from './services/pyodide-sdl-canvas-service';
+import {
+  installSDLKeyboardCapture as installSDLKeyboardCaptureService,
+  installSDLMouseCapture as installSDLMouseCaptureService,
+  isSDLControlKey as isSDLControlKeyService,
+  postSyntheticPygameMouseEvent as postSyntheticPygameMouseEventService,
+  shouldCaptureSDLKeyboard as shouldCaptureSDLKeyboardService,
+  startSDLEventPumpLoop as startSDLEventPumpLoopService,
+  stopSDLEventPumpLoop as stopSDLEventPumpLoopService,
+  uninstallSDLKeyboardCapture as uninstallSDLKeyboardCaptureService,
+  uninstallSDLMouseCapture as uninstallSDLMouseCaptureService,
+} from './services/pyodide-sdl-input-service';
+import {
   cancelPyodideBackgroundTask,
   clearPyodideExecutionLimit,
   getSharedPyodide,
@@ -21,7 +36,6 @@ import {
   installPyodideRuntimeCompatibility,
   resetPyodideBackgroundTaskState,
   setActivePyodideRuntime,
-  setActivePyodideSDLCanvas,
   setPyodideExecutionLimit,
   sharedPyodideRuntimeState,
 } from './services/pyodide-runtime-service';
@@ -597,19 +611,7 @@ export default class PyodideRunner {
    * @returns {void}
    */
   startSDLEventPumpLoop() {
-    if (this._sdlEventPumpInterval !== null || typeof window?.setInterval !== 'function') {
-      return;
-    }
-
-    this._sdlEventPumpInterval = window.setInterval(() => {
-      if (!this.pyodide || this.stopped || !this.sdlCanvas?.isConnected) {
-        return;
-      }
-
-      this.pyodide.runPythonAsync('import pygame\\npygame.event.pump()').catch(() => {
-        // Keep loop alive even if pygame is temporarily unavailable.
-      });
-    }, 50);
+    startSDLEventPumpLoopService(this);
   }
 
   /**
@@ -617,12 +619,7 @@ export default class PyodideRunner {
    * @returns {void}
    */
   stopSDLEventPumpLoop() {
-    if (this._sdlEventPumpInterval === null || typeof window?.clearInterval !== 'function') {
-      return;
-    }
-
-    window.clearInterval(this._sdlEventPumpInterval);
-    this._sdlEventPumpInterval = null;
+    stopSDLEventPumpLoopService(this);
   }
 
   /**
@@ -631,13 +628,7 @@ export default class PyodideRunner {
    * @returns {boolean} True for keys that should not leak to editors.
    */
   isSDLControlKey(event) {
-    const key = String(event?.key || '');
-
-    return key === 'ArrowUp'
-      || key === 'ArrowDown'
-      || key === 'ArrowLeft'
-      || key === 'ArrowRight'
-      || key === ' ';
+    return isSDLControlKeyService(event);
   }
 
   /**
@@ -646,24 +637,7 @@ export default class PyodideRunner {
    * @returns {boolean} True when the active SDL canvas owns keyboard input.
    */
   shouldCaptureSDLKeyboard(event) {
-    if (!this.runtime.containsSDLCode?.()) {
-      return false;
-    }
-
-    if (!this.sdlCanvas?.isConnected) {
-      return false;
-    }
-
-    const pageName = this.runtime.codeContainer?.getPageManager?.().activePageName;
-    if (pageName && pageName !== 'canvas') {
-      return false;
-    }
-
-    if (sharedPyodideRuntimeState.activeSDLRunner && sharedPyodideRuntimeState.activeSDLRunner !== this) {
-      return false;
-    }
-
-    return this.isSDLControlKey(event);
+    return shouldCaptureSDLKeyboardService(this, event, sharedPyodideRuntimeState);
   }
 
   /**
@@ -671,44 +645,7 @@ export default class PyodideRunner {
    * @returns {void}
    */
   installSDLKeyboardCapture() {
-    if (this._sdlKeyboardCaptureInstalled || typeof document?.addEventListener !== 'function') {
-      return;
-    }
-
-    this._sdlKeyboardCaptureBound = (event) => {
-      if (!this.shouldCaptureSDLKeyboard(event)) {
-        return;
-      }
-
-      const activeElement = document.activeElement;
-      const ownCanvasScope = this.canvasWrapper || this.canvasDiv || this.sdlCanvas;
-      const focusIsInsideOwnCanvas = Boolean(
-        ownCanvasScope
-        && activeElement
-        && typeof ownCanvasScope.contains === 'function'
-        && ownCanvasScope.contains(activeElement),
-      ) || activeElement === this.sdlCanvas;
-
-      if (!focusIsInsideOwnCanvas && typeof this.sdlCanvas?.focus === 'function') {
-        this.sdlCanvas.focus({ preventScroll: true });
-
-        if (typeof event.preventDefault === 'function') {
-          event.preventDefault();
-        }
-        if (typeof event.stopPropagation === 'function') {
-          event.stopPropagation();
-        }
-
-        return;
-      }
-
-      if (typeof event.preventDefault === 'function') {
-        event.preventDefault();
-      }
-    };
-
-    document.addEventListener('keydown', this._sdlKeyboardCaptureBound, true);
-    this._sdlKeyboardCaptureInstalled = true;
+    installSDLKeyboardCaptureService(this, sharedPyodideRuntimeState);
   }
 
   /**
@@ -716,13 +653,7 @@ export default class PyodideRunner {
    * @returns {void}
    */
   uninstallSDLKeyboardCapture() {
-    if (!this._sdlKeyboardCaptureInstalled || !this._sdlKeyboardCaptureBound || typeof document?.removeEventListener !== 'function') {
-      return;
-    }
-
-    document.removeEventListener('keydown', this._sdlKeyboardCaptureBound, true);
-    this._sdlKeyboardCaptureBound = null;
-    this._sdlKeyboardCaptureInstalled = false;
+    uninstallSDLKeyboardCaptureService(this);
   }
 
   /**
@@ -730,68 +661,7 @@ export default class PyodideRunner {
    * @returns {void}
    */
   installSDLMouseCapture() {
-    if (this._sdlMouseCaptureInstalled || typeof document?.addEventListener !== 'function') {
-      return;
-    }
-
-    if (typeof window !== 'undefined') {
-      window.__h5pInstallMouseCaptureRuns = (window.__h5pInstallMouseCaptureRuns || 0) + 1;
-    }
-
-    this._sdlMouseCaptureBound = (event) => {
-      if (!this.sdlCanvas?.isConnected) {
-        return;
-      }
-
-      const rect = this.sdlCanvas.getBoundingClientRect();
-      const isOverCanvas = event.clientX >= rect.left
-        && event.clientX <= rect.right
-        && event.clientY >= rect.top
-        && event.clientY <= rect.bottom;
-
-      if (!isOverCanvas) {
-        return;
-      }
-
-      // Keep SDL bound to the visible canvas right before input is processed.
-      this.bindSDLCanvas();
-
-      const activeElement = document.activeElement;
-      const ownCanvasScope = this.canvasWrapper || this.canvasDiv || this.sdlCanvas;
-      const focusIsInsideOwnCanvas = Boolean(
-        ownCanvasScope
-        && activeElement
-        && typeof ownCanvasScope.contains === 'function'
-        && ownCanvasScope.contains(activeElement),
-      ) || activeElement === this.sdlCanvas;
-
-      if (!focusIsInsideOwnCanvas && typeof this.sdlCanvas?.focus === 'function') {
-        this.sdlCanvas.focus({ preventScroll: true });
-      }
-
-      // Fallback bridge: feed pygame queue from DOM events.
-      this.postSyntheticPygameMouseEvent(event, rect);
-    };
-
-    const eventTypes = [
-      'mousedown',
-      'mouseup',
-      'mousemove',
-      'click',
-      'pointerdown',
-      'pointerup',
-      'pointermove',
-      'touchstart',
-      'touchend',
-      'touchmove',
-    ];
-
-    eventTypes.forEach((type) => {
-      document.addEventListener(type, this._sdlMouseCaptureBound, true);
-      this.sdlCanvas.addEventListener(type, this._sdlMouseCaptureBound, true);
-    });
-
-    this._sdlMouseCaptureInstalled = true;
+    installSDLMouseCaptureService(this);
   }
 
   /**
@@ -801,47 +671,7 @@ export default class PyodideRunner {
    * @returns {void}
    */
   postSyntheticPygameMouseEvent(event, rect) {
-    if (!this.pyodide || !this.sdlCanvas || !rect) {
-      return;
-    }
-
-    const hasPointerSupport = typeof window?.PointerEvent === 'function';
-    if (hasPointerSupport && String(event.type || '').startsWith('mouse')) {
-      return;
-    }
-
-    const eventTypeMap = {
-      mousedown: 'MOUSEBUTTONDOWN',
-      mouseup: 'MOUSEBUTTONUP',
-      mousemove: 'MOUSEMOTION',
-      pointerdown: 'MOUSEBUTTONDOWN',
-      pointerup: 'MOUSEBUTTONUP',
-      pointermove: 'MOUSEMOTION',
-    };
-
-    const pygameEventType = eventTypeMap[event.type];
-    if (!pygameEventType) {
-      return;
-    }
-
-    const relClientX = event.clientX - rect.left;
-    const relClientY = event.clientY - rect.top;
-    const x = Math.max(0, Math.min(this.sdlCanvas.width - 1, Math.round((relClientX / Math.max(1, rect.width)) * this.sdlCanvas.width)));
-    const y = Math.max(0, Math.min(this.sdlCanvas.height - 1, Math.round((relClientY / Math.max(1, rect.height)) * this.sdlCanvas.height)));
-    const button = Number.isFinite(event.button) ? (event.button + 1) : 1;
-    const buttons = Number.isFinite(event.buttons) ? event.buttons : 0;
-
-    const pythonCode = pygameEventType === 'MOUSEMOTION'
-      ? `import pygame\npygame.event.post(pygame.event.Event(pygame.MOUSEMOTION, {'pos': (${x}, ${y}), 'rel': (0, 0), 'buttons': (${buttons & 1}, ${Boolean(buttons & 4) ? 1 : 0}, ${Boolean(buttons & 2) ? 1 : 0}), 'touch': False}))`
-      : `import pygame\npygame.event.post(pygame.event.Event(pygame.${pygameEventType}, {'pos': (${x}, ${y}), 'button': ${button}, 'touch': False}))`;
-
-    if (typeof window !== 'undefined') {
-      window.__h5pSyntheticMousePosted = (window.__h5pSyntheticMousePosted || 0) + 1;
-    }
-
-    this.pyodide.runPythonAsync(pythonCode).catch(() => {
-      // Ignore fallback posting failures to avoid interrupting execution.
-    });
+    postSyntheticPygameMouseEventService(this, event, rect);
   }
 
   /**
@@ -849,32 +679,7 @@ export default class PyodideRunner {
    * @returns {void}
    */
   uninstallSDLMouseCapture() {
-    if (!this._sdlMouseCaptureInstalled || !this._sdlMouseCaptureBound || typeof document?.removeEventListener !== 'function') {
-      return;
-    }
-
-    const eventTypes = [
-      'mousedown',
-      'mouseup',
-      'mousemove',
-      'click',
-      'pointerdown',
-      'pointerup',
-      'pointermove',
-      'touchstart',
-      'touchend',
-      'touchmove',
-    ];
-
-    eventTypes.forEach((type) => {
-      document.removeEventListener(type, this._sdlMouseCaptureBound, true);
-      if (this.sdlCanvas?.isConnected) {
-        this.sdlCanvas.removeEventListener(type, this._sdlMouseCaptureBound, true);
-      }
-    });
-    
-    this._sdlMouseCaptureBound = null;
-    this._sdlMouseCaptureInstalled = false;
+    uninstallSDLMouseCaptureService(this);
   }
 
   /**
@@ -883,16 +688,7 @@ export default class PyodideRunner {
    * @returns {void}
    */
   bindSDLCanvas(focus = false) {
-    if (!this.sdlCanvas) {
-      return;
-    }
-
-    setActivePyodideSDLCanvas(this.sdlCanvas);
-    this.pyodide?.canvas?.setCanvas2D?.(this.sdlCanvas);
-
-    if (focus && this.sdlCanvas.isConnected && typeof this.sdlCanvas.focus === 'function') {
-      this.sdlCanvas.focus({ preventScroll: true });
-    }
+    bindSDLCanvasService(this, focus);
   }
 
   /**
@@ -900,22 +696,7 @@ export default class PyodideRunner {
    * @returns {void}
    */
   syncSDLCanvasSize() {
-    if (!this.sdlCanvas || !this.canvasDiv) {
-      return;
-    }
-
-    const width = this.canvasDiv.clientWidth;
-    const height = this.canvasDiv.clientHeight;
-
-    if (width > 0 && height > 0) {
-      if (this.sdlCanvas.width !== width) {
-        this.sdlCanvas.width = width;
-      }
-
-      if (this.sdlCanvas.height !== height) {
-        this.sdlCanvas.height = height;
-      }
-    }
+    syncSDLCanvasSizeService(this);
   }
 
   /**

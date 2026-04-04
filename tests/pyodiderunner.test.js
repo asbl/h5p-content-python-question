@@ -415,6 +415,93 @@ describe('PyodideRunner', () => {
     expect(mocks.setActivePyodideSDLCanvas).not.toHaveBeenCalled();
   });
 
+  it('posts a synthetic pygame mouse button event for pointer input over the SDL canvas', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const wrapper = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    const focus = vi.fn();
+
+    canvas.width = 200;
+    canvas.height = 100;
+    canvas.focus = focus;
+    canvas.getBoundingClientRect = () => ({
+      left: 0,
+      right: 200,
+      top: 0,
+      bottom: 100,
+      width: 200,
+      height: 100,
+    });
+
+    wrapper.appendChild(canvas);
+    document.body.appendChild(wrapper);
+
+    const bindSDLCanvasSpy = vi.spyOn(runner, 'bindSDLCanvas').mockImplementation(() => {});
+    const runPythonAsync = vi.fn(() => Promise.resolve());
+
+    runner.canvasWrapper = wrapper;
+    runner.canvasDiv = wrapper;
+    runner.sdlCanvas = canvas;
+    runner.pyodide = {
+      runPythonAsync,
+      canvas: {
+        setCanvas2D: vi.fn(),
+      },
+    };
+
+    runner.installSDLMouseCapture();
+    runner._sdlMouseCaptureBound({
+      type: 'pointerdown',
+      clientX: 80,
+      clientY: 40,
+      button: 0,
+      buttons: 1,
+    });
+
+    expect(bindSDLCanvasSpy).toHaveBeenCalled();
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(runPythonAsync).toHaveBeenCalledWith(expect.stringContaining('pygame.MOUSEBUTTONDOWN'));
+
+    runner.uninstallSDLMouseCapture();
+    wrapper.remove();
+  });
+
+  it('ignores mouse fallback events when PointerEvent support exists', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const originalPointerEvent = window.PointerEvent;
+
+    window.PointerEvent = function PointerEventMock() {};
+
+    runner.sdlCanvas = { width: 200, height: 100 };
+    runner.pyodide = {
+      runPythonAsync: vi.fn(() => Promise.resolve()),
+    };
+
+    runner.postSyntheticPygameMouseEvent({
+      type: 'mousedown',
+      clientX: 50,
+      clientY: 40,
+      button: 0,
+      buttons: 1,
+    }, {
+      left: 0,
+      top: 0,
+      width: 200,
+      height: 100,
+    });
+
+    expect(runner.pyodide.runPythonAsync).not.toHaveBeenCalled();
+
+    if (typeof originalPointerEvent === 'undefined') {
+      delete window.PointerEvent;
+    }
+    else {
+      window.PointerEvent = originalPointerEvent;
+    }
+  });
+
   it('synchronizes SDL canvas dimensions with the visible canvas container', () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
