@@ -133,6 +133,18 @@
                 "description": "Wenn aktiviert, können Lernende für dieses Inhaltselement während der Laufzeit Bilder hochladen und im Code verwenden."
               },
               {
+                "label": "Standard-Bilder",
+                "entity": "image",
+                "description": "Bilder, die für dieses Inhaltselement im Bilder-Tab vorgeladen werden.",
+                "field": {
+                  "label": "Standard-Bild",
+                  "fields": [
+                    { "label": "Bild" },
+                    { "label": "Dateiname", "description": "Optionaler Dateiname im Bilder-Tab (z. B. hintergrund.png)." }
+                  ]
+                }
+              },
+              {
                 "label": "Sound-Uploads aktivieren",
                 "description": "Wenn aktiviert, können Lernende für dieses Inhaltselement während der Laufzeit Sounds hochladen und im Code verwenden."
               },
@@ -243,6 +255,18 @@
             {
               "label": "Bild-Uploads aktivieren",
               "description": "Wenn aktiviert, können Lernende in diesem Editor während der Laufzeit Bilder hochladen und im Code verwenden."
+            },
+            {
+              "label": "Standard-Bilder",
+              "entity": "image",
+              "description": "Bilder, die für diesen Editor im Bilder-Tab vorgeladen werden.",
+              "field": {
+                "label": "Standard-Bild",
+                "fields": [
+                  { "label": "Bild" },
+                  { "label": "Dateiname", "description": "Optionaler Dateiname im Bilder-Tab (z. B. hintergrund.png)." }
+                ]
+              }
             },
             {
               "label": "Sound-Uploads aktivieren",
