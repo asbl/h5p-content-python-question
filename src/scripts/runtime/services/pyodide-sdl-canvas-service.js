@@ -20,7 +20,12 @@ export function bindSDLCanvas(runner, focus = false) {
 }
 
 /**
- * Synchronizes the SDL canvas pixel size with its current host dimensions.
+ * Synchronizes the SDL canvas display size with its current host dimensions.
+ *
+ * Uses CSS style scaling rather than changing canvas.width/canvas.height so
+ * that the logical coordinate space set by pygame.display.set_mode() is
+ * preserved. Changing the pixel dimensions would shift SDL's coordinate origin
+ * and cause mouse events to map to wrong game positions.
  * @param {object} runner - PyodideRunner instance.
  * @returns {void}
  */
@@ -33,13 +38,8 @@ export function syncSDLCanvasSize(runner) {
   const height = runner.canvasDiv.clientHeight;
 
   if (width > 0 && height > 0) {
-    if (runner.sdlCanvas.width !== width) {
-      runner.sdlCanvas.width = width;
-    }
-
-    if (runner.sdlCanvas.height !== height) {
-      runner.sdlCanvas.height = height;
-    }
+    runner.sdlCanvas.style.width = `${width}px`;
+    runner.sdlCanvas.style.height = `${height}px`;
   }
 }
 

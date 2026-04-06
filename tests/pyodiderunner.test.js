@@ -502,7 +502,7 @@ describe('PyodideRunner', () => {
     }
   });
 
-  it('synchronizes SDL canvas dimensions with the visible canvas container', () => {
+  it('scales SDL canvas to the container via CSS while preserving logical pixel dimensions', () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
     const canvasDiv = document.createElement('div');
@@ -518,8 +518,12 @@ describe('PyodideRunner', () => {
 
     runner.syncSDLCanvasSize();
 
-    expect(canvas.width).toBe(960);
-    expect(canvas.height).toBe(540);
+    // Logical pixel dimensions are preserved so pygame coordinate mapping stays correct.
+    expect(canvas.width).toBe(320);
+    expect(canvas.height).toBe(240);
+    // The canvas is visually scaled to fill the container via CSS style.
+    expect(canvas.style.width).toBe('960px');
+    expect(canvas.style.height).toBe('540px');
   });
 
   it('resizes before and during scheduled SDL canvas rebinds', () => {
