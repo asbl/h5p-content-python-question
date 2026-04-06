@@ -193,7 +193,28 @@ export function installSDLMouseCapture(runner) {
       && event.clientY <= rect.bottom;
 
     if (!isOverCanvas) {
+      // Mouse left the canvas area: clear the tracked position so
+      // world.mouse.get_position() returns None when off-canvas.
+      if (typeof window !== 'undefined') {
+        window.__h5pSDLMousePos = null;
+      }
       return;
+    }
+
+    // Compute logical SDL coordinates (canvas.width × canvas.height space)
+    // and expose them via a JS global so that the Python pygame.mouse.get_pos
+    // monkey-patch can read them synchronously without event-queue lag.
+    if (typeof window !== 'undefined') {
+      const rect2 = runner.sdlCanvas.getBoundingClientRect();
+      const lw = runner.sdlCanvas.width;
+      const lh = runner.sdlCanvas.height;
+      if (lw > 0 && lh > 0 && rect2.width > 0 && rect2.height > 0) {
+        const mx = Math.max(0, Math.min(lw - 1,
+          Math.round(((event.clientX - rect2.left) / rect2.width) * lw)));
+        const my = Math.max(0, Math.min(lh - 1,
+          Math.round(((event.clientY - rect2.top) / rect2.height) * lh)));
+        window.__h5pSDLMousePos = [mx, my];
+      }
     }
 
     // For pointer button events only (pointerdown/pointerup), suppress the
