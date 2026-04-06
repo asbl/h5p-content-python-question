@@ -196,6 +196,17 @@ export function installSDLMouseCapture(runner) {
       return;
     }
 
+    // Suppress the corresponding legacy mouse event (mousedown/mousemove/mouseup)
+    // that browsers synthesise after pointer events. emscripten SDL hooks into
+    // those legacy events, so without this suppression every click or move
+    // produces one native SDL event AND one synthetic event posted below,
+    // causing double-fire (e.g. on_mouse_left_down toggles back immediately).
+    if (typeof event.preventDefault === 'function'
+      && typeof event.type === 'string'
+      && event.type.startsWith('pointer')) {
+      event.preventDefault();
+    }
+
     // Keep SDL bound to the visible canvas right before input is processed.
     runner.bindSDLCanvas();
 
@@ -216,9 +227,12 @@ export function installSDLMouseCapture(runner) {
     postSyntheticPygameMouseEvent(runner, event, rect);
   };
 
+  // Register on document only (capture phase).  Installing the same handler
+  // on the canvas element too would cause a second invocation for every event
+  // that originates on the canvas, resulting in two synthetic pygame events
+  // per user action.
   SDL_MOUSE_EVENT_TYPES.forEach((type) => {
     document.addEventListener(type, runner._sdlMouseCaptureBound, true);
-    runner.sdlCanvas.addEventListener(type, runner._sdlMouseCaptureBound, true);
   });
 
   runner._sdlMouseCaptureInstalled = true;
@@ -236,9 +250,6 @@ export function uninstallSDLMouseCapture(runner) {
 
   SDL_MOUSE_EVENT_TYPES.forEach((type) => {
     document.removeEventListener(type, runner._sdlMouseCaptureBound, true);
-    if (runner.sdlCanvas?.isConnected) {
-      runner.sdlCanvas.removeEventListener(type, runner._sdlMouseCaptureBound, true);
-    }
   });
 
   runner._sdlMouseCaptureBound = null;
