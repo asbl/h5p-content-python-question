@@ -573,31 +573,6 @@ if not globals().get('_h5p_runtime_compat_installed', False):
       return _h5p_track_background_task(task)
 
   asyncio.run = _h5p_asyncio_run
-
-  # Monkey-patch pygame.mouse.get_pos to return a JS-tracked position.
-  # In emscripten/Pyodide, pygame.mouse.get_pos() returns (0, 0) because
-  # SDL has no direct access to the DOM mouse position. The JS input handler
-  # writes the current logical canvas coordinates to window.__h5pSDLMousePos.
-  # We override get_pos() to read that global synchronously so that
-  # world.mouse.get_position() works even without pending MOUSEMOTION events.
-  try:
-    import pygame as _h5p_pygame
-    _h5p_original_mouse_get_pos = _h5p_pygame.mouse.get_pos
-
-    def _h5p_mouse_get_pos():
-      try:
-        from js import window as _h5p_js_window
-        pos = getattr(_h5p_js_window, '__h5pSDLMousePos', None)
-        if pos is not None:
-          return (int(pos[0]), int(pos[1]))
-      except Exception:
-        pass
-      return _h5p_original_mouse_get_pos()
-
-    _h5p_pygame.mouse.get_pos = _h5p_mouse_get_pos
-  except Exception:
-    pass
-
   globals()['_h5p_runtime_compat_installed'] = True
 `).catch((error) => {
     state.compatibilityPromise = null;

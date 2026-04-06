@@ -193,42 +193,7 @@ export function installSDLMouseCapture(runner) {
       && event.clientY <= rect.bottom;
 
     if (!isOverCanvas) {
-      // Mouse left the canvas area: clear the tracked position so
-      // world.mouse.get_position() returns None when off-canvas.
-      if (typeof window !== 'undefined') {
-        window.__h5pSDLMousePos = null;
-      }
       return;
-    }
-
-    // Compute logical SDL coordinates (canvas.width × canvas.height space)
-    // and expose them via a JS global so that the Python pygame.mouse.get_pos
-    // monkey-patch can read them synchronously without event-queue lag.
-    if (typeof window !== 'undefined') {
-      const rect2 = runner.sdlCanvas.getBoundingClientRect();
-      const lw = runner.sdlCanvas.width;
-      const lh = runner.sdlCanvas.height;
-      if (lw > 0 && lh > 0 && rect2.width > 0 && rect2.height > 0) {
-        const mx = Math.max(0, Math.min(lw - 1,
-          Math.round(((event.clientX - rect2.left) / rect2.width) * lw)));
-        const my = Math.max(0, Math.min(lh - 1,
-          Math.round(((event.clientY - rect2.top) / rect2.height) * lh)));
-        window.__h5pSDLMousePos = [mx, my];
-      }
-    }
-
-    // For pointer button events only (pointerdown/pointerup), suppress the
-    // corresponding compatibility mouse event (mousedown/mouseup) that
-    // browsers synthesise. emscripten SDL hooks into those legacy events,
-    // so without this suppression every click produces one native SDL event
-    // AND one synthetic event posted below, causing double-fire (e.g.
-    // on_mouse_left_down toggles back immediately).
-    // pointermove is intentionally excluded: suppressing its corresponding
-    // mousemove would prevent emscripten from generating MOUSEMOTION events,
-    // breaking world.mouse.get_position() in act().
-    if (typeof event.preventDefault === 'function'
-      && (event.type === 'pointerdown' || event.type === 'pointerup')) {
-      event.preventDefault();
     }
 
     // Keep SDL bound to the visible canvas right before input is processed.
@@ -251,12 +216,9 @@ export function installSDLMouseCapture(runner) {
     postSyntheticPygameMouseEvent(runner, event, rect);
   };
 
-  // Register on document only (capture phase).  Installing the same handler
-  // on the canvas element too would cause a second invocation for every event
-  // that originates on the canvas, resulting in two synthetic pygame events
-  // per user action.
   SDL_MOUSE_EVENT_TYPES.forEach((type) => {
     document.addEventListener(type, runner._sdlMouseCaptureBound, true);
+    runner.sdlCanvas.addEventListener(type, runner._sdlMouseCaptureBound, true);
   });
 
   runner._sdlMouseCaptureInstalled = true;
@@ -274,6 +236,9 @@ export function uninstallSDLMouseCapture(runner) {
 
   SDL_MOUSE_EVENT_TYPES.forEach((type) => {
     document.removeEventListener(type, runner._sdlMouseCaptureBound, true);
+    if (runner.sdlCanvas?.isConnected) {
+      runner.sdlCanvas.removeEventListener(type, runner._sdlMouseCaptureBound, true);
+    }
   });
 
   runner._sdlMouseCaptureBound = null;
