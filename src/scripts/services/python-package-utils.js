@@ -37,6 +37,38 @@ export const PYTHON_PACKAGE_DEPENDENCY_MAP = Object.freeze({
 });
 
 /**
+ * Extracts the distribution name from a wheel filename or URL.
+ * e.g. 'http://localhost:8081/miniworlds-3.5.0.3-py3-none-any.whl' → 'miniworlds'
+ * Returns null if the input is not a recognisable wheel URL.
+ * @param {string} packageNameOrUrl - Package name or wheel URL.
+ * @returns {string|null} Bare distribution name or null.
+ */
+export function extractWheelPackageName(packageNameOrUrl) {
+  if (typeof packageNameOrUrl !== 'string') {
+    return null;
+  }
+
+  const filename = packageNameOrUrl.split('/').pop()?.split('?')[0] ?? '';
+
+  if (!filename.endsWith('.whl')) {
+    return null;
+  }
+
+  // Wheel filename: {distribution}-{version}(-{build})?-{pytag}-{abitag}-{platformtag}.whl
+  const stem = filename.slice(0, -4);
+  const parts = stem.split('-');
+  // Version is the first part that starts with a digit.
+  const versionIdx = parts.findIndex((p) => /^\d/.test(p));
+
+  if (versionIdx <= 0) {
+    return null;
+  }
+
+  // Wheel distributions use underscores; normalise hyphens just in case.
+  return parts.slice(0, versionIdx).join('_').toLowerCase();
+}
+
+/**
  * Normalizes a package-like entry coming from semantics or runtime options.
  * @param {*} entry - Raw package entry.
  * @returns {string|null} Normalized package name or null.

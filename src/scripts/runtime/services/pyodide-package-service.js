@@ -1,4 +1,5 @@
 import {
+  extractWheelPackageName,
   getImportedPythonPackages,
   getPythonPackageDependencies,
   normalizePythonPackageEntries,
@@ -112,6 +113,18 @@ export async function loadMissingPyodidePackages(pyodide, packages = []) {
     if (pyodidePackages.length) {
       await pyodide.loadPackage(pyodidePackages);
       markLoadedPyodidePackages(pyodide, pyodidePackages);
+
+      // For URL wheel entries, also mark the extracted bare package name as
+      // loaded.  Without this, auto-import detection (e.g. 'import miniworlds')
+      // would find the bare name missing from loadedPackages and re-install the
+      // package via micropip, which would then pull in deps like pygame-ce from
+      // PyPI — a binary incompatible with pyodide's WASM environment.
+      pyodidePackages.forEach((pkg) => {
+        const bareName = extractWheelPackageName(pkg);
+        if (bareName) {
+          markLoadedPyodidePackages(pyodide, [bareName]);
+        }
+      });
     }
 
     if (micropipPackages.length) {
