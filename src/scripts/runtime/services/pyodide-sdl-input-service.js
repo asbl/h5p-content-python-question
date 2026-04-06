@@ -196,14 +196,17 @@ export function installSDLMouseCapture(runner) {
       return;
     }
 
-    // Suppress the corresponding legacy mouse event (mousedown/mousemove/mouseup)
-    // that browsers synthesise after pointer events. emscripten SDL hooks into
-    // those legacy events, so without this suppression every click or move
-    // produces one native SDL event AND one synthetic event posted below,
-    // causing double-fire (e.g. on_mouse_left_down toggles back immediately).
+    // For pointer button events only (pointerdown/pointerup), suppress the
+    // corresponding compatibility mouse event (mousedown/mouseup) that
+    // browsers synthesise. emscripten SDL hooks into those legacy events,
+    // so without this suppression every click produces one native SDL event
+    // AND one synthetic event posted below, causing double-fire (e.g.
+    // on_mouse_left_down toggles back immediately).
+    // pointermove is intentionally excluded: suppressing its corresponding
+    // mousemove would prevent emscripten from generating MOUSEMOTION events,
+    // breaking world.mouse.get_position() in act().
     if (typeof event.preventDefault === 'function'
-      && typeof event.type === 'string'
-      && event.type.startsWith('pointer')) {
+      && (event.type === 'pointerdown' || event.type === 'pointerup')) {
       event.preventDefault();
     }
 
