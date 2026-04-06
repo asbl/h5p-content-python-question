@@ -85,6 +85,7 @@ describe('PythonQuestion', () => {
     expect(question.getCodeContainerOptions()).toEqual({
       fromParent: true,
       hasConsole: true,
+      consoleBelowCanvas: true,
       enableImageUploads: true,
       enableSoundUploads: true,
       showSaveLoadButtons: false,
@@ -136,6 +137,7 @@ describe('PythonQuestion', () => {
     expect(question.getCodeContainerOptions()).toEqual({
       fromParent: true,
       hasConsole: true,
+      consoleBelowCanvas: true,
       enableImageUploads: false,
       enableSoundUploads: false,
       showSaveLoadButtons: true,

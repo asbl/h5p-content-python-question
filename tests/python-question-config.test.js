@@ -128,6 +128,7 @@ describe('Python question config', () => {
     expect(buildPythonCodeContainerOptions({ fromParent: true }, config, editorParams)).toEqual({
       fromParent: true,
       hasConsole: true,
+      consoleBelowCanvas: true,
       enableImageUploads: true,
       enableSoundUploads: true,
       showSaveLoadButtons: false,
