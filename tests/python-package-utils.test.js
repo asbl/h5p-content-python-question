@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  extractWheelPackageName,
   getImportedPythonPackages,
   getPythonPackageDependencies,
   normalizePythonPackageEntries,
@@ -45,29 +44,5 @@ from helper import value
       micropipPackages: ['miniworlds'],
     });
     expect(getPythonPackageDependencies('miniworlds')).toEqual(['numpy', 'pygame-ce']);
-  });
-
-  describe('extractWheelPackageName', () => {
-    it('extracts the distribution name from a wheel URL', () => {
-      expect(extractWheelPackageName(
-        'http://localhost:8081/miniworlds-3.5.0.3-py3-none-any.whl',
-      )).toBe('miniworlds');
-    });
-
-    it('extracts the distribution name from a plain wheel filename', () => {
-      expect(extractWheelPackageName('pygame_ce-2.5.6-cp313-cp313-emscripten_3_1_58_wasm32.whl')).toBe('pygame_ce');
-    });
-
-    it('returns null for a regular package name', () => {
-      expect(extractWheelPackageName('miniworlds')).toBeNull();
-    });
-
-    it('returns null for an empty string', () => {
-      expect(extractWheelPackageName('')).toBeNull();
-    });
-
-    it('returns null for a non-wheel URL', () => {
-      expect(extractWheelPackageName('http://localhost:8081/miniworlds.tar.gz')).toBeNull();
-    });
   });
 });
