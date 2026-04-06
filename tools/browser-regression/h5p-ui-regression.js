@@ -10,6 +10,7 @@ const CONSOLE_CONTENT_ID = process.env.H5P_CONSOLE_CONTENT_ID || 'Imported---Fir
 const RUNSTOP_CONTENT_ID = process.env.H5P_RUNSTOP_CONTENT_ID || 'Endlosschleife';
 const MULTI_INSTANCE_CONTENT_ID = process.env.H5P_MULTI_INSTANCE_CONTENT_ID || FOCUS_CONTENT_ID;
 const ZIP_ROUNDTRIP_CONTENT_ID = process.env.H5P_ZIP_ROUNDTRIP_CONTENT_ID || 'miniworlds-basic';
+const MOUSE_FOLLOW_CONTENT_ID = process.env.H5P_MOUSE_FOLLOW_CONTENT_ID || 'miniworlds-mouse-follow';
 const HEADED = process.env.H5P_HEADED === '1';
 const FOCUS_DEBUG = process.env.H5P_FOCUS_DEBUG === '1';
 const ARTIFACTS_DIR = process.env.H5P_BROWSER_REGRESSION_ARTIFACTS_DIR || path.join(process.cwd(), 'audit', 'browser-regression');
@@ -1082,6 +1083,108 @@ async function checkMiniworldsRerun(page) {
   }
 }
 
+/**
+ * Verifies that world.mouse.get_position() tracks actual pointer coordinates,
+ * not the uninitialised SDL default of (0, 0).
+ *
+ * The test content runs a 400×300 miniworlds world.  A World-level click
+ * handler enables following mode and a Circle then moves towards the reported
+ * mouse position each act().  The test:
+ *   1. Waits for the Stop button (confirms world.run() called and game loop running)
+ *   2. Moves the pointer to the right side of the canvas then clicks the centre
+ *   3. Verifies console output contains "FOLLOW: ON" + "TARGET: x y" with x > 50
+ *      → x ≤ 50 means the stale (0,0) bug is still present.
+ *
+ * NOTE: The test content (content/miniworlds-mouse-follow/) uses a local wheel
+ * URL in pyodideOptions so that the fixed miniworlds build is loaded instead of
+ * the unpatched PyPI release.  Once the fix is published to PyPI this can be
+ * reverted to the plain "miniworlds" package name.
+ * @param {import('playwright').Page} page
+ */
+async function checkMiniworldsMouseFollow(page) {
+  const frame = await getH5pFrame(page, getViewUrl(MOUSE_FOLLOW_CONTENT_ID));
+
+  const runButton = await findQuestionButton(frame, 'run');
+  await runButton.click();
+
+  // Wait for the Stop button — this is the most reliable indicator that
+  // world.run() has been called and the game loop has started.
+  const stopButton = await findQuestionButton(frame, 'stop', 45000);
+
+  // Also confirm the SDL canvas is attached and visible in the layout.
+  const canvasCandidates = frame.locator('canvas.pyodide-sdl-canvas');
+  const canvas = await findVisibleLocator(canvasCandidates, 30000, 'SDL canvas not visible after game loop started.');
+
+  // Let a few animation frames pass so the canvas has rendered at least once
+  // and SDL\'s internal state is fully initialised.
+  await page.waitForTimeout(2000);
+
+  // Obtain the canvas position in full-page coordinates so we can drive
+  // real (trusted) mouse events via Playwright.
+  const iframeBox = await page.locator('iframe.h5p-iframe').boundingBox();
+  if (!iframeBox) throw new Error('H5P iframe bounding box is null.');
+
+  const canvasRect = await canvas.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return { x: r.x, y: r.y, width: r.width, height: r.height };
+  });
+
+  // The canvas page must be visible (non-zero bbox) by now because
+  // findVisibleLocator already confirmed isVisible() returned true.
+  if (canvasRect.width < 10 || canvasRect.height < 10) {
+    throw new Error(`Canvas has unexpected zero size: ${JSON.stringify(canvasRect)}`);
+  }
+
+  const absLeft = iframeBox.x + canvasRect.x;
+  const absTop  = iframeBox.y + canvasRect.y;
+
+  // Move to the right side of the canvas so that MOUSEMOTION gives the circle
+  // a realistic target position far from (0,0).
+  await page.mouse.move(
+    absLeft + Math.round(canvasRect.width * 7 / 8),
+    absTop  + Math.round(canvasRect.height / 2),
+  );
+  await page.waitForTimeout(1500);
+
+  // Click the canvas to enable following mode (triggers on_mouse_left_down).
+  await page.mouse.click(
+    absLeft + Math.round(canvasRect.width / 2),
+    absTop  + Math.round(canvasRect.height / 2),
+  );
+
+  // Wait for act() cycles so move_towards fires and TARGET lines are printed.
+  await page.waitForTimeout(4000);
+
+  // Console output lives in .console-body.
+  const consoleText = await frame.evaluate(() => {
+    const body = document.querySelector('.console-body');
+    return body ? (body.innerText || body.textContent || '') : '';
+  });
+
+  const normalised = consoleText.replace(/\s+/g, ' ').trim();
+
+  if (!normalised.includes('FOLLOW: ON')) {
+    throw new Error(
+      `Click did not enable following mode. Console (800): "${normalised.slice(0, 800)}"`
+    );
+  }
+
+  // Extract the first reported target position.
+  const targetMatch = normalised.match(/TARGET:\s*(-?\d+)\s+(-?\d+)/);
+  if (!targetMatch) {
+    throw new Error(
+      `No TARGET line in console output – circle never moved. Console: "${normalised.slice(0, 800)}"`
+    );
+  }
+
+  const targetX = parseInt(targetMatch[1], 10);
+  if (targetX <= 50) {
+    throw new Error(
+      `Mouse position resolved to x=${targetX} which is near (0,0) – the stale initialisation bug is present. Console: "${normalised.slice(0, 800)}"`
+    );
+  }
+}
+
 async function main() {
   const browser = await chromium.launch({ headless: !HEADED });
 
@@ -1097,6 +1200,7 @@ async function main() {
   results.push(await executeCheck(browser, 'console is placed below canvas and restored on code page', checkConsoleBelowCanvasPlacement));
   results.push(await executeCheck(browser, 'console stays below canvas in fullscreen and restores on code page', checkConsoleBelowCanvasPlacementFullscreen));
   results.push(await executeCheck(browser, 'run/stop toggles on infinite loop', checkRunStop));
+  results.push(await executeCheck(browser, 'miniworlds mouse.get_position() tracks real coordinates (not stale 0,0)', checkMiniworldsMouseFollow));
 
   await browser.close();
 
