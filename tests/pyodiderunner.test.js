@@ -502,7 +502,7 @@ describe('PyodideRunner', () => {
     }
   });
 
-  it('scales SDL canvas to the container via CSS while preserving logical pixel dimensions', () => {
+  it('scales SDL canvas aspect-ratio-correct into the container via CSS', () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
     const canvasDiv = document.createElement('div');
@@ -511,6 +511,7 @@ describe('PyodideRunner', () => {
     Object.defineProperty(canvasDiv, 'clientWidth', { value: 960, configurable: true });
     Object.defineProperty(canvasDiv, 'clientHeight', { value: 540, configurable: true });
 
+    // 320×240 = 4:3; container 960×540 is 16:9; height is the limiting dimension.
     canvas.width = 320;
     canvas.height = 240;
     runner.canvasDiv = canvasDiv;
@@ -521,9 +522,99 @@ describe('PyodideRunner', () => {
     // Logical pixel dimensions are preserved so pygame coordinate mapping stays correct.
     expect(canvas.width).toBe(320);
     expect(canvas.height).toBe(240);
-    // The canvas is visually scaled to fill the container via CSS style.
-    expect(canvas.style.width).toBe('960px');
+    // Canvas is scaled uniformly (no stretch): height limited → 720×540.
+    expect(canvas.style.width).toBe('720px');
     expect(canvas.style.height).toBe('540px');
+  });
+
+  it('fills the container when canvas and container aspect ratios match exactly', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+    const canvas = document.createElement('canvas');
+
+    Object.defineProperty(canvasDiv, 'clientWidth', { value: 800, configurable: true });
+    Object.defineProperty(canvasDiv, 'clientHeight', { value: 600, configurable: true });
+
+    // 400×300 = 4:3; 800×600 = 4:3: scale = 2 → fills container exactly.
+    canvas.width = 400;
+    canvas.height = 300;
+    runner.canvasDiv = canvasDiv;
+    runner.sdlCanvas = canvas;
+
+    runner.syncSDLCanvasSize();
+
+    expect(canvas.style.width).toBe('800px');
+    expect(canvas.style.height).toBe('600px');
+  });
+
+  it('falls back to container fill when canvas has zero dimensions', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+    const canvas = document.createElement('canvas');
+
+    Object.defineProperty(canvasDiv, 'clientWidth', { value: 800, configurable: true });
+    Object.defineProperty(canvasDiv, 'clientHeight', { value: 600, configurable: true });
+
+    canvas.width = 0;
+    canvas.height = 0;
+    runner.canvasDiv = canvasDiv;
+    runner.sdlCanvas = canvas;
+
+    runner.syncSDLCanvasSize();
+
+    expect(canvas.style.width).toBe('800px');
+    expect(canvas.style.height).toBe('600px');
+  });
+
+  it('re-syncs canvas CSS size automatically when pygame changes canvas dimensions', async () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+
+    Object.defineProperty(canvasDiv, 'clientWidth', { value: 800, configurable: true });
+    Object.defineProperty(canvasDiv, 'clientHeight', { value: 600, configurable: true });
+
+    document.body.appendChild(canvasDiv);
+
+    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    const canvas = runner.setupSDLCanvas(canvasDiv);
+
+    // Initially: canvas dimensions equal container (800×600 = 4:3), fills 800×600.
+    expect(canvas.style.width).toBe('800px');
+    expect(canvas.style.height).toBe('600px');
+
+    // Simulate pygame.display.set_mode(400, 300): SDL sets canvas.width/height.
+    canvas.width = 400;
+    canvas.height = 300;
+
+    // MutationObserver fires asynchronously; give it one microtask tick.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Aspect-ratio-correct scaling: 800/400=2.0, 600/300=2.0 → fills 800×600.
+    expect(canvas.style.width).toBe('800px');
+    expect(canvas.style.height).toBe('600px');
+
+    canvasDiv.remove();
+  });
+
+  it('disconnects the canvas dimension observer on releaseInputFocus', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+    document.body.appendChild(canvasDiv);
+
+    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    runner.setupSDLCanvas(canvasDiv);
+
+    expect(runner._canvasDimensionObserver).not.toBeNull();
+
+    runner.releaseInputFocus();
+
+    expect(runner._canvasDimensionObserver).toBeNull();
+
+    canvasDiv.remove();
   });
 
   it('resizes before and during scheduled SDL canvas rebinds', () => {

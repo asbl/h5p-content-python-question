@@ -79,6 +79,7 @@ export default class PyodideRunner {
     this._sdlMouseCaptureBound = null;
     this._sdlMouseCaptureInstalled = false;
     this._sdlEventPumpInterval = null;
+    this._canvasDimensionObserver = null;
     this._isInitialized = false;
     this._setupPromise = null;
     this._cancelPromise = null;
@@ -725,6 +726,11 @@ export default class PyodideRunner {
     this.uninstallSDLMouseCapture();
     this.stopSDLEventPumpLoop();
 
+    if (this._canvasDimensionObserver) {
+      this._canvasDimensionObserver.disconnect();
+      this._canvasDimensionObserver = null;
+    }
+
     if (!this.sdlCanvas) {
       return;
     }
@@ -848,6 +854,7 @@ export default class PyodideRunner {
       }
 
       this.sdlCanvas = canvas;
+      this._attachCanvasDimensionObserver(canvas);
       this.syncSDLCanvasSize();
       this.acquireInputFocus();
       this.triggerResizeAfterCanvasUpdate();
@@ -876,11 +883,38 @@ export default class PyodideRunner {
     }
 
     this.sdlCanvas = canvas;
+    this._attachCanvasDimensionObserver(canvas);
     this.syncSDLCanvasSize();
     this.acquireInputFocus();
     this.triggerResizeAfterCanvasUpdate();
 
     return canvas;
+  }
+
+  /**
+   * Attaches a MutationObserver that re-runs syncSDLCanvasSize whenever
+   * pygame (via SDL) changes canvas.width or canvas.height after set_mode().
+   * @param {HTMLCanvasElement} canvas - The SDL canvas element to observe.
+   * @returns {void}
+   */
+  _attachCanvasDimensionObserver(canvas) {
+    if (this._canvasDimensionObserver) {
+      this._canvasDimensionObserver.disconnect();
+      this._canvasDimensionObserver = null;
+    }
+
+    if (typeof MutationObserver === 'undefined') {
+      return;
+    }
+
+    this._canvasDimensionObserver = new MutationObserver(() => {
+      this.syncSDLCanvasSize();
+    });
+
+    this._canvasDimensionObserver.observe(canvas, {
+      attributes: true,
+      attributeFilter: ['width', 'height'],
+    });
   }
 
   /**

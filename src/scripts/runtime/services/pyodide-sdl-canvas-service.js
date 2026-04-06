@@ -26,6 +26,9 @@ export function bindSDLCanvas(runner, focus = false) {
  * that the logical coordinate space set by pygame.display.set_mode() is
  * preserved. Changing the pixel dimensions would shift SDL's coordinate origin
  * and cause mouse events to map to wrong game positions.
+ *
+ * The scaling preserves the canvas aspect ratio (set by pygame.display.set_mode)
+ * by fitting it within the container using uniform scaling (no stretch).
  * @param {object} runner - PyodideRunner instance.
  * @returns {void}
  */
@@ -34,12 +37,25 @@ export function syncSDLCanvasSize(runner) {
     return;
   }
 
-  const width = runner.canvasDiv.clientWidth;
-  const height = runner.canvasDiv.clientHeight;
+  const containerW = runner.canvasDiv.clientWidth;
+  const containerH = runner.canvasDiv.clientHeight;
 
-  if (width > 0 && height > 0) {
-    runner.sdlCanvas.style.width = `${width}px`;
-    runner.sdlCanvas.style.height = `${height}px`;
+  if (containerW <= 0 || containerH <= 0) {
+    return;
+  }
+
+  const logicalW = runner.sdlCanvas.width;
+  const logicalH = runner.sdlCanvas.height;
+
+  if (logicalW > 0 && logicalH > 0) {
+    // Scale uniformly so the canvas fits within the container without distortion.
+    const scale = Math.min(containerW / logicalW, containerH / logicalH);
+    runner.sdlCanvas.style.width = `${Math.round(logicalW * scale)}px`;
+    runner.sdlCanvas.style.height = `${Math.round(logicalH * scale)}px`;
+  }
+  else {
+    runner.sdlCanvas.style.width = `${containerW}px`;
+    runner.sdlCanvas.style.height = `${containerH}px`;
   }
 }
 
