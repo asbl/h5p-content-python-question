@@ -502,7 +502,7 @@ describe('PyodideRunner', () => {
     }
   });
 
-  it('scales SDL canvas aspect-ratio-correct into the container via CSS', () => {
+  it('scales SDL canvas to fill container width while preserving aspect ratio', () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
     const canvasDiv = document.createElement('div');
@@ -511,7 +511,8 @@ describe('PyodideRunner', () => {
     Object.defineProperty(canvasDiv, 'clientWidth', { value: 960, configurable: true });
     Object.defineProperty(canvasDiv, 'clientHeight', { value: 540, configurable: true });
 
-    // 320×240 = 4:3; container 960×540 is 16:9; height is the limiting dimension.
+    // 320×240 = 4:3; container is 960px wide.
+    // Scale = 960 / 320 = 3.0 → 960×720 (fills full container width; height determined by ratio).
     canvas.width = 320;
     canvas.height = 240;
     runner.canvasDiv = canvasDiv;
@@ -522,9 +523,32 @@ describe('PyodideRunner', () => {
     // Logical pixel dimensions are preserved so pygame coordinate mapping stays correct.
     expect(canvas.width).toBe(320);
     expect(canvas.height).toBe(240);
-    // Canvas is scaled uniformly (no stretch): height limited → 720×540.
-    expect(canvas.style.width).toBe('720px');
-    expect(canvas.style.height).toBe('540px');
+    // Canvas fills the full container width; height derived from aspect ratio.
+    expect(canvas.style.width).toBe('960px');
+    expect(canvas.style.height).toBe('720px');
+  });
+
+  it('fills container width for a square world that would previously have been height-constrained', () => {
+    // Canvas 600×600 (square) in a 900×600 container. With the old two-dimension
+    // fit logic, containerH=600 limited scale to 600/600=1.0 → only 600px wide.
+    // The new width-only logic gives scale=900/600=1.5 → 900×900 (fills container).
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+    const canvas = document.createElement('canvas');
+
+    Object.defineProperty(canvasDiv, 'clientWidth', { value: 900, configurable: true });
+    Object.defineProperty(canvasDiv, 'clientHeight', { value: 600, configurable: true });
+
+    canvas.width = 600;
+    canvas.height = 600;
+    runner.canvasDiv = canvasDiv;
+    runner.sdlCanvas = canvas;
+
+    runner.syncSDLCanvasSize();
+
+    expect(canvas.style.width).toBe('900px');
+    expect(canvas.style.height).toBe('900px');
   });
 
   it('fills the container when canvas and container aspect ratios match exactly', () => {

@@ -32,6 +32,18 @@ canvas.pyodide-sdl-canvas:focus {
     box-shadow: 1px 1px 1px 1px rgba(100, 100, 100, 0.2);
 }
 
+/* p5 and Skulpt turtle canvases fill the container width and maintain their
+ * aspect ratio.  The SDL canvas (.pyodide-sdl-canvas) is excluded because its
+ * display size is managed explicitly by syncSDLCanvasSize() via inline styles.
+ * p5.js v1.1.9 divides scrollWidth by getBoundingClientRect().width to remap
+ * mouse coordinates back to logical pixels, so CSS scaling is transparent to
+ * mouseX/mouseY in student code. */
+.h5p-codequestion .page-canvas .canvas-wrapper .turtle-content canvas:not(.pyodide-sdl-canvas) {
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+}
+
 .h5p-codequestion .page-canvas .console_wrapper {
     margin-top: 12px;
 }

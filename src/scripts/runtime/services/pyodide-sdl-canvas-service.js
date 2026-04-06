@@ -27,8 +27,11 @@ export function bindSDLCanvas(runner, focus = false) {
  * preserved. Changing the pixel dimensions would shift SDL's coordinate origin
  * and cause mouse events to map to wrong game positions.
  *
- * The scaling preserves the canvas aspect ratio (set by pygame.display.set_mode)
- * by fitting it within the container using uniform scaling (no stretch).
+ * The canvas always fills the full container width; height is derived from
+ * the world's aspect ratio. Using containerH as a second constraint would
+ * create a circular dependency (canvasDiv.clientHeight is set by the canvas
+ * CSS height itself) that locks small or square worlds to a narrower display
+ * than the available container width.
  * @param {object} runner - PyodideRunner instance.
  * @returns {void}
  */
@@ -38,9 +41,8 @@ export function syncSDLCanvasSize(runner) {
   }
 
   const containerW = runner.canvasDiv.clientWidth;
-  const containerH = runner.canvasDiv.clientHeight;
 
-  if (containerW <= 0 || containerH <= 0) {
+  if (containerW <= 0) {
     return;
   }
 
@@ -48,14 +50,16 @@ export function syncSDLCanvasSize(runner) {
   const logicalH = runner.sdlCanvas.height;
 
   if (logicalW > 0 && logicalH > 0) {
-    // Scale uniformly so the canvas fits within the container without distortion.
-    const scale = Math.min(containerW / logicalW, containerH / logicalH);
+    // Scale to fill the full container width; height follows from the aspect ratio.
+    const scale = containerW / logicalW;
     runner.sdlCanvas.style.width = `${Math.round(logicalW * scale)}px`;
     runner.sdlCanvas.style.height = `${Math.round(logicalH * scale)}px`;
   }
   else {
+    // Canvas not yet initialised (pygame hasn't called set_mode yet); use a 4:3
+    // placeholder so the div has a visible height before the game starts.
     runner.sdlCanvas.style.width = `${containerW}px`;
-    runner.sdlCanvas.style.height = `${containerH}px`;
+    runner.sdlCanvas.style.height = `${Math.round(containerW * 0.75)}px`;
   }
 }
 
