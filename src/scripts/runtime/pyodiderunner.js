@@ -366,6 +366,17 @@ export default class PyodideRunner {
 
       if (this.hasBackgroundTask) {
         this.setCanvasLoading(false);
+        // pygame.display.set_mode() ran during the Python code above, so the
+        // canvas logical dimensions may have changed.  Schedule extra resyncs
+        // as a fallback in case the MutationObserver did not fire in time
+        // (e.g. when emscripten SDL updates canvas internals off-main-thread).
+        if (activeCanvasDiv && this.runtime.containsSDLCode?.() && typeof window?.setTimeout === 'function') {
+          [50, 200, 600].forEach((ms) => window.setTimeout(() => {
+            if (!this.stopped) {
+              this.syncSDLCanvasSize();
+            }
+          }, ms));
+        }
         return result;
       }
 
