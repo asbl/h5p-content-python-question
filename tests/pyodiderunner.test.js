@@ -576,6 +576,34 @@ describe('PyodideRunner', () => {
     expect(canvas.style.aspectRatio).toBe('400 / 300');
   });
 
+  it('uses natural 1:1 size when world is wider than the container (World(900,300) in 560px)', () => {
+    // World(900,300) in a 560px-wide container: JS sets style.width to the natural
+    // 900px. In a real browser, max-width:100% (set on the element) caps the
+    // rendered width to 560px; aspect-ratio then computes height = 560*(300/900)
+    // ≈ 187px automatically without any JS resize observer.
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+    const canvas = document.createElement('canvas');
+
+    Object.defineProperty(canvasDiv, 'clientWidth', { value: 560, configurable: true });
+
+    canvas.width = 900;
+    canvas.height = 300;
+    runner.canvasDiv = canvasDiv;
+    runner.sdlCanvas = canvas;
+
+    runner.syncSDLCanvasSize();
+
+    // Logical dimensions must not be changed (pygame coordinate mapping).
+    expect(canvas.width).toBe(900);
+    expect(canvas.height).toBe(300);
+    // JS always writes the natural world size; CSS max-width:100% handles the cap.
+    expect(canvas.style.width).toBe('900px');
+    expect(canvas.style.height).toBe('auto');
+    expect(canvas.style.aspectRatio).toBe('900 / 300');
+  });
+
   it('falls back to container fill with 4:3 placeholder when canvas has zero dimensions', () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
