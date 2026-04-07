@@ -6,6 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:browser:tutorial-canvas": "node tools/browser-regression/h5p-tutorial-canvas-sizing-regression.js",
     "lint": "stylelint --allow-empty-input './src/**/*.scss' && eslint './src/**/*.js'",
     "build": "webpack",
     "watch": "webpack --watch"
