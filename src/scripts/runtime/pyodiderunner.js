@@ -876,8 +876,14 @@ export default class PyodideRunner {
 
     const canvas = document.createElement('canvas');
     canvas.classList.add('pyodide-sdl-canvas');
-    canvas.width = canvasDiv.clientWidth || 800;
-    canvas.height = canvasDiv.clientHeight || 600;
+    // Start at 1×1 so that ANY pygame.display.set_mode() call changes both
+    // canvas.width and canvas.height, guaranteeing the MutationObserver fires
+    // and syncSDLCanvasSize updates the CSS to the correct world dimensions.
+    // (If we used the container size, a World whose width matched the initial
+    // canvas.width would leave canvas.width unchanged, the observer might not
+    // fire for that attribute, and the display would stay square.)
+    canvas.width = 1;
+    canvas.height = 1;
     canvas.style.maxWidth = '100%';
     canvas.style.height = 'auto';
     canvas.style.display = 'block';
@@ -921,6 +927,9 @@ export default class PyodideRunner {
 
     this._canvasDimensionObserver = new MutationObserver(() => {
       this.syncSDLCanvasSize();
+      // Notify H5P to recalculate iframe height now that the canvas dimensions
+      // (and therefore the page layout) have changed.
+      this.triggerResizeAfterCanvasUpdate();
     });
 
     this._canvasDimensionObserver.observe(canvas, {

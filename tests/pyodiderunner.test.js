@@ -638,10 +638,11 @@ describe('PyodideRunner', () => {
     runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
     const canvas = runner.setupSDLCanvas(canvasDiv);
 
-    // Initially: canvas.width=800, canvas.height=600 (container size placeholder).
-    expect(canvas.style.width).toBe('800px');
+    // Initially: canvas.width=1, canvas.height=1 (intentional 1×1 so any
+    // pygame.display.set_mode() call always changes both attributes).
+    expect(canvas.style.width).toBe('1px');
     expect(canvas.style.height).toBe('auto');
-    expect(canvas.style.aspectRatio).toBe('800 / 600');
+    expect(canvas.style.aspectRatio).toBe('1 / 1');
 
     // Simulate pygame.display.set_mode(400, 300): SDL sets canvas.width/height.
     canvas.width = 400;
