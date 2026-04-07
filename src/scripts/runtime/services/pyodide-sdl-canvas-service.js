@@ -49,8 +49,9 @@ export function syncSDLCanvasSize(runner) {
 
   const logicalW = runner.sdlCanvas.width;
   const logicalH = runner.sdlCanvas.height;
+  const hasInitializedLogicalSize = logicalW > 1 && logicalH > 1;
 
-  if (logicalW > 0 && logicalH > 0) {
+  if (hasInitializedLogicalSize) {
     // Natural 1:1 size; max-width:100% (set on the element) caps it at the
     // container width. height:auto derives from width via aspect-ratio.
     runner.sdlCanvas.style.width = `${logicalW}px`;
@@ -58,7 +59,10 @@ export function syncSDLCanvasSize(runner) {
     runner.sdlCanvas.style.aspectRatio = `${logicalW} / ${logicalH}`;
   }
   else {
-    // Canvas not yet initialised (pygame hasn't called set_mode yet).
+    // Canvas not yet initialised. setupSDLCanvas starts at 1x1 on purpose so
+    // any later set_mode() call changes both attributes and trips the observer.
+    // Treat that placeholder like an uninitialised canvas so it stays visible
+    // at a sensible size instead of collapsing to a 1px dot.
     // Use container width with a 4:3 placeholder so the div has visible height.
     runner.sdlCanvas.style.width = `${containerW}px`;
     runner.sdlCanvas.style.height = 'auto';

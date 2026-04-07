@@ -639,10 +639,11 @@ describe('PyodideRunner', () => {
     const canvas = runner.setupSDLCanvas(canvasDiv);
 
     // Initially: canvas.width=1, canvas.height=1 (intentional 1×1 so any
-    // pygame.display.set_mode() call always changes both attributes).
-    expect(canvas.style.width).toBe('1px');
+    // pygame.display.set_mode() call always changes both attributes). The
+    // placeholder still uses the container size so it remains visible.
+    expect(canvas.style.width).toBe('800px');
     expect(canvas.style.height).toBe('auto');
-    expect(canvas.style.aspectRatio).toBe('1 / 1');
+    expect(canvas.style.aspectRatio).toBe('4 / 3');
 
     // Simulate pygame.display.set_mode(400, 300): SDL sets canvas.width/height.
     canvas.width = 400;
