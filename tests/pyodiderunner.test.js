@@ -625,6 +625,61 @@ describe('PyodideRunner', () => {
     expect(canvas.style.aspectRatio).toBe('4 / 3');
   });
 
+  it('primes SDL canvas size from a static miniworlds world declaration', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'import miniworlds',
+      'world = miniworlds.World(400, 300)',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+
+    Object.defineProperty(canvasDiv, 'clientWidth', { value: 800, configurable: true });
+    Object.defineProperty(canvasDiv, 'clientHeight', { value: 600, configurable: true });
+
+    document.body.appendChild(canvasDiv);
+
+    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    const canvas = runner.setupSDLCanvas(canvasDiv);
+
+    expect(canvas.width).toBe(400);
+    expect(canvas.height).toBe(300);
+    expect(canvas.style.width).toBe('400px');
+    expect(canvas.style.height).toBe('auto');
+    expect(canvas.style.aspectRatio).toBe('400 / 300');
+
+    canvasDiv.remove();
+  });
+
+  it('primes SDL canvas size from a wider static miniworlds world declaration', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'import miniworlds',
+      'world = miniworlds.World(900, 300)',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+
+    Object.defineProperty(canvasDiv, 'clientWidth', { value: 560, configurable: true });
+
+    document.body.appendChild(canvasDiv);
+
+    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    const canvas = runner.setupSDLCanvas(canvasDiv);
+
+    expect(canvas.width).toBe(900);
+    expect(canvas.height).toBe(300);
+    expect(canvas.style.width).toBe('900px');
+    expect(canvas.style.height).toBe('auto');
+    expect(canvas.style.aspectRatio).toBe('900 / 300');
+
+    canvasDiv.remove();
+  });
+
   it('re-syncs canvas CSS size automatically when pygame changes canvas dimensions', async () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});

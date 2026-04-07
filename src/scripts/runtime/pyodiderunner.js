@@ -14,6 +14,7 @@ import PyodideSourceService from './services/pyodide-source-service';
 import PyodideSoundService from './services/pyodide-sound-service';
 import {
   bindSDLCanvas as bindSDLCanvasService,
+  primeSDLCanvasLogicalSize as primeSDLCanvasLogicalSizeService,
   syncSDLCanvasSize as syncSDLCanvasSizeService,
 } from './services/pyodide-sdl-canvas-service';
 import {
@@ -712,6 +713,14 @@ export default class PyodideRunner {
   }
 
   /**
+   * Applies a statically inferred world size to the SDL canvas when available.
+   * @returns {void}
+   */
+  primeSDLCanvasLogicalSize() {
+    primeSDLCanvasLogicalSizeService(this);
+  }
+
+  /**
    * Rebinds SDL canvas over multiple ticks to avoid browser-specific timing
    * races where SDL still targets the previously detached canvas.
    * @returns {void}
@@ -865,6 +874,7 @@ export default class PyodideRunner {
       }
 
       this.sdlCanvas = canvas;
+      this.primeSDLCanvasLogicalSize();
       this._attachCanvasDimensionObserver(canvas);
       this.syncSDLCanvasSize();
       this.acquireInputFocus();
@@ -901,6 +911,7 @@ export default class PyodideRunner {
     }
 
     this.sdlCanvas = canvas;
+    this.primeSDLCanvasLogicalSize();
     this._attachCanvasDimensionObserver(canvas);
     this.syncSDLCanvasSize();
     this.acquireInputFocus();

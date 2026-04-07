@@ -20,6 +20,62 @@ export function bindSDLCanvas(runner, focus = false) {
 }
 
 /**
+ * Attempts to infer static SDL world dimensions from learner code.
+ * Supports common literal forms for miniworlds and pygame.
+ * @param {object} runner - PyodideRunner instance.
+ * @returns {{width: number, height: number}|null} Inferred logical size.
+ */
+export function inferSDLLogicalSize(runner) {
+  const code = runner.runtime?.getAnalysisCode?.();
+
+  if (!code) {
+    return null;
+  }
+
+  const miniworldsMatch = code.match(/miniworlds\.World\(\s*(\d+)\s*,\s*(\d+)\s*\)/);
+  if (miniworldsMatch) {
+    return {
+      width: Number(miniworldsMatch[1]),
+      height: Number(miniworldsMatch[2]),
+    };
+  }
+
+  const pygameMatch = code.match(/pygame\.display\.set_mode\(\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*\)/);
+  if (pygameMatch) {
+    return {
+      width: Number(pygameMatch[1]),
+      height: Number(pygameMatch[2]),
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Seeds the SDL canvas with a statically inferred logical size when SDL has
+ * not yet resized it away from the 1x1 placeholder.
+ * @param {object} runner - PyodideRunner instance.
+ * @returns {void}
+ */
+export function primeSDLCanvasLogicalSize(runner) {
+  if (!runner.sdlCanvas) {
+    return;
+  }
+
+  if (runner.sdlCanvas.width > 1 && runner.sdlCanvas.height > 1) {
+    return;
+  }
+
+  const inferredSize = inferSDLLogicalSize(runner);
+  if (!inferredSize) {
+    return;
+  }
+
+  runner.sdlCanvas.width = inferredSize.width;
+  runner.sdlCanvas.height = inferredSize.height;
+}
+
+/**
  * Synchronizes the SDL canvas display size with its current host dimensions.
  *
  * Uses CSS style scaling rather than changing canvas.width/canvas.height so
