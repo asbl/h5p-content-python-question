@@ -36,6 +36,12 @@ async function findTutorialExampleBlock(frame) {
   return block;
 }
 
+async function findDefaultWorldBlock(frame) {
+  const block = frame.locator('.code_container').filter({ hasText: 'world = miniworlds.World()' }).first();
+  await block.waitFor({ state: 'visible', timeout: 30000 });
+  return block;
+}
+
 async function replaceEditorCode(block, page, code) {
   const codeButton = block.locator('.button-show_code').first();
   if (await codeButton.isVisible().catch(() => false)) {
@@ -117,12 +123,24 @@ async function main() {
 
   const results = {
     tutorialContentId: TUTORIAL_CONTENT_ID,
+    defaultExample: { status: 'PENDING' },
     originalExample: { status: 'PENDING' },
     widenedExample: { status: 'PENDING' },
   };
 
   try {
     const frame = await getH5pFrame(page, getViewUrl(TUTORIAL_CONTENT_ID));
+    const defaultBlock = await findDefaultWorldBlock(frame);
+    await defaultBlock.scrollIntoViewIfNeeded();
+    const defaultCanvas = await runBlockAndReadCanvas(defaultBlock, page);
+    assertCanvasDimensions(defaultCanvas, {
+      logicalWidth: 400,
+      logicalHeight: 400,
+      styleWidth: '400px',
+      styleAspect: '400 / 400',
+    }, 'defaultExample');
+    results.defaultExample = { status: 'PASS', diagnostics: defaultCanvas };
+
     const block = await findTutorialExampleBlock(frame);
     await block.scrollIntoViewIfNeeded();
 
@@ -162,7 +180,10 @@ async function main() {
   catch (error) {
     const message = error?.message || String(error);
 
-    if (results.originalExample.status === 'PENDING') {
+    if (results.defaultExample.status === 'PENDING') {
+      results.defaultExample = { status: 'FAIL', error: message };
+    }
+    else if (results.originalExample.status === 'PENDING') {
       results.originalExample = { status: 'FAIL', error: message };
     }
     else {
@@ -175,7 +196,11 @@ async function main() {
 
   process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
 
-  if (results.originalExample.status !== 'PASS' || results.widenedExample.status !== 'PASS') {
+  if (
+    results.defaultExample.status !== 'PASS'
+    || results.originalExample.status !== 'PASS'
+    || results.widenedExample.status !== 'PASS'
+  ) {
     process.exitCode = 1;
   }
 }

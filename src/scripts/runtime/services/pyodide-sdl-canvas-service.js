@@ -47,6 +47,13 @@ export function inferSDLLogicalSize(runner) {
     }
   }
 
+  if (code.match(/miniworlds\.World\(\s*\)/)) {
+    return {
+      width: 400,
+      height: 400,
+    };
+  }
+
   return null;
 }
 

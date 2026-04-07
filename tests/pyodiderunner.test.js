@@ -693,6 +693,46 @@ describe('PyodideRunner', () => {
     expect(inferSDLLogicalSize(runner)).toEqual({ width: 640, height: 360 });
   });
 
+  it('defaults miniworlds.World() without explicit size to 400x400', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'import miniworlds',
+      'world = miniworlds.World()',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+
+    expect(inferSDLLogicalSize(runner)).toEqual({ width: 400, height: 400 });
+  });
+
+  it('primes SDL canvas size from the default miniworlds world size', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'import miniworlds',
+      'world = miniworlds.World()',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+
+    Object.defineProperty(canvasDiv, 'clientWidth', { value: 800, configurable: true });
+
+    document.body.appendChild(canvasDiv);
+
+    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    const canvas = runner.setupSDLCanvas(canvasDiv);
+
+    expect(canvas.width).toBe(400);
+    expect(canvas.height).toBe(400);
+    expect(canvas.style.width).toBe('400px');
+    expect(canvas.style.height).toBe('auto');
+    expect(canvas.style.aspectRatio).toBe('400 / 400');
+
+    canvasDiv.remove();
+  });
+
   it('re-syncs canvas CSS size automatically when pygame changes canvas dimensions', async () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
