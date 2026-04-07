@@ -59,6 +59,7 @@ vi.mock('../src/scripts/runtime/services/pyodide-runtime-service', () => ({
 }));
 
 const { default: PyodideRunner } = await import('../src/scripts/runtime/pyodiderunner.js');
+const { inferSDLLogicalSize } = await import('../src/scripts/runtime/services/pyodide-sdl-canvas-service.js');
 
 /**
  * Creates a minimal runtime mock for Pyodide runner tests.
@@ -680,6 +681,18 @@ describe('PyodideRunner', () => {
     canvasDiv.remove();
   });
 
+  it('infers static SDL canvas size from pygame display.set_mode literals', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'import pygame',
+      'screen = pygame.display.set_mode((640, 360))',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+
+    expect(inferSDLLogicalSize(runner)).toEqual({ width: 640, height: 360 });
+  });
+
   it('re-syncs canvas CSS size automatically when pygame changes canvas dimensions', async () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
@@ -710,6 +723,39 @@ describe('PyodideRunner', () => {
     // Natural size: 400px wide (narrower than 800px container), aspect-ratio 4:3.
     expect(canvas.style.width).toBe('400px');
     expect(canvas.style.height).toBe('auto');
+    expect(canvas.style.aspectRatio).toBe('400 / 300');
+
+    canvasDiv.remove();
+  });
+
+  it('reuses an existing SDL canvas and primes its logical size from static world code', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'import miniworlds',
+      'world = miniworlds.World(400, 300)',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+    const existingCanvas = document.createElement('canvas');
+
+    Object.defineProperty(canvasDiv, 'clientWidth', { value: 800, configurable: true });
+    document.body.appendChild(canvasDiv);
+
+    existingCanvas.classList.add('pyodide-sdl-canvas');
+    existingCanvas.width = 1;
+    existingCanvas.height = 1;
+    canvasDiv.appendChild(existingCanvas);
+
+    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+
+    const canvas = runner.setupSDLCanvas(canvasDiv);
+
+    expect(canvas).toBe(existingCanvas);
+    expect(canvas.width).toBe(400);
+    expect(canvas.height).toBe(300);
+    expect(canvas.style.width).toBe('400px');
     expect(canvas.style.aspectRatio).toBe('400 / 300');
 
     canvasDiv.remove();

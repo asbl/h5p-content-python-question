@@ -32,20 +32,19 @@ export function inferSDLLogicalSize(runner) {
     return null;
   }
 
-  const miniworldsMatch = code.match(/miniworlds\.World\(\s*(\d+)\s*,\s*(\d+)\s*\)/);
-  if (miniworldsMatch) {
-    return {
-      width: Number(miniworldsMatch[1]),
-      height: Number(miniworldsMatch[2]),
-    };
-  }
+  const patterns = [
+    /miniworlds\.World\(\s*(\d+)\s*,\s*(\d+)\s*\)/,
+    /pygame\.display\.set_mode\(\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*\)/,
+  ];
 
-  const pygameMatch = code.match(/pygame\.display\.set_mode\(\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*\)/);
-  if (pygameMatch) {
-    return {
-      width: Number(pygameMatch[1]),
-      height: Number(pygameMatch[2]),
-    };
+  for (const pattern of patterns) {
+    const match = code.match(pattern);
+    if (match) {
+      return {
+        width: Number(match[1]),
+        height: Number(match[2]),
+      };
+    }
   }
 
   return null;
@@ -73,6 +72,19 @@ export function primeSDLCanvasLogicalSize(runner) {
 
   runner.sdlCanvas.width = inferredSize.width;
   runner.sdlCanvas.height = inferredSize.height;
+}
+
+/**
+ * Applies CSS display sizing to the visible SDL canvas.
+ * @param {HTMLCanvasElement} canvas - Visible SDL canvas.
+ * @param {number} width - CSS width in pixels.
+ * @param {string} aspectRatio - CSS aspect ratio value.
+ * @returns {void}
+ */
+function applySDLCanvasDisplaySize(canvas, width, aspectRatio) {
+  canvas.style.width = `${width}px`;
+  canvas.style.height = 'auto';
+  canvas.style.aspectRatio = aspectRatio;
 }
 
 /**
@@ -110,9 +122,7 @@ export function syncSDLCanvasSize(runner) {
   if (hasInitializedLogicalSize) {
     // Natural 1:1 size; max-width:100% (set on the element) caps it at the
     // container width. height:auto derives from width via aspect-ratio.
-    runner.sdlCanvas.style.width = `${logicalW}px`;
-    runner.sdlCanvas.style.height = 'auto';
-    runner.sdlCanvas.style.aspectRatio = `${logicalW} / ${logicalH}`;
+    applySDLCanvasDisplaySize(runner.sdlCanvas, logicalW, `${logicalW} / ${logicalH}`);
   }
   else {
     // Canvas not yet initialised. setupSDLCanvas starts at 1x1 on purpose so
@@ -120,9 +130,7 @@ export function syncSDLCanvasSize(runner) {
     // Treat that placeholder like an uninitialised canvas so it stays visible
     // at a sensible size instead of collapsing to a 1px dot.
     // Use container width with a 4:3 placeholder so the div has visible height.
-    runner.sdlCanvas.style.width = `${containerW}px`;
-    runner.sdlCanvas.style.height = 'auto';
-    runner.sdlCanvas.style.aspectRatio = '4 / 3';
+    applySDLCanvasDisplaySize(runner.sdlCanvas, containerW, '4 / 3');
   }
 }
 
@@ -132,13 +140,13 @@ export function syncSDLCanvasSize(runner) {
  * @returns {void}
  */
 export function scheduleSDLCanvasRebind(runner) {
-  syncSDLCanvasSize(runner);
-  bindSDLCanvas(runner);
+  runner.syncSDLCanvasSize();
+  runner.bindSDLCanvas();
 
   if (typeof window?.requestAnimationFrame === 'function') {
     window.requestAnimationFrame(() => {
-      syncSDLCanvasSize(runner);
-      bindSDLCanvas(runner);
+      runner.syncSDLCanvasSize();
+      runner.bindSDLCanvas();
     });
   }
 }

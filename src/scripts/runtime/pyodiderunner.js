@@ -15,6 +15,7 @@ import PyodideSoundService from './services/pyodide-sound-service';
 import {
   bindSDLCanvas as bindSDLCanvasService,
   primeSDLCanvasLogicalSize as primeSDLCanvasLogicalSizeService,
+  scheduleSDLCanvasRebind as scheduleSDLCanvasRebindService,
   syncSDLCanvasSize as syncSDLCanvasSizeService,
 } from './services/pyodide-sdl-canvas-service';
 import {
@@ -726,15 +727,22 @@ export default class PyodideRunner {
    * @returns {void}
    */
   scheduleSDLCanvasRebind() {
-    this.syncSDLCanvasSize();
-    this.bindSDLCanvas();
+    scheduleSDLCanvasRebindService(this);
+  }
 
-    if (typeof window?.requestAnimationFrame === 'function') {
-      window.requestAnimationFrame(() => {
-        this.syncSDLCanvasSize();
-        this.bindSDLCanvas();
-      });
-    }
+  /**
+   * Finalizes a visible SDL canvas after creation or reuse.
+   * @param {HTMLCanvasElement} canvas - Active SDL canvas element.
+   * @returns {HTMLCanvasElement} Configured canvas element.
+   */
+  finalizeSDLCanvasSetup(canvas) {
+    this.sdlCanvas = canvas;
+    this.primeSDLCanvasLogicalSize();
+    this._attachCanvasDimensionObserver(canvas);
+    this.syncSDLCanvasSize();
+    this.acquireInputFocus();
+    this.triggerResizeAfterCanvasUpdate();
+    return canvas;
   }
 
   /**
@@ -873,13 +881,7 @@ export default class PyodideRunner {
         this.pyodide._api._skip_unwind_fatal_error = true;
       }
 
-      this.sdlCanvas = canvas;
-      this.primeSDLCanvasLogicalSize();
-      this._attachCanvasDimensionObserver(canvas);
-      this.syncSDLCanvasSize();
-      this.acquireInputFocus();
-      this.triggerResizeAfterCanvasUpdate();
-      return canvas;
+      return this.finalizeSDLCanvasSetup(canvas);
     }
 
     canvasDiv.innerHTML = '';
@@ -910,14 +912,7 @@ export default class PyodideRunner {
       this.pyodide._api._skip_unwind_fatal_error = true;
     }
 
-    this.sdlCanvas = canvas;
-    this.primeSDLCanvasLogicalSize();
-    this._attachCanvasDimensionObserver(canvas);
-    this.syncSDLCanvasSize();
-    this.acquireInputFocus();
-    this.triggerResizeAfterCanvasUpdate();
-
-    return canvas;
+    return this.finalizeSDLCanvasSetup(canvas);
   }
 
   /**
