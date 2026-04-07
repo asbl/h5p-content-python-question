@@ -27,11 +27,12 @@ export function bindSDLCanvas(runner, focus = false) {
  * preserved. Changing the pixel dimensions would shift SDL's coordinate origin
  * and cause mouse events to map to wrong game positions.
  *
- * The canvas always fills the full container width; height is derived from
- * the world's aspect ratio. Using containerH as a second constraint would
- * create a circular dependency (canvasDiv.clientHeight is set by the canvas
- * CSS height itself) that locks small or square worlds to a narrower display
- * than the available container width.
+ * Strategy: display the canvas at its natural 1:1 logical size, but cap it at
+ * the container width via max-width:100% (set once in setupSDLCanvas).
+ * Setting height:auto + aspect-ratio instead of an explicit pixel height means
+ * that CSS scaling is self-consistent: if the container narrows after setup,
+ * both width and height shrink proportionally without distortion, even without
+ * a ResizeObserver.
  * @param {object} runner - PyodideRunner instance.
  * @returns {void}
  */
@@ -50,16 +51,18 @@ export function syncSDLCanvasSize(runner) {
   const logicalH = runner.sdlCanvas.height;
 
   if (logicalW > 0 && logicalH > 0) {
-    // Scale to fill the full container width; height follows from the aspect ratio.
-    const scale = containerW / logicalW;
-    runner.sdlCanvas.style.width = `${Math.round(logicalW * scale)}px`;
-    runner.sdlCanvas.style.height = `${Math.round(logicalH * scale)}px`;
+    // Natural 1:1 size; max-width:100% (set on the element) caps it at the
+    // container width. height:auto derives from width via aspect-ratio.
+    runner.sdlCanvas.style.width = `${logicalW}px`;
+    runner.sdlCanvas.style.height = 'auto';
+    runner.sdlCanvas.style.aspectRatio = `${logicalW} / ${logicalH}`;
   }
   else {
-    // Canvas not yet initialised (pygame hasn't called set_mode yet); use a 4:3
-    // placeholder so the div has a visible height before the game starts.
+    // Canvas not yet initialised (pygame hasn't called set_mode yet).
+    // Use container width with a 4:3 placeholder so the div has visible height.
     runner.sdlCanvas.style.width = `${containerW}px`;
-    runner.sdlCanvas.style.height = `${Math.round(containerW * 0.75)}px`;
+    runner.sdlCanvas.style.height = 'auto';
+    runner.sdlCanvas.style.aspectRatio = '4 / 3';
   }
 }
 

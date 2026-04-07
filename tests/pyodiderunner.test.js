@@ -502,7 +502,7 @@ describe('PyodideRunner', () => {
     }
   });
 
-  it('scales SDL canvas to fill container width while preserving aspect ratio', () => {
+  it('sets CSS to natural 1:1 size and delegates proportional scaling to CSS aspect-ratio', () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
     const canvasDiv = document.createElement('div');
@@ -511,8 +511,8 @@ describe('PyodideRunner', () => {
     Object.defineProperty(canvasDiv, 'clientWidth', { value: 960, configurable: true });
     Object.defineProperty(canvasDiv, 'clientHeight', { value: 540, configurable: true });
 
-    // 320×240 = 4:3; container is 960px wide.
-    // Scale = 960 / 320 = 3.0 → 960×720 (fills full container width; height determined by ratio).
+    // 320×240 logical. CSS max-width:100% (set by setupSDLCanvas) caps at container
+    // width; aspect-ratio automatically scales height to keep proportions correct.
     canvas.width = 320;
     canvas.height = 240;
     runner.canvasDiv = canvasDiv;
@@ -523,15 +523,16 @@ describe('PyodideRunner', () => {
     // Logical pixel dimensions are preserved so pygame coordinate mapping stays correct.
     expect(canvas.width).toBe(320);
     expect(canvas.height).toBe(240);
-    // Canvas fills the full container width; height derived from aspect ratio.
-    expect(canvas.style.width).toBe('960px');
-    expect(canvas.style.height).toBe('720px');
+    // Natural size; browser CSS (max-width/aspect-ratio) handles the cap.
+    expect(canvas.style.width).toBe('320px');
+    expect(canvas.style.height).toBe('auto');
+    expect(canvas.style.aspectRatio).toBe('320 / 240');
   });
 
-  it('fills container width for a square world that would previously have been height-constrained', () => {
-    // Canvas 600×600 (square) in a 900×600 container. With the old two-dimension
-    // fit logic, containerH=600 limited scale to 600/600=1.0 → only 600px wide.
-    // The new width-only logic gives scale=900/600=1.5 → 900×900 (fills container).
+  it('uses natural 1:1 size for a square world; CSS max-width/aspect-ratio caps and scales', () => {
+    // Canvas 600×600 (square) in a 900px container.
+    // Natural CSS width = 600px (not blowing up to 900px); max-width:100% would
+    // shrink it if the container ever becomes narrower than 600px.
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
     const canvasDiv = document.createElement('div');
@@ -547,11 +548,12 @@ describe('PyodideRunner', () => {
 
     runner.syncSDLCanvasSize();
 
-    expect(canvas.style.width).toBe('900px');
-    expect(canvas.style.height).toBe('900px');
+    expect(canvas.style.width).toBe('600px');
+    expect(canvas.style.height).toBe('auto');
+    expect(canvas.style.aspectRatio).toBe('600 / 600');
   });
 
-  it('fills the container when canvas and container aspect ratios match exactly', () => {
+  it('uses natural 1:1 size when canvas is narrower than the container', () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
     const canvasDiv = document.createElement('div');
@@ -560,7 +562,8 @@ describe('PyodideRunner', () => {
     Object.defineProperty(canvasDiv, 'clientWidth', { value: 800, configurable: true });
     Object.defineProperty(canvasDiv, 'clientHeight', { value: 600, configurable: true });
 
-    // 400×300 = 4:3; 800×600 = 4:3: scale = 2 → fills container exactly.
+    // 400×300 world in an 800px container: CSS width = 400px (natural); max-width
+    // does not clip because the container is wider than the logical size.
     canvas.width = 400;
     canvas.height = 300;
     runner.canvasDiv = canvasDiv;
@@ -568,11 +571,12 @@ describe('PyodideRunner', () => {
 
     runner.syncSDLCanvasSize();
 
-    expect(canvas.style.width).toBe('800px');
-    expect(canvas.style.height).toBe('600px');
+    expect(canvas.style.width).toBe('400px');
+    expect(canvas.style.height).toBe('auto');
+    expect(canvas.style.aspectRatio).toBe('400 / 300');
   });
 
-  it('falls back to container fill when canvas has zero dimensions', () => {
+  it('falls back to container fill with 4:3 placeholder when canvas has zero dimensions', () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
     const canvasDiv = document.createElement('div');
@@ -589,7 +593,8 @@ describe('PyodideRunner', () => {
     runner.syncSDLCanvasSize();
 
     expect(canvas.style.width).toBe('800px');
-    expect(canvas.style.height).toBe('600px');
+    expect(canvas.style.height).toBe('auto');
+    expect(canvas.style.aspectRatio).toBe('4 / 3');
   });
 
   it('re-syncs canvas CSS size automatically when pygame changes canvas dimensions', async () => {
@@ -605,9 +610,10 @@ describe('PyodideRunner', () => {
     runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
     const canvas = runner.setupSDLCanvas(canvasDiv);
 
-    // Initially: canvas dimensions equal container (800×600 = 4:3), fills 800×600.
+    // Initially: canvas.width=800, canvas.height=600 (container size placeholder).
     expect(canvas.style.width).toBe('800px');
-    expect(canvas.style.height).toBe('600px');
+    expect(canvas.style.height).toBe('auto');
+    expect(canvas.style.aspectRatio).toBe('800 / 600');
 
     // Simulate pygame.display.set_mode(400, 300): SDL sets canvas.width/height.
     canvas.width = 400;
@@ -616,9 +622,10 @@ describe('PyodideRunner', () => {
     // MutationObserver fires asynchronously; give it one microtask tick.
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // Aspect-ratio-correct scaling: 800/400=2.0, 600/300=2.0 → fills 800×600.
-    expect(canvas.style.width).toBe('800px');
-    expect(canvas.style.height).toBe('600px');
+    // Natural size: 400px wide (narrower than 800px container), aspect-ratio 4:3.
+    expect(canvas.style.width).toBe('400px');
+    expect(canvas.style.height).toBe('auto');
+    expect(canvas.style.aspectRatio).toBe('400 / 300');
 
     canvasDiv.remove();
   });

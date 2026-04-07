@@ -879,6 +879,7 @@ export default class PyodideRunner {
     canvas.width = canvasDiv.clientWidth || 800;
     canvas.height = canvasDiv.clientHeight || 600;
     canvas.style.maxWidth = '100%';
+    canvas.style.height = 'auto';
     canvas.style.display = 'block';
     canvas.tabIndex = 0;
    
