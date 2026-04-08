@@ -96,6 +96,7 @@ describe('PyodideRunner', () => {
     vi.clearAllMocks();
     mocks.sharedPyodideRuntimeState.sharedPyodidePromise = null;
     mocks.sharedPyodideRuntimeState.activeSDLCanvas = null;
+    window.__h5pPygameEventQueue = [];
   });
 
   it('applies and clears the execution limit around learner code execution', async () => {
@@ -501,6 +502,39 @@ describe('PyodideRunner', () => {
     else {
       window.PointerEvent = originalPointerEvent;
     }
+  });
+
+  it('queues mouse fallback events for pygame.event.get consumers', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+
+    runner.sdlCanvas = { width: 200, height: 100 };
+    runner.pyodide = {
+      runPythonAsync: vi.fn(() => Promise.resolve()),
+    };
+
+    runner.postSyntheticPygameMouseEvent({
+      type: 'pointerdown',
+      clientX: 80,
+      clientY: 40,
+      button: 0,
+      buttons: 1,
+    }, {
+      left: 0,
+      top: 0,
+      width: 200,
+      height: 100,
+    });
+
+    expect(window.__h5pPygameEventQueue).toEqual([{
+      type: 'MOUSEBUTTONDOWN',
+      attrs: {
+        pos: [80, 40],
+        button: 1,
+        touch: false,
+      },
+    }]);
+    expect(runner.pyodide.runPythonAsync).toHaveBeenCalledWith(expect.stringContaining('pygame.MOUSEBUTTONDOWN'));
   });
 
   it('sets CSS to natural 1:1 size and delegates proportional scaling to CSS aspect-ratio', () => {

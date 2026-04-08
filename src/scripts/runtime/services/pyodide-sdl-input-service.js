@@ -141,11 +141,35 @@ export function postSyntheticPygameMouseEvent(runner, event, rect) {
   const button = Number.isFinite(event.button) ? (event.button + 1) : 1;
   const buttons = Number.isFinite(event.buttons) ? event.buttons : 0;
 
+  const queuedEvent = pygameEventType === 'MOUSEMOTION'
+    ? {
+      type: 'MOUSEMOTION',
+      attrs: {
+        pos: [x, y],
+        rel: [0, 0],
+        buttons: [buttons & 1, Boolean(buttons & 4) ? 1 : 0, Boolean(buttons & 2) ? 1 : 0],
+        touch: false,
+      },
+    }
+    : {
+      type: pygameEventType,
+      attrs: {
+        pos: [x, y],
+        button,
+        touch: false,
+      },
+    };
+
   const pythonCode = pygameEventType === 'MOUSEMOTION'
     ? `import pygame\npygame.event.post(pygame.event.Event(pygame.MOUSEMOTION, {'pos': (${x}, ${y}), 'rel': (0, 0), 'buttons': (${buttons & 1}, ${Boolean(buttons & 4) ? 1 : 0}, ${Boolean(buttons & 2) ? 1 : 0}), 'touch': False}))`
     : `import pygame\npygame.event.post(pygame.event.Event(pygame.${pygameEventType}, {'pos': (${x}, ${y}), 'button': ${button}, 'touch': False}))`;
 
   if (typeof window !== 'undefined') {
+    if (!Array.isArray(window.__h5pPygameEventQueue)) {
+      window.__h5pPygameEventQueue = [];
+    }
+
+    window.__h5pPygameEventQueue.push(queuedEvent);
     window.__h5pSyntheticMousePosted = (window.__h5pSyntheticMousePosted || 0) + 1;
   }
 

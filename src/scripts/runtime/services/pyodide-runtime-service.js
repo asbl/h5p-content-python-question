@@ -327,6 +327,7 @@ export function installPyodideRuntimeCompatibility(pyodide) {
   state.compatibilityPromise = pyodide.runPythonAsync(`
 import asyncio
 import ast as _h5p_ast
+import builtins as _h5p_builtins
 import sys as _h5p_sys
 import time as _h5p_time
 
@@ -337,6 +338,7 @@ if not globals().get('_h5p_runtime_compat_installed', False):
   _h5p_execution_limit_ms = 0
   _h5p_execution_limit_started = 0.0
   _h5p_execution_limit_message = 'Execution limit exceeded.'
+  _h5p_original_import = _h5p_builtins.__import__
   _h5p_previous_trace = None
 
   def _h5p_execution_limit_trace(frame, event, arg):
@@ -377,6 +379,81 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     global _h5p_background_task, _h5p_background_task_started
     _h5p_background_task = None
     _h5p_background_task_started = False
+
+  def _h5p_consume_js_pygame_event_queue():
+    try:
+      from js import window as _h5p_window
+    except Exception:
+      return []
+
+    queue = getattr(_h5p_window, '__h5pPygameEventQueue', None)
+    if queue is None:
+      return []
+
+    events = []
+
+    try:
+      while int(getattr(queue, 'length', 0)) > 0:
+        item = queue.shift()
+        if item is None:
+          continue
+
+        if hasattr(item, 'to_py'):
+          item = item.to_py()
+
+        if isinstance(item, dict):
+          events.append(item)
+    except Exception:
+      return events
+
+    return events
+
+  def _h5p_patch_pygame_event_get():
+    try:
+      import pygame
+    except Exception:
+      return
+
+    if getattr(pygame.event, '_h5p_patched_get', False):
+      return
+
+    _h5p_original_pygame_event_get = pygame.event.get
+
+    def _h5p_event_get(*args, **kwargs):
+      events = list(_h5p_original_pygame_event_get(*args, **kwargs))
+
+      for payload in _h5p_consume_js_pygame_event_queue():
+        event_type_name = str(payload.get('type') or '')
+        event_type = getattr(pygame, event_type_name, None)
+        if event_type is None:
+          continue
+
+        attrs = payload.get('attrs') or {}
+        try:
+          attrs = dict(attrs)
+        except Exception:
+          attrs = {}
+
+        try:
+          events.append(pygame.event.Event(event_type, attrs))
+        except Exception:
+          continue
+
+      return events
+
+    pygame.event.get = _h5p_event_get
+    pygame.event._h5p_patched_get = True
+
+  def _h5p_import(name, globals=None, locals=None, fromlist=(), level=0):
+    module = _h5p_original_import(name, globals, locals, fromlist, level)
+
+    try:
+      if str(name).split('.', 1)[0] == 'pygame':
+        _h5p_patch_pygame_event_get()
+    except Exception:
+      pass
+
+    return module
 
   def _h5p_has_background_task():
     return bool(
@@ -572,6 +649,8 @@ if not globals().get('_h5p_runtime_compat_installed', False):
       task = loop.create_task(_h5p_wrap_background_coro(main))
       return _h5p_track_background_task(task)
 
+  _h5p_builtins.__import__ = _h5p_import
+  _h5p_patch_pygame_event_get()
   asyncio.run = _h5p_asyncio_run
   globals()['_h5p_runtime_compat_installed'] = True
 `).catch((error) => {

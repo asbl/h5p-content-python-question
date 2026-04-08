@@ -448,6 +448,7 @@ async function runPygameMouseQueueDiagnostic(frame, page) {
   const diagnosticCode = [
     'import miniworlds',
     'import pygame',
+    'from js import window',
     '',
     'world = miniworlds.World(400, 300)',
     'world.add_background((0, 0, 0))',
@@ -459,12 +460,16 @@ async function runPygameMouseQueueDiagnostic(frame, page) {
     '    events = pygame.event.get()',
     '    for event in events:',
     '        if event.type == pygame.MOUSEBUTTONDOWN:',
+    '            window.__tutorialMouseQueueSeen = True',
     '            print(\'MOUSEBUTTONDOWN\', getattr(event, \'pos\', None))',
     '        if event.type == pygame.MOUSEBUTTONUP:',
+    '            window.__tutorialMouseQueueSeen = True',
     '            print(\'MOUSEBUTTONUP\', getattr(event, \'pos\', None))',
     '        if event.type == pygame.MOUSEMOTION:',
+    '            window.__tutorialMouseQueueSeen = True',
     '            print(\'MOUSEMOTION\', getattr(event, \'pos\', None))',
     '        if event.type == pygame.KEYDOWN:',
+    '            window.__tutorialKeyboardQueueSeen = True',
     '            print(\'KEYDOWN\', getattr(event, \'key\', None))',
     '',
     'world.run()',
@@ -475,6 +480,11 @@ async function runPygameMouseQueueDiagnostic(frame, page) {
   await stopIfRunning(questionRoot);
   await replaceEditorCode(questionRoot, page, diagnosticCode);
 
+  await questionRoot.evaluate(() => {
+    window.__tutorialMouseQueueSeen = false;
+    window.__tutorialKeyboardQueueSeen = false;
+  });
+
   const runButton = await findQuestionRootButton(questionRoot, /run|ausf/i, 20000);
   await runButton.click();
 
@@ -482,6 +492,11 @@ async function runPygameMouseQueueDiagnostic(frame, page) {
   await page.keyboard.press('ArrowRight');
   await questionRoot.page().waitForTimeout(500);
   const probeState = await readDomMouseProbe(questionRoot);
+
+  const queueState = await questionRoot.evaluate(() => ({
+    mouseQueueSeen: Boolean(window.__tutorialMouseQueueSeen),
+    keyboardQueueSeen: Boolean(window.__tutorialKeyboardQueueSeen),
+  }));
 
   let queueOutputMatched = false;
   let keyboardOutputMatched = false;
@@ -504,8 +519,10 @@ async function runPygameMouseQueueDiagnostic(frame, page) {
   await stopIfRunning(questionRoot);
 
   return {
-    queueOutputMatched,
-    keyboardOutputMatched,
+    queueOutputMatched: queueOutputMatched || queueState.mouseQueueSeen,
+    keyboardOutputMatched: keyboardOutputMatched || queueState.keyboardQueueSeen,
+    mouseQueueSeen: queueState.mouseQueueSeen,
+    keyboardQueueSeen: queueState.keyboardQueueSeen,
     canvasDiag,
     domProbe: probeState.domProbe,
     syntheticPosted: probeState.syntheticPosted,
