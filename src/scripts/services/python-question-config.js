@@ -188,15 +188,26 @@ export function normalizePythonRunner(runner) {
 /**
  * Normalizes advanced runtime options from semantics.
  * @param {object} [advancedOptions] - Raw advanced options.
+ * @param {object} [pyodideOptions] - Raw Pyodide advanced options.
  * @returns {{disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}} Normalized options.
  */
-export function normalizePythonAdvancedOptions(advancedOptions = {}) {
+export function normalizePythonAdvancedOptions(advancedOptions = {}, pyodideOptions = {}) {
   return {
     showConsole: advancedOptions?.showConsole !== false,
     disableOutputPopups: advancedOptions?.disableOutputPopups === true,
     enableImageUploads: advancedOptions?.enableImageUploads === true,
     enableSoundUploads: advancedOptions?.enableSoundUploads === true,
     enableSaveLoadButtons: advancedOptions?.enableSaveLoadButtons !== false,
+    blocklyCdnUrl: String(advancedOptions?.blocklyCdnUrl || '').trim(),
+    codeMirrorCdnUrl: String(advancedOptions?.codeMirrorCdnUrl || '').trim(),
+    markdownCdnUrl: String(advancedOptions?.markdownCdnUrl || '').trim(),
+    fontAwesomeCdnUrl: String(advancedOptions?.fontAwesomeCdnUrl || '').trim(),
+    sweetAlertCdnUrl: String(advancedOptions?.sweetAlertCdnUrl || '').trim(),
+    jsZipCdnUrl: String(advancedOptions?.jsZipCdnUrl || '').trim(),
+    p5CdnUrl: String(advancedOptions?.p5CdnUrl || '').trim(),
+    skulptCdnUrl: String(advancedOptions?.skulptCdnUrl || '').trim(),
+    sqlJsUrl: String(advancedOptions?.sqlJsUrl || '').trim(),
+    pyodideCdnUrl: String(pyodideOptions?.pyodideCdnUrl || '').trim(),
     executionLimit: normalizePythonExecutionLimit(advancedOptions?.execLimit),
   };
 }
@@ -216,7 +227,7 @@ export function normalizePythonQuestionConfig(params = {}) {
     runner,
     pyodidePackageEntries,
     packages: normalizePythonPackageEntries(pyodidePackageEntries),
-    advancedOptions: normalizePythonAdvancedOptions(params.advancedOptions),
+    advancedOptions: normalizePythonAdvancedOptions(params.advancedOptions, params.pyodideOptions),
   };
 }
 
@@ -248,6 +259,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     ...baseOptions,
     hasConsole: config?.advancedOptions?.showConsole !== false,
     consoleBelowCanvas: config?.advancedOptions?.showConsole !== false,
+    pythonPackages: Array.isArray(config?.packages) ? [...config.packages] : [],
     enableImageUploads: editorParams?.enableImageUploads === true || config?.advancedOptions?.enableImageUploads === true,
     enableSoundUploads: editorParams?.enableSoundUploads === true || config?.advancedOptions?.enableSoundUploads === true,
     showSaveLoadButtons: config?.advancedOptions?.enableSaveLoadButtons !== false,
@@ -262,6 +274,12 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     editorMode: normalizePythonEditorMode(editorParams?.editorMode),
     blocklyCategories: editorParams?.blocklyCategories || null,
     blocklyPackages: config?.runner === 'pyodide' && Array.isArray(config?.packages) ? [...config.packages] : [],
+    blocklyCdnUrl: config?.advancedOptions?.blocklyCdnUrl || '',
+    codeMirrorCdnUrl: config?.advancedOptions?.codeMirrorCdnUrl || '',
+    markdownCdnUrl: config?.advancedOptions?.markdownCdnUrl || '',
+    fontAwesomeCdnUrl: config?.advancedOptions?.fontAwesomeCdnUrl || '',
+    sweetAlertCdnUrl: config?.advancedOptions?.sweetAlertCdnUrl || '',
+    jsZipCdnUrl: config?.advancedOptions?.jsZipCdnUrl || '',
   };
 }
 
@@ -277,6 +295,14 @@ export function buildPythonRuntimeOptions(config, runtimeL10n) {
     l10n: runtimeL10n,
     packages: [...(config?.packages || [])],
     disableOutputPopups: config?.advancedOptions?.disableOutputPopups === true,
+    blocklyCdnUrl: config?.advancedOptions?.blocklyCdnUrl || '',
+    codeMirrorCdnUrl: config?.advancedOptions?.codeMirrorCdnUrl || '',
+    fontAwesomeCdnUrl: config?.advancedOptions?.fontAwesomeCdnUrl || '',
+    sweetAlertCdnUrl: config?.advancedOptions?.sweetAlertCdnUrl || '',
+    p5CdnUrl: config?.advancedOptions?.p5CdnUrl || '',
+    skulptCdnUrl: config?.advancedOptions?.skulptCdnUrl || '',
+    sqlJsUrl: config?.advancedOptions?.sqlJsUrl || '',
+    pyodideCdnUrl: config?.advancedOptions?.pyodideCdnUrl || '',
     executionLimit: config?.advancedOptions?.executionLimit || 0,
     projectStorageEnabled: config?.runner === 'pyodide',
   };

@@ -32,6 +32,7 @@ describe('PythonQuestion', () => {
       l10n: { localValue: 'child' },
       pythonRunner: 'pyodide',
       pyodideOptions: {
+        pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
         packages: [
           'numpy',
           { package: 'pygame-ce' },
@@ -65,6 +66,15 @@ describe('PythonQuestion', () => {
         enableImageUploads: true,
         enableSoundUploads: true,
         enableSaveLoadButtons: false,
+        blocklyCdnUrl: 'https://static.example.com/blockly/',
+        codeMirrorCdnUrl: 'https://static.example.com/codemirror/',
+        markdownCdnUrl: 'https://static.example.com/markdown/',
+        fontAwesomeCdnUrl: 'https://static.example.com/fontawesome.css',
+        sweetAlertCdnUrl: 'https://static.example.com/sweetalert/',
+        jsZipCdnUrl: 'https://static.example.com/jszip/',
+        p5CdnUrl: 'https://static.example.com/p5/p5.min.js',
+        skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
+        sqlJsUrl: 'https://static.example.com/sql.js/sql-wasm.js',
         execLimit: 1800,
       },
     }, 42);
@@ -79,13 +89,23 @@ describe('PythonQuestion', () => {
       l10n: question.runtimeL10n,
       packages: ['numpy', 'pygame-ce', 'sqlite3'],
       disableOutputPopups: true,
+      blocklyCdnUrl: 'https://static.example.com/blockly/',
+      codeMirrorCdnUrl: 'https://static.example.com/codemirror/',
+      fontAwesomeCdnUrl: 'https://static.example.com/fontawesome.css',
+      sweetAlertCdnUrl: 'https://static.example.com/sweetalert/',
+      p5CdnUrl: 'https://static.example.com/p5/p5.min.js',
+      skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
+      sqlJsUrl: 'https://static.example.com/sql.js/sql-wasm.js',
+      pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
       executionLimit: 1800,
       projectStorageEnabled: true,
+      localSkulptUrl: '/libraries/H5P.PythonQuestion-6.64/lib/skulpt.min.js',
     });
     expect(question.getCodeContainerOptions()).toEqual({
       fromParent: true,
       hasConsole: true,
       consoleBelowCanvas: true,
+      pythonPackages: ['numpy', 'pygame-ce', 'sqlite3'],
       enableImageUploads: true,
       enableSoundUploads: true,
       showSaveLoadButtons: false,
@@ -112,6 +132,12 @@ describe('PythonQuestion', () => {
       editorMode: 'code',
       blocklyCategories: null,
       blocklyPackages: ['numpy', 'pygame-ce', 'sqlite3'],
+      blocklyCdnUrl: 'https://static.example.com/blockly/',
+      codeMirrorCdnUrl: 'https://static.example.com/codemirror/',
+      markdownCdnUrl: 'https://static.example.com/markdown/',
+      fontAwesomeCdnUrl: 'https://static.example.com/fontawesome.css',
+      sweetAlertCdnUrl: 'https://static.example.com/sweetalert/',
+      jsZipCdnUrl: 'https://static.example.com/jszip/',
     });
     expect(question.getAdvancedOption('enableSoundUploads')).toBe(true);
     expect(question.getAdvancedOption('missingOption')).toBe(false);
@@ -138,6 +164,7 @@ describe('PythonQuestion', () => {
       fromParent: true,
       hasConsole: true,
       consoleBelowCanvas: true,
+      pythonPackages: ['matplotlib', 'pygame-ce'],
       enableImageUploads: false,
       enableSoundUploads: false,
       showSaveLoadButtons: true,
@@ -152,8 +179,25 @@ describe('PythonQuestion', () => {
       editorMode: 'code',
       blocklyCategories: null,
       blocklyPackages: [],
+      blocklyCdnUrl: '',
+      codeMirrorCdnUrl: '',
+      markdownCdnUrl: '',
+      fontAwesomeCdnUrl: '',
+      sweetAlertCdnUrl: '',
+      jsZipCdnUrl: '',
     });
     expect(question.getRuntimeOptions().executionLimit).toBe(0);
     expect(question.getRuntimeOptions().projectStorageEnabled).toBe(false);
+    expect(question.getRuntimeOptions()).toMatchObject({
+      blocklyCdnUrl: '',
+      codeMirrorCdnUrl: '',
+      fontAwesomeCdnUrl: '',
+      sweetAlertCdnUrl: '',
+      p5CdnUrl: '',
+      skulptCdnUrl: '',
+      sqlJsUrl: '',
+      pyodideCdnUrl: '',
+      localSkulptUrl: '/libraries/H5P.PythonQuestion-6.64/lib/skulpt.min.js',
+    });
   });
 });

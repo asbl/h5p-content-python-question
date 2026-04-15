@@ -1,4 +1,17 @@
+import { createPythonCompletionSource } from '../services/python-autocomplete';
+
 export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
+
+  applyPythonAutocomplete() {
+    this.getEditorManager?.()?.setCompletionConfig?.({
+      override: [createPythonCompletionSource({
+        packageNames: Array.isArray(this.options?.pythonPackages) ? [...this.options.pythonPackages] : [],
+        getWorkspaceFiles: () => this.getEditorManager?.()?.getWorkspaceFiles?.() || this.options?.sourceFiles || [],
+      })],
+      activateOnTyping: true,
+      maxRenderedOptions: 200,
+    });
+  }
 
   shouldShowConsoleBelowCanvas() {
     return this.options?.consoleBelowCanvas === true && this.options?.hasConsole !== false;
@@ -52,6 +65,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
 
   async setup() {
     await super.setup();
+    this.applyPythonAutocomplete();
   }
 
   getUIRegistrations() {

@@ -26,13 +26,34 @@ describe('Python question config', () => {
       enableImageUploads: true,
       enableSoundUploads: true,
       enableSaveLoadButtons: false,
+      blocklyCdnUrl: 'https://cdn.example.com/blockly/',
+      codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
+      markdownCdnUrl: 'https://cdn.example.com/markdown/',
+      fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
+      sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
+      jsZipCdnUrl: 'https://cdn.example.com/jszip/',
+      p5CdnUrl: 'https://static.example.com/p5/p5.min.js',
+      skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
+      sqlJsUrl: 'https://cdn.example.com/sql.js/dist/',
       execLimit: 1500.9,
+    }, {
+      pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
     })).toEqual({
       showConsole: true,
       disableOutputPopups: true,
       enableImageUploads: true,
       enableSoundUploads: true,
       enableSaveLoadButtons: false,
+      blocklyCdnUrl: 'https://cdn.example.com/blockly/',
+      codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
+      markdownCdnUrl: 'https://cdn.example.com/markdown/',
+      fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
+      sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
+      jsZipCdnUrl: 'https://cdn.example.com/jszip/',
+      p5CdnUrl: 'https://static.example.com/p5/p5.min.js',
+      skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
+      sqlJsUrl: 'https://cdn.example.com/sql.js/dist/',
+      pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
       executionLimit: 1500,
     });
   });
@@ -77,12 +98,22 @@ describe('Python question config', () => {
           { package: { value: 'sqlite3' } },
           { value: 'miniworlds' },
         ],
+        pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
       },
       advancedOptions: {
         disableOutputPopups: true,
         enableImageUploads: true,
         enableSoundUploads: true,
         enableSaveLoadButtons: false,
+        blocklyCdnUrl: 'https://cdn.example.com/blockly/',
+        codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
+        markdownCdnUrl: 'https://cdn.example.com/markdown/',
+        fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
+        sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
+        jsZipCdnUrl: 'https://cdn.example.com/jszip/',
+        p5CdnUrl: 'https://static.example.com/p5/p5.min.js',
+        skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
+        sqlJsUrl: 'https://cdn.example.com/sql.js/dist/',
         execLimit: 2750,
       },
     });
@@ -101,6 +132,16 @@ describe('Python question config', () => {
         enableImageUploads: true,
         enableSoundUploads: true,
         enableSaveLoadButtons: false,
+        blocklyCdnUrl: 'https://cdn.example.com/blockly/',
+        codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
+        markdownCdnUrl: 'https://cdn.example.com/markdown/',
+        fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
+        sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
+        jsZipCdnUrl: 'https://cdn.example.com/jszip/',
+        p5CdnUrl: 'https://static.example.com/p5/p5.min.js',
+        skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
+        sqlJsUrl: 'https://cdn.example.com/sql.js/dist/',
+        pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
         executionLimit: 2750,
       },
     });
@@ -129,6 +170,7 @@ describe('Python question config', () => {
       fromParent: true,
       hasConsole: true,
       consoleBelowCanvas: true,
+      pythonPackages: ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
       enableImageUploads: true,
       enableSoundUploads: true,
       showSaveLoadButtons: false,
@@ -155,6 +197,12 @@ describe('Python question config', () => {
       editorMode: 'blocks',
       blocklyCategories: { variables: true, logic: false, loops: true, math: false, text: true, lists: false, functions: false },
       blocklyPackages: ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
+      blocklyCdnUrl: 'https://cdn.example.com/blockly/',
+      codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
+      markdownCdnUrl: 'https://cdn.example.com/markdown/',
+      fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
+      sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
+      jsZipCdnUrl: 'https://cdn.example.com/jszip/',
     });
 
     expect(buildPythonRuntimeOptions(config, { pyodideReady: 'Ready' })).toEqual({
@@ -162,6 +210,14 @@ describe('Python question config', () => {
       l10n: { pyodideReady: 'Ready' },
       packages: ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
       disableOutputPopups: true,
+      blocklyCdnUrl: 'https://cdn.example.com/blockly/',
+      codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
+      fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
+      sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
+      p5CdnUrl: 'https://static.example.com/p5/p5.min.js',
+      skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
+      sqlJsUrl: 'https://cdn.example.com/sql.js/dist/',
+      pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
       executionLimit: 2750,
       projectStorageEnabled: true,
     });
@@ -178,6 +234,7 @@ describe('Python question config', () => {
     expect(config.advancedOptions.showConsole).toBe(false);
     expect(buildPythonCodeContainerOptions({ fromParent: true }, config, {})).toMatchObject({
       hasConsole: false,
+      pythonPackages: [],
     });
   });
 

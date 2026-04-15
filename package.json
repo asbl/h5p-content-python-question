@@ -6,7 +6,8 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:browser": "npm run test:browser:ui && npm run test:browser:mouse-tutorial && npm run test:browser:tutorial-canvas",
+    "test:browser": "npm run test:browser:ui && npm run test:browser:mouse-tutorial && npm run test:browser:tutorial-canvas && npm run test:browser:autocomplete",
+    "test:browser:autocomplete": "node tools/browser-regression/python-autocomplete-smoke.js",
     "test:browser:ui": "node tools/browser-regression/h5p-ui-regression.js",
     "test:browser:mouse-tutorial": "node tools/browser-regression/h5p-mouse-tutorial-regression.js",
     "test:browser:tutorial-canvas": "node tools/browser-regression/h5p-tutorial-canvas-sizing-regression.js",
