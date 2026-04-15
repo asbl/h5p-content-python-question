@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   clearPyodideExecutionLimit,
+  ensurePyodideScript,
   getLoadedPyodidePackages,
   getPyodideRuntimeInput,
   getSharedPyodide,
+  normalizePyodideScriptUrl,
   resetSharedPyodideRuntimeState,
   setPyodideExecutionLimit,
   setActivePyodideRuntime,
@@ -126,5 +128,54 @@ describe('Pyodide runtime service', () => {
 
     expect(getLoadedPyodidePackages(firstPyodide).has('numpy')).toBe(true);
     expect(getLoadedPyodidePackages(secondPyodide).has('numpy')).toBe(false);
+  });
+
+  it('normalizes custom Pyodide script URLs and derived index directories', () => {
+    expect(normalizePyodideScriptUrl('https://static.example.com/pyodide/')).toEqual({
+      scriptUrl: 'https://static.example.com/pyodide/pyodide.js',
+      indexURL: 'https://static.example.com/pyodide/',
+    });
+
+    expect(normalizePyodideScriptUrl('https://static.example.com/pyodide/pyodide.js')).toEqual({
+      scriptUrl: 'https://static.example.com/pyodide/pyodide.js',
+      indexURL: 'https://static.example.com/pyodide/',
+    });
+  });
+
+  it('loads a custom Pyodide script URL exactly once', async () => {
+    const appendSpy = vi.spyOn(document.head, 'appendChild').mockImplementation((node) => {
+      queueMicrotask(() => {
+        window.loadPyodide = vi.fn();
+        node.onload?.();
+      });
+
+      return node;
+    });
+
+    await ensurePyodideScript('https://static.example.com/pyodide/pyodide.js');
+
+    expect(appendSpy).toHaveBeenCalledTimes(1);
+    expect(appendSpy.mock.calls[0][0].src).toBe('https://static.example.com/pyodide/pyodide.js');
+
+    appendSpy.mockRestore();
+  });
+
+  it('passes the derived indexURL when creating a shared Pyodide instance', async () => {
+    const runtime = { outputHandler: vi.fn(), inputHandler: vi.fn(() => 'A'), l10n: {} };
+
+    window.loadPyodide = vi
+      .fn()
+      .mockImplementation(({ stdout, stderr }) => Promise.resolve({
+        globals: { set: vi.fn() },
+        runPythonAsync: vi.fn().mockResolvedValue(undefined),
+        _stdout: stdout,
+        _stderr: stderr,
+      }));
+
+    await getSharedPyodide({ pyodideCdnUrl: 'https://static.example.com/pyodide/' }, runtime);
+
+    expect(window.loadPyodide).toHaveBeenCalledWith(expect.objectContaining({
+      indexURL: 'https://static.example.com/pyodide/',
+    }));
   });
 });

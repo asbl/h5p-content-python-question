@@ -48,12 +48,52 @@
         {
           "label": "Ausführungs-Limit",
           "description": "Maximale Anzahl von Ausführungsschritten für Python. Verhindert Endlosschleifen. [0: kein Limit]"
+        },
+        {
+          "label": "Blockly-Skript-URL",
+          "description": "Basis-URL oder direkte URL zu blockly.min.js. Selbst gehostete Dateien werden unterstützt. Standardblöcke und der Python-Generator werden aus demselben Verzeichnis geladen."
+        },
+        {
+          "label": "CodeMirror-Modul-URL",
+          "description": "Basis-URL zu einem ESM-CDN oder direkte URL zu einem eigenen CodeMirror-Runtime-Modul. Selbst gehostete Modul-Spiegel werden unterstützt."
+        },
+        {
+          "label": "Markdown-Modul-URL",
+          "description": "Basis-URL zu einem ESM-CDN oder direkte URL zu einem eigenen Markdown-Runtime-Modul. Selbst gehostete Modul-Spiegel werden unterstützt."
+        },
+        {
+          "label": "Font-Awesome-Stylesheet-URL",
+          "description": "Direkte URL oder Basis-URL zu einem selbst gehosteten Font-Awesome-Stylesheet. Leer lassen, um das standardmäßig gehostete Stylesheet zu verwenden."
+        },
+        {
+          "label": "SweetAlert-Skript-URL",
+          "description": "Basis-URL oder direkte URL zu sweetalert2.all.min.js. Selbst gehostete Dateien werden unterstützt."
+        },
+        {
+          "label": "JSZip-Skript-URL",
+          "description": "Basis-URL oder direkte URL zu jszip.min.js. Selbst gehostete Dateien werden unterstützt."
+        },
+        {
+          "label": "p5-Skript-URL",
+          "description": "Direkte URL zu einer gehosteten p5.min.js-Datei. Leer lassen, um die standardmäßig gehostete Datei zu verwenden."
+        },
+        {
+          "label": "Skulpt-Skript-URL",
+          "description": "Basis-URL oder direkte URL zu skulpt.min.js. Selbst gehostete Dateien werden unterstützt. Wenn leer, verwenden p5-Aufgaben den lokal gebündelten Skulpt-Build und andere Skulpt-Aufgaben den standardmäßig gehosteten Build."
+        },
+        {
+          "label": "sql.js-Skript-URL",
+          "description": "Basis-URL oder direkte URL zu sql-wasm.js. Selbst gehostete Dateien werden unterstützt. Die passende sql-wasm.wasm wird aus demselben Verzeichnis geladen."
         }
       ]
     },
     {
       "label": "Erweiterte Pyodide-Optionen",
       "fields": [
+        {
+          "label": "Pyodide-Skript-URL",
+          "description": "Basis-URL oder direkte URL zu pyodide.js. Selbst gehostete Dateien werden unterstützt. Zugehörige Pyodide-Assets werden aus demselben Verzeichnis geladen."
+        },
         {
           "label": "Pyodide-Pakete",
           "entity": "package",

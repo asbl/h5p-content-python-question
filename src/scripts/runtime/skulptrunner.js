@@ -1,11 +1,11 @@
-/* global Sk, p5 */
-
 import {
   getPythonL10nValue,
   tPython,
 } from '../services/python-l10n';
 import { addPythonErrorHint } from '../services/python-error-hints';
 import { normalizePythonExecutionLimit } from '../services/python-execution-limit';
+import { ensureP5Script } from './services/p5-runtime-service';
+import { ensureSkulptRuntime } from './services/skulpt-runtime-service';
 
 export default class SkulptRunner {
 
@@ -84,6 +84,28 @@ export default class SkulptRunner {
       || errorMessage.includes('Program exceeded run time limit');
   }
 
+  getSkulpt() {
+    return this.Sk || globalThis.Sk || null;
+  }
+
+  getSkulptRuntimeUrl(containsP5 = this.runtime.containsP5Code()) {
+    const configuredUrl = String(this.options.skulptCdnUrl || '').trim();
+
+    if (configuredUrl) {
+      return configuredUrl;
+    }
+
+    if (containsP5) {
+      const localUrl = String(this.options.localSkulptUrl || '').trim();
+
+      if (localUrl) {
+        return localUrl;
+      }
+    }
+
+    return undefined;
+  }
+
   /**
    * Stops the current execution.
    * @returns {boolean} true, if program is stopped
@@ -91,16 +113,18 @@ export default class SkulptRunner {
   stop() {
     this.stopped = true;
 
-    if (!Sk) return;
+    const skulpt = this.getSkulpt();
+
+    if (!skulpt) return;
 
     // 1. Python-Seite abbrechen (falls noch aktiv)
-    Sk.shouldStop = true;
-    Sk.rejectSleep?.('Interrupted execution');
+    skulpt.shouldStop = true;
+    skulpt.rejectSleep?.('Interrupted execution');
 
     // 2. Turtle HARD RESET
-    if (Sk.TurtleGraphics) {
+    if (skulpt.TurtleGraphics) {
       try {
-        Sk.TurtleGraphics.stop();
+        skulpt.TurtleGraphics.stop();
       }
       catch {
         console.warn('could not stop turtle');
@@ -108,9 +132,9 @@ export default class SkulptRunner {
       }
     }
     // p5 abbrechen
-    if (Sk.p5) {
+    if (skulpt.p5) {
       try {
-        Sk.p5.kill();
+        skulpt.p5.kill();
       }
       catch {
         console.warn('could not stop p5');
@@ -123,10 +147,18 @@ export default class SkulptRunner {
     return true;
   }
 
-  setup() {
+  async setup() {
+    const skulptRuntimeUrl = this.getSkulptRuntimeUrl();
+    const skulpt = this.getSkulpt() || await ensureSkulptRuntime(skulptRuntimeUrl);
+
+    if (!skulpt) {
+      throw new Error('Skulpt runtime is not loaded.');
+    }
+
     this._isInitalized = true;
-    Sk.timeoutMsg = () => this.getExecutionLimitMessage();
-    Sk.configure({
+    this.Sk = skulpt;
+    skulpt.timeoutMsg = () => this.getExecutionLimitMessage();
+    skulpt.configure({
       output: (text) => {
         this.runtime.outputHandler(text);
       },
@@ -137,7 +169,7 @@ export default class SkulptRunner {
       killableFor: this.killableFor,
       retainGlobals: this.retainGlobals,
       execLimit: this.hasExecutionLimit() ? this.executionLimit : null,
-      __future__: Sk.python3
+      __future__: skulpt.python3
     });
   }
 
@@ -214,23 +246,40 @@ export default class SkulptRunner {
   }
 
   async execute(code, canvasDiv = null) {
-    if (!this._isInitalized) this.setup();
+    const containsP5 = this.runtime.containsP5Code();
+    const containsTurtle = this.runtime.containsTurtleCode?.() === true;
+    const skulptRuntimeUrl = this.getSkulptRuntimeUrl(containsP5);
+
+    await ensureSkulptRuntime(skulptRuntimeUrl);
+
+    if (!this._isInitalized) {
+      await this.setup();
+    }
+
+    if (containsP5) {
+      await ensureP5Script(this.options.p5CdnUrl);
+    }
 
     this.stopped = false;
-    this.Sk = Sk;
-    Sk.shouldStop = false;
-    Sk.execStart = Date.now();
+    const skulpt = this.getSkulpt();
+
+    this.Sk = skulpt;
+    skulpt.shouldStop = false;
+    skulpt.execStart = Date.now();
     this.installImageRegistry();
     this.installSoundRegistry();
 
     // Canvas vorbereiten
-    if (canvasDiv) this.setupP5(canvasDiv);
-
-    // Prüfen, ob Python Code p5 verwendet
-    const containsP5 = this.runtime.containsP5Code();
+    if (canvasDiv && containsP5) {
+      this.setupP5(canvasDiv);
+    }
+    else if (canvasDiv && containsTurtle) {
+      this.setupTurtleDiv(canvasDiv);
+    }
 
     if (containsP5 && canvasDiv) {
       const runner = this;
+      const P5Runtime = window.p5;
 
       // Erzeugen einer p5 Instanz mit Instance Mode
       const sketch = function (p) {
@@ -260,13 +309,13 @@ export default class SkulptRunner {
       };
 
       // p5 Instanz erstellen
-      this.p5Instance = new p5(sketch, canvasDiv);
-      Sk.p5 = { instance: this.p5Instance };
+      this.p5Instance = new P5Runtime(sketch, canvasDiv);
+      skulpt.p5 = { instance: this.p5Instance };
     }
 
     try {
-      const result = await Sk.misceval.asyncToPromise(() =>
-        Sk.importMainWithBody('<stdin>', false, code, true, this.suspension)
+      const result = await skulpt.misceval.asyncToPromise(() =>
+        skulpt.importMainWithBody('<stdin>', false, code, true, this.suspension)
       );
       await this.onSuccess?.(result);
       return result;
@@ -324,16 +373,20 @@ export default class SkulptRunner {
 
 
   _readHandler(x) {
-    if (!Sk.builtinFiles?.files?.[x]) {
+    const skulpt = this.getSkulpt();
+
+    if (!skulpt?.builtinFiles?.files?.[x]) {
       throw tPython(this.l10n, 'skulptFileNotFound', { file: x });
     }
-    return Sk.builtinFiles.files[x];
+    return skulpt.builtinFiles.files[x];
   }
 
   _createSuspensionConfig() {
     return {
       '*': () => {
-        if (this.stopped || Sk.shouldStop) {
+        const skulpt = this.getSkulpt();
+
+        if (this.stopped || skulpt?.shouldStop) {
           throw 'Program suspended';
         }
       },
@@ -341,11 +394,16 @@ export default class SkulptRunner {
   }
 
   setupTurtleDiv(canvasDiv) {
-    (Sk.TurtleGraphics ||= {}).target = canvasDiv.id;
+    const skulpt = this.getSkulpt();
+
+    (skulpt.TurtleGraphics ||= {}).target = canvasDiv.id;
   }
 
   setupP5(canvasDiv) {
-    if (!window.p5) {
+    const P5Runtime = window.p5;
+    const skulpt = this.getSkulpt();
+
+    if (!P5Runtime) {
       console.error(getPythonL10nValue(this.l10n, 'skulptP5Missing'));
       return;
     }
@@ -359,42 +417,54 @@ export default class SkulptRunner {
     canvasDiv.innerHTML = '';
     this.canvasDiv = canvasDiv;
 
-    if (this.runtime.containsP5Code() && !p5.prototype._skulptBound) {
-      p5.prototype._skulptBound = true;
+    if (this.runtime.containsP5Code() && !P5Runtime.prototype._skulptBound) {
+      P5Runtime.prototype._skulptBound = true;
     }
 
-    p5.prototype.linmap = p5.prototype.map;
+    P5Runtime.prototype.linmap = P5Runtime.prototype.map;
 
     // attach all p5 instance properties to the p5 prototype so they are accessible in Python
     // necessary for p5play bindings
-    p5.prototype.registerMethod('init', function () {
+    P5Runtime.prototype.registerMethod('init', function () {
       for (let key in this) {
         const val = this[key];
-        if (p5.prototype[key] === undefined) {
-          p5.prototype[key] = val;
+        if (P5Runtime.prototype[key] === undefined) {
+          P5Runtime.prototype[key] = val;
         }// else
       }
-      //this.loadImage = p5.prototype.loadImage;
+      //this.loadImage = P5Runtime.prototype.loadImage;
     });
 
     // Skulpt p5 Referenz für Python
-    Sk.p5 = { instance: this.p5Instance };
+    skulpt.p5 = { instance: this.p5Instance };
   }
 
   addCanvas(canvasWrapper, canvasDiv) {
-    if (!this._isInitalized) {
-      this.setup();
-    }
     if (!canvasDiv) return;
 
-    Sk.canvas = canvasDiv.id;
+    const containsP5 = this.runtime.containsP5Code();
+    const skulptRuntimeUrl = this.getSkulptRuntimeUrl(containsP5);
 
-    if (this.runtime.containsTurtleCode()) {
-      this.setupTurtleDiv(canvasDiv);
-    }
+    ensureSkulptRuntime(skulptRuntimeUrl)
+      .then(() => {
+        if (!this._isInitalized) {
+          this.setup();
+        }
 
-    if (this.runtime.containsP5Code()) {
-      this.setupP5(canvasDiv);
-    }
+        const skulpt = this.getSkulpt();
+        skulpt.canvas = canvasDiv.id;
+
+        if (this.runtime.containsTurtleCode()) {
+          this.setupTurtleDiv(canvasDiv);
+        }
+
+        if (!containsP5) {
+          return null;
+        }
+
+        return ensureP5Script(this.options.p5CdnUrl)
+          .then(() => this.setupP5(canvasDiv));
+      })
+      .catch((error) => this.runtime.onError(String(error?.message || error)));
   }
 }

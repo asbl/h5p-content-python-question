@@ -151,7 +151,7 @@ describe('PythonSolutionRuntime', () => {
     expect(first.setup).toHaveBeenCalledTimes(1);
   });
 
-  it('prepareForRun calls super and attaches the expected canvas when canvas code is present', () => {
+  it('prepareForRun calls super and attaches the expected canvas when canvas code is present', async () => {
     const runtime = new PythonSolutionRuntime(vi.fn(), 'solution', { runner: 'pyodide' });
     runtime.codeTester = {
       view: { type: 'expected-view' },
@@ -160,13 +160,13 @@ describe('PythonSolutionRuntime', () => {
     };
     vi.spyOn(runtime, 'containsCanvasCode').mockReturnValue(true);
 
-    runtime.prepareForRun();
+    await runtime.prepareForRun();
 
     expect(runtime._basePrepared).toBe(true);
     expect(canvasManagers[0].attachCanvas).toHaveBeenCalledWith('expected', 7);
   });
 
-  it('prepareForRun does not attach an expected canvas when no canvas code exists', () => {
+  it('prepareForRun does not attach an expected canvas when no canvas code exists', async () => {
     const runtime = new PythonSolutionRuntime(vi.fn(), 'solution', { runner: 'pyodide' });
     runtime.codeTester = {
       view: { type: 'expected-view' },
@@ -174,7 +174,7 @@ describe('PythonSolutionRuntime', () => {
     };
     vi.spyOn(runtime, 'containsCanvasCode').mockReturnValue(false);
 
-    runtime.prepareForRun();
+    await runtime.prepareForRun();
 
     expect(runtime._basePrepared).toBe(true);
     expect(canvasManagers).toHaveLength(0);

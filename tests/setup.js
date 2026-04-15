@@ -8,6 +8,9 @@ class BaseCodeQuestion {
     this.contentId = contentId;
     this.extras = extras;
     this.l10n = { parentValue: 'parent' };
+    this.libraryInfo = {
+      versionedNameNoSpaces: 'H5P.PythonQuestion-6.64',
+    };
   }
 
   getCodeTesterFactory() {
@@ -18,6 +21,10 @@ class BaseCodeQuestion {
 
   getCodeContainerOptions() {
     return { fromParent: true };
+  }
+
+  getLibraryFilePath(filePath) {
+    return `/libraries/${this.libraryInfo.versionedNameNoSpaces}/${filePath}`;
   }
 }
 

@@ -35,8 +35,8 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
    * Prepares the Python runtime before executing student code.
    * Sets up canvas handling if canvas-related code is detected.
    */
-  prepareForRun() {
-    super.prepareForRun();
+  async prepareForRun() {
+    await super.prepareForRun();
     if (this.containsCanvasCode(this.getCode())) {
       const testCaseIndex = this.codeTester?.session?.testCaseIndex
         ?? this.codeTester?.testCaseIndex;

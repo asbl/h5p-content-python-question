@@ -27,6 +27,30 @@ export const sharedPyodideRuntimeState = {
 };
 const PYODIDE_FETCH_CACHE_NAME = 'h5p-pythonquestion-pyodide-fetch-v2';
 
+const DEFAULT_PYODIDE_CDN_URL = 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js';
+
+/**
+ * Normalizes a Pyodide script URL or base directory into a script + index URL pair.
+ * @param {string} [url] - Base URL or direct URL to pyodide.js.
+ * @returns {{scriptUrl: string, indexURL: string}} Normalized Pyodide URLs.
+ */
+export function normalizePyodideScriptUrl(url = DEFAULT_PYODIDE_CDN_URL) {
+  const trimmedUrl = String(url || '').trim();
+  const candidateUrl = trimmedUrl || DEFAULT_PYODIDE_CDN_URL;
+  const scriptCandidate = /\/pyodide\.js(?:[?#].*)?$/i.test(candidateUrl)
+    ? candidateUrl
+    : `${candidateUrl.replace(/\/$/, '')}/pyodide.js`;
+  const baseHref = typeof window !== 'undefined' && window.location?.href
+    ? window.location.href
+    : 'https://cdn.jsdelivr.net/';
+  const scriptUrl = new URL(scriptCandidate, baseHref).toString();
+
+  return {
+    scriptUrl,
+    indexURL: new URL('./', scriptUrl).toString(),
+  };
+}
+
 /**
  * Returns the mutable state associated with one concrete Pyodide instance.
  * @param {object} pyodide - Pyodide instance.
@@ -730,7 +754,7 @@ export async function clearPyodideExecutionLimit(pyodide) {
  */
 export async function getSharedPyodide(options = {}, runtime = null) {
   const state = sharedPyodideRuntimeState;
-  const cdnUrl = options.pyodideCdnUrl || 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js';
+  const { scriptUrl, indexURL } = normalizePyodideScriptUrl(options.pyodideCdnUrl);
   const persistentPyodideCache = options.persistentPyodideCache !== false;
 
   if (runtime) {
@@ -738,13 +762,14 @@ export async function getSharedPyodide(options = {}, runtime = null) {
   }
 
   if (persistentPyodideCache) {
-    installPyodideFetchCache(cdnUrl);
+    installPyodideFetchCache(scriptUrl);
   }
 
-  await ensurePyodideScript(cdnUrl);
+  await ensurePyodideScript(scriptUrl);
 
   if (!state.sharedPyodidePromise) {
     state.sharedPyodidePromise = loadPyodide({
+      indexURL,
       stdout: (text) => writePyodideRuntimeOutput(text),
       stderr: (text) => writePyodideRuntimeOutput(text, true),
       stdin: () => '\n',

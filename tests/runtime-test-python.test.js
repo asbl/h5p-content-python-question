@@ -92,7 +92,7 @@ beforeEach(async () => {
 });
 
 describe('PythonTestRuntime', () => {
-  it('attaches testcase canvas using session test-case index', () => {
+  it('attaches testcase canvas using session test-case index', async () => {
     const runtime = new PythonTestRuntime(
       vi.fn(),
       'solution',
@@ -105,13 +105,13 @@ describe('PythonTestRuntime', () => {
     );
     vi.spyOn(runtime, 'containsCanvasCode').mockReturnValue(true);
 
-    runtime.prepareForRun();
+    await runtime.prepareForRun();
 
     expect(runtime._basePrepared).toBe(true);
     expect(canvasManagers[0].attachCanvas).toHaveBeenCalledWith('testcase', 4);
   });
 
-  it('falls back to legacy tester testCaseIndex when session index is missing', () => {
+  it('falls back to legacy tester testCaseIndex when session index is missing', async () => {
     const runtime = new PythonTestRuntime(
       vi.fn(),
       'solution',
@@ -123,7 +123,7 @@ describe('PythonTestRuntime', () => {
     );
     vi.spyOn(runtime, 'containsCanvasCode').mockReturnValue(true);
 
-    runtime.prepareForRun();
+    await runtime.prepareForRun();
 
     expect(canvasManagers[0].attachCanvas).toHaveBeenCalledWith('testcase', 6);
   });

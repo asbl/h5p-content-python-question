@@ -45,8 +45,8 @@ export default class PythonSolutionRuntime extends H5P.SolutionRuntimeMixin(Pyth
    * Prepares the runtime environment before execution.
    * Creates a solution canvas if needed.
    */
-  prepareForRun() {
-    super.prepareForRun();
+  async prepareForRun() {
+    await super.prepareForRun();
     if (this.containsCanvasCode(this.getCode())) {
       const testCaseIndex = this.codeTester?.session?.testCaseIndex
         ?? this.codeTester?.testCaseIndex;

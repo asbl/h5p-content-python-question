@@ -138,12 +138,17 @@ export default class PythonRuntime extends H5P.Runtime {
       .filter(Boolean);
   }
 
-  prepareForRun() {
+  async prepareForRun() {
     if (this.runnerType === 'pyodide') {
-      this.runner.setup().catch((error) => this.onError(error.toString()));
+      try {
+        await this.runner.setup();
+      }
+      catch (error) {
+        this.onError(error.toString());
+      }
     }
     else {
-      super.prepareForRun();
+      await super.prepareForRun();
     }
 
     if (this.containsCanvasCode()) {

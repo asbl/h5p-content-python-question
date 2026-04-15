@@ -1,5 +1,3 @@
-/* global p5 */
-
 import {
   getPythonL10nValue,
 } from '../services/python-l10n';
@@ -41,6 +39,7 @@ import {
   setPyodideExecutionLimit,
   sharedPyodideRuntimeState,
 } from './services/pyodide-runtime-service';
+import { ensureP5Script } from './services/p5-runtime-service';
 
 export default class PyodideRunner {
   /**
@@ -339,6 +338,7 @@ export default class PyodideRunner {
 
       // Prepare canvas integrations before executing user code.
       if (canvasDiv && this.runtime.containsP5Code()) {
+        await ensureP5Script(this.options.p5CdnUrl);
         this.setupP5(canvasDiv);
       }
 
@@ -849,7 +849,8 @@ export default class PyodideRunner {
       });
     };
 
-    this.p5Instance = new p5(sketch, canvasDiv);
+    const P5Runtime = window.p5;
+    this.p5Instance = new P5Runtime(sketch, canvasDiv);
   }
 
   /**
@@ -960,8 +961,15 @@ export default class PyodideRunner {
     this.setCanvasLoading(true);
 
     if (this.runtime.containsP5Code()) {
-      this.setupP5(canvasDiv);
-      this.setCanvasLoading(false);
+      ensureP5Script(this.options.p5CdnUrl)
+        .then(() => {
+          this.setupP5(canvasDiv);
+          this.setCanvasLoading(false);
+        })
+        .catch((error) => {
+          this.setCanvasLoading(false);
+          this.onError(error);
+        });
     }
     else if (this.runtime.containsSDLCode()) {
       this.setup()

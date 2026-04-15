@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   clearPyodideExecutionLimit: vi.fn(() => Promise.resolve()),
+  ensureP5Script: vi.fn(() => Promise.resolve()),
   getImportedPyodidePackages: vi.fn(() => []),
   hasPyodideBackgroundTask: vi.fn(() => Promise.resolve(false)),
   loadMissingPyodidePackages: vi.fn(() => Promise.resolve()),
@@ -56,6 +57,10 @@ vi.mock('../src/scripts/runtime/services/pyodide-runtime-service', () => ({
   setActivePyodideSDLCanvas: mocks.setActivePyodideSDLCanvas,
   setPyodideExecutionLimit: mocks.setPyodideExecutionLimit,
   sharedPyodideRuntimeState: mocks.sharedPyodideRuntimeState,
+}));
+
+vi.mock('../src/scripts/runtime/services/p5-runtime-service', () => ({
+  ensureP5Script: mocks.ensureP5Script,
 }));
 
 const { default: PyodideRunner } = await import('../src/scripts/runtime/pyodiderunner.js');
@@ -257,6 +262,40 @@ describe('PyodideRunner', () => {
     if (!hadTempP5Fn) {
       delete window.h5pTempP5Fn;
     }
+    if (typeof previousP5 === 'undefined') {
+      delete window.p5;
+    }
+    else {
+      window.p5 = previousP5;
+    }
+  });
+
+  it('uses the configured hosted p5 script URL before executing p5 code', async () => {
+    const runtime = createRuntime();
+    runtime.containsP5Code.mockReturnValue(true);
+    const runner = new PyodideRunner(runtime, {
+      packages: [],
+      p5CdnUrl: 'https://static.example.com/p5/p5.min.js',
+    });
+    const previousP5 = window.p5;
+
+    window.p5 = class P5Mock {
+      constructor(sketch) {
+        const instance = Object.create({});
+        instance.noLoop = vi.fn();
+        sketch(instance);
+      }
+    };
+
+    runner.pyodide = {
+      runPythonAsync: vi.fn(() => Promise.resolve('ok')),
+    };
+    runner._isInitialized = true;
+
+    await runner.execute('print(1)', document.createElement('div'));
+
+    expect(mocks.ensureP5Script).toHaveBeenCalledWith('https://static.example.com/p5/p5.min.js');
+
     if (typeof previousP5 === 'undefined') {
       delete window.p5;
     }

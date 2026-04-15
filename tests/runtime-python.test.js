@@ -225,12 +225,12 @@ describe('PythonRuntime', () => {
     expect(runtime.containsMiniworldsCode()).toBe(false);
   });
 
-  it('prepareForRun calls base prepare for skulpt and attaches canvas when needed', () => {
+  it('prepareForRun calls base prepare for skulpt and attaches canvas when needed', async () => {
     const runtime = new PythonRuntime(vi.fn(), 'import turtle', { runner: 'skulpt' });
     runtime.setup(createCodeContainer());
     vi.spyOn(runtime, 'containsCanvasCode').mockReturnValue(true);
 
-    runtime.prepareForRun();
+    await runtime.prepareForRun();
 
     expect(runtime._basePrepared).toBe(true);
     expect(canvasManagers[0].attachCanvas).toHaveBeenCalledWith('manual');
@@ -247,8 +247,7 @@ describe('PythonRuntime', () => {
     vi.spyOn(runtime, 'containsCanvasCode').mockReturnValue(false);
     const onErrorSpy = vi.spyOn(runtime, 'onError');
 
-    runtime.prepareForRun();
-    await Promise.resolve();
+    await runtime.prepareForRun();
 
     expect(runtime.runner.setup).toHaveBeenCalledTimes(1);
     expect(onErrorSpy).toHaveBeenCalledWith('Error: boom');

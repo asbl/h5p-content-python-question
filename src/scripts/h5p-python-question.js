@@ -132,7 +132,10 @@ export default class PythonQuestion extends H5P.CodeQuestion {
    * @returns {object} Runtime options.
    */
   getRuntimeOptions() {
-    return buildPythonRuntimeOptions(this.pythonConfig, this.runtimeL10n);
+    return {
+      ...buildPythonRuntimeOptions(this.pythonConfig, this.runtimeL10n),
+      localSkulptUrl: this.getLibraryFilePath('lib/skulpt.min.js'),
+    };
   }
 
   getCodingLanguage() {

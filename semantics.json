@@ -75,6 +75,69 @@
                 "description": "Maximum execution time in milliseconds. Use to prevent programs from running indefinitely. [0: No limit]",
                 "default": 0,
                 "min": 0
+            },
+            {
+                "name": "blocklyCdnUrl",
+                "type": "text",
+                "label": "Blockly Script URL",
+                "description": "Base URL or direct URL to blockly.min.js. Self-hosted files are supported. Standard blocks and the Python generator are loaded from the same directory.",
+                "default": ""
+            },
+            {
+                "name": "codeMirrorCdnUrl",
+                "type": "text",
+                "label": "CodeMirror Module URL",
+                "description": "Base URL to an ESM CDN or direct URL to a custom CodeMirror runtime module. Self-hosted module mirrors are supported.",
+                "default": ""
+            },
+            {
+                "name": "markdownCdnUrl",
+                "type": "text",
+                "label": "Markdown Module URL",
+                "description": "Base URL to an ESM CDN or direct URL to a custom markdown runtime module. Self-hosted module mirrors are supported.",
+                "default": ""
+            },
+            {
+                "name": "fontAwesomeCdnUrl",
+                "type": "text",
+                "label": "Font Awesome Stylesheet URL",
+                "description": "Direct URL or base URL to a self-hosted Font Awesome stylesheet. Leave empty to use the default hosted stylesheet.",
+                "default": ""
+            },
+            {
+                "name": "sweetAlertCdnUrl",
+                "type": "text",
+                "label": "SweetAlert Script URL",
+                "description": "Base URL or direct URL to sweetalert2.all.min.js. Self-hosted files are supported.",
+                "default": ""
+            },
+            {
+                "name": "jsZipCdnUrl",
+                "type": "text",
+                "label": "JSZip Script URL",
+                "description": "Base URL or direct URL to jszip.min.js. Self-hosted files are supported.",
+                "default": ""
+            },
+            {
+                "name": "p5CdnUrl",
+                "type": "text",
+                "label": "p5 Script URL",
+                "description": "Direct URL to a hosted p5.min.js file. Leave empty to use the default hosted file.",
+                "default": ""
+            },
+            {
+                "name": "skulptCdnUrl",
+                "type": "text",
+                "label": "Skulpt Script URL",
+                "description": "Base URL or direct URL to skulpt.min.js. Self-hosted files are supported. If left empty, p5 tasks use the bundled local Skulpt build and other Skulpt tasks use the default hosted build.",
+                "default": ""
+            },
+            {
+                "name": "sqlJsUrl",
+                "type": "text",
+                "label": "sql.js Script URL",
+                "description": "Base URL or direct URL to sql-wasm.js. Self-hosted files are supported. The matching sql-wasm.wasm is loaded from the same directory.",
+                "default": ""
             }
         ]
     },
@@ -94,6 +157,13 @@
             ]
         },
         "fields": [
+            {
+                "name": "pyodideCdnUrl",
+                "type": "text",
+                "label": "Pyodide Script URL",
+                "description": "Base URL or direct URL to pyodide.js. Self-hosted files are supported. Matching Pyodide assets are loaded from the same directory.",
+                "default": ""
+            },
             {
                 "name": "packages",
                 "type": "list",
