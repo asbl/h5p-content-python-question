@@ -25,6 +25,7 @@ const { default: PythonQuestion } = await import('../src/scripts/h5p-python-ques
 describe('PythonQuestion', () => {
   beforeEach(() => {
     mocks.createPythonL10n.mockClear();
+    document.head.innerHTML = '';
   });
 
   it('normalizes runtime and container options from params', () => {
@@ -199,5 +200,19 @@ describe('PythonQuestion', () => {
       pyodideCdnUrl: '',
       localSkulptUrl: '/libraries/H5P.PythonQuestion-6.64/lib/skulpt.min.js',
     });
+  });
+
+  it('derives the local skulpt url from the loaded bundle path when available', () => {
+    const script = document.createElement('script');
+    script.src = 'http://localhost:8080/libraries/H5P.PythonQuestion-6.0/dist/h5p-python-question.js';
+    document.head.appendChild(script);
+
+    const question = new PythonQuestion({
+      advancedOptions: {},
+    }, 9);
+
+    expect(question.getRuntimeOptions().localSkulptUrl).toBe(
+      'http://localhost:8080/libraries/H5P.PythonQuestion-6.0/lib/skulpt.min.js'
+    );
   });
 });

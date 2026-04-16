@@ -127,6 +127,26 @@ export default class PythonQuestion extends H5P.CodeQuestion {
     );
   }
 
+  getLoadedBundleBasePath() {
+    const bundleScript = Array.from(document.querySelectorAll('script[src]')).find((script) => (
+      /\/libraries\/H5P\.PythonQuestion-[^/]+\/dist\/h5p-python-question\.js(?:\?.*)?$/i.test(script.src)
+    ));
+
+    return bundleScript?.src
+      ? bundleScript.src.replace(/\/dist\/h5p-python-question\.js(?:\?.*)?$/i, '')
+      : '';
+  }
+
+  getLibraryAssetPath(relativePath) {
+    const bundleBasePath = this.getLoadedBundleBasePath();
+
+    if (bundleBasePath) {
+      return `${bundleBasePath}/${String(relativePath || '').replace(/^\/+/, '')}`;
+    }
+
+    return this.getLibraryFilePath(relativePath);
+  }
+
   /**
    * Returns normalized runtime options for Python runtimes.
    * @returns {object} Runtime options.
@@ -134,7 +154,7 @@ export default class PythonQuestion extends H5P.CodeQuestion {
   getRuntimeOptions() {
     return {
       ...buildPythonRuntimeOptions(this.pythonConfig, this.runtimeL10n),
-      localSkulptUrl: this.getLibraryFilePath('lib/skulpt.min.js'),
+      localSkulptUrl: this.getLibraryAssetPath('lib/skulpt.min.js'),
     };
   }
 
