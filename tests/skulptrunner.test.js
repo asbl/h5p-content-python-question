@@ -170,7 +170,7 @@ describe('SkulptRunner', () => {
     }
   });
 
-  it('uses the bundled local Skulpt build for p5 when no hosted override is configured', async () => {
+  it('uses the bundled local Skulpt build and the default p5 CDN when no override is configured', async () => {
     const runtime = createRuntime();
     runtime.containsP5Code.mockReturnValue(true);
     const runner = new SkulptRunner(runtime, {
@@ -193,6 +193,7 @@ describe('SkulptRunner', () => {
     await runner.execute('print(1)', document.createElement('div'));
 
     expect(serviceMocks.ensureSkulptRuntime).toHaveBeenCalledWith('/libraries/H5P.PythonQuestion-6.64/lib/skulpt.min.js');
+    expect(serviceMocks.ensureP5Script).toHaveBeenCalledWith(undefined);
 
     if (typeof previousP5 === 'undefined') {
       delete window.p5;

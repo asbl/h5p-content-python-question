@@ -304,6 +304,39 @@ describe('PyodideRunner', () => {
     }
   });
 
+  it('uses the default p5 CDN when no override is configured', async () => {
+    const runtime = createRuntime();
+    runtime.containsP5Code.mockReturnValue(true);
+    const runner = new PyodideRunner(runtime, {
+      packages: [],
+    });
+    const previousP5 = window.p5;
+
+    window.p5 = class P5Mock {
+      constructor(sketch) {
+        const instance = Object.create({});
+        instance.noLoop = vi.fn();
+        sketch(instance);
+      }
+    };
+
+    runner.pyodide = {
+      runPythonAsync: vi.fn(() => Promise.resolve('ok')),
+    };
+    runner._isInitialized = true;
+
+    await runner.execute('print(1)', document.createElement('div'));
+
+    expect(mocks.ensureP5Script).toHaveBeenCalledWith(undefined);
+
+    if (typeof previousP5 === 'undefined') {
+      delete window.p5;
+    }
+    else {
+      window.p5 = previousP5;
+    }
+  });
+
   it('rebinds SDL rendering to the visible canvas when acquiring input focus', () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, {});
