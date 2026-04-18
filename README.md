@@ -19,7 +19,6 @@ It allows educators to create coding assignments, interactive explanations, and 
 - Programming exercises for students
 - Interactive Python tutorials
 - Coding assignments with automatic grading
-- Teaching algorithmic thinking
 - Self-paced learning modules
 - Demonstrations and live coding explanations
 
@@ -28,16 +27,17 @@ It allows educators to create coding assignments, interactive explanations, and 
 
 This content type integrates:
 
-- **Skulpt** → Python execution in the browser
-- **Ace Editor** → code editing interface
+- **Skulpt** and **Pyodide** → Python execution in the browser
+- **Codemirror-Editor** → code editing interface
 
 Student code runs directly in the browser and can be validated using predefined test cases.
 
 ## Examples:
 
+
 ### Interactive Examples
 
-See: [Part of actual programming course (Language: German)](https://www.opencoding.de/course/view.php?id=12)
+See: [Showcase](https://www.opencoding.de/course/view.php?id=2) (german only)
 
 ### p5 Graphics
 
