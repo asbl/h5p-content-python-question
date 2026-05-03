@@ -80,7 +80,7 @@ async function getH5pFrame(page, url) {
 }
 
 async function findQuestionButton(frame, label, timeout = 30000) {
-  const expected = new RegExp(`^\\s*${escapeRegex(label)}\\s*$`, 'i');
+  const expected = new RegExp(`(^|\\b)${escapeRegex(label)}(\\b|$)`, 'i');
   const selectors = [
     '.h5p-codequestion .h5p-question-buttons .button',
     '.h5p-codequestion .h5p-question-buttons button',
