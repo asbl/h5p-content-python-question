@@ -352,10 +352,12 @@ export function installPyodideRuntimeCompatibility(pyodide) {
 import asyncio
 import ast as _h5p_ast
 import builtins as _h5p_builtins
+import os as _h5p_os
 import sys as _h5p_sys
 import time as _h5p_time
 
 if not globals().get('_h5p_runtime_compat_installed', False):
+  _h5p_os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
   _h5p_original_asyncio_run = asyncio.run
   _h5p_background_task = None
   _h5p_background_task_started = False

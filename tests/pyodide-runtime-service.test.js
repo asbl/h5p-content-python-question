@@ -6,6 +6,7 @@ import {
   getLoadedPyodidePackages,
   getPyodideRuntimeInput,
   getSharedPyodide,
+  installPyodideRuntimeCompatibility,
   normalizePyodideScriptUrl,
   resetSharedPyodideRuntimeState,
   setPyodideExecutionLimit,
@@ -92,6 +93,17 @@ describe('Pyodide runtime service', () => {
       2,
       '_h5p_clear_execution_limit()',
     );
+  });
+
+  it('hides the pygame support prompt during compatibility bootstrap', async () => {
+    const pyodide = {
+      runPythonAsync: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await installPyodideRuntimeCompatibility(pyodide);
+
+    expect(pyodide.runPythonAsync).toHaveBeenCalledTimes(1);
+    expect(pyodide.runPythonAsync.mock.calls[0][0]).toContain("_h5p_os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'");
   });
 
   it('reuses one shared Pyodide instance and routes output through the active runtime', async () => {
