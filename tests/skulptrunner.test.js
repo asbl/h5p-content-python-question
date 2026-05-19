@@ -170,12 +170,10 @@ describe('SkulptRunner', () => {
     }
   });
 
-  it('uses the bundled local Skulpt build and the default p5 CDN when no override is configured', async () => {
+  it('uses the default hosted Skulpt and p5 runtimes when no override is configured', async () => {
     const runtime = createRuntime();
     runtime.containsP5Code.mockReturnValue(true);
-    const runner = new SkulptRunner(runtime, {
-      localSkulptUrl: '/libraries/H5P.PythonQuestion-6.64/lib/skulpt.min.js',
-    });
+    const runner = new SkulptRunner(runtime, {});
     const previousP5 = window.p5;
 
     function P5Mock(sketch) {
@@ -192,7 +190,7 @@ describe('SkulptRunner', () => {
 
     await runner.execute('print(1)', document.createElement('div'));
 
-    expect(serviceMocks.ensureSkulptRuntime).toHaveBeenCalledWith('/libraries/H5P.PythonQuestion-6.64/lib/skulpt.min.js');
+    expect(serviceMocks.ensureSkulptRuntime).toHaveBeenCalledWith(undefined);
     expect(serviceMocks.ensureP5Script).toHaveBeenCalledWith(undefined);
 
     if (typeof previousP5 === 'undefined') {
@@ -219,5 +217,59 @@ describe('SkulptRunner', () => {
     expect(serviceMocks.ensureSkulptRuntime).toHaveBeenCalledWith('https://static.example.com/skulpt/skulpt.min.js');
     expect(globalThis.Sk.canvas).toBe('turtle-canvas');
     expect(globalThis.Sk.TurtleGraphics.target).toBe('turtle-canvas');
+  });
+
+  it('sets up a fresh turtle target for each independent canvas div', async () => {
+    const runtime = createRuntime();
+    runtime.containsTurtleCode = vi.fn(() => true);
+    const runner = new SkulptRunner(runtime, {});
+
+    const divA = document.createElement('div');
+    divA.id = 'turtle-block-a';
+    runner.addCanvas(document.createElement('div'), divA);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(globalThis.Sk.TurtleGraphics.target).toBe('turtle-block-a');
+
+    const divB = document.createElement('div');
+    divB.id = 'turtle-block-b';
+    runner.addCanvas(document.createElement('div'), divB);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(globalThis.Sk.TurtleGraphics.target).toBe('turtle-block-b');
+  });
+
+  it('updates turtle target via setupTurtleDiv during execute', async () => {
+    const runtime = createRuntime();
+    runtime.containsTurtleCode = vi.fn(() => true);
+    const runner = new SkulptRunner(runtime, {});
+
+    const canvasDiv = document.createElement('div');
+    canvasDiv.id = 'turtle-exec-canvas';
+
+    await runner.execute('import turtle\nt1 = turtle.Turtle()\nt2 = turtle.Turtle()', canvasDiv);
+
+    expect(globalThis.Sk.TurtleGraphics.target).toBe('turtle-exec-canvas');
+  });
+
+  it('setupTurtleDiv always targets the most recently provided canvas, not a previous one', () => {
+    const runtime = createRuntime();
+    const runner = new SkulptRunner(runtime, {});
+    runner.Sk = globalThis.Sk;
+
+    const first = document.createElement('div');
+    first.id = 'turtle-first';
+    runner.setupTurtleDiv(first);
+    expect(globalThis.Sk.TurtleGraphics.target).toBe('turtle-first');
+
+    const second = document.createElement('div');
+    second.id = 'turtle-second';
+    runner.setupTurtleDiv(second);
+    expect(globalThis.Sk.TurtleGraphics.target).toBe('turtle-second');
+
+    const third = document.createElement('div');
+    third.id = 'turtle-third';
+    runner.setupTurtleDiv(third);
+    expect(globalThis.Sk.TurtleGraphics.target).toBe('turtle-third');
   });
 });

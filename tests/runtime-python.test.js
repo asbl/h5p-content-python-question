@@ -214,6 +214,35 @@ describe('PythonRuntime', () => {
     expect(runtime.containsCanvasCode()).toBe(true);
   });
 
+  it('detects miniworlds imports across project files before pyodide setup', async () => {
+    const workspace = {
+      files: [
+        { name: 'main.py', isEntry: true, code: 'from scene import make_world\nmake_world()' },
+        { name: 'scene.py', isEntry: false, code: 'from miniworlds import World\nworld = World(320, 240)' },
+      ],
+    };
+    const callOrder = [];
+    const runtime = new PythonRuntime(vi.fn(), 'from scene import make_world\nmake_world()', { runner: 'pyodide' });
+    runtime.setup(createCodeContainer(workspace));
+    runtime.runner = {
+      setup: vi.fn(async () => {
+        callOrder.push('setup');
+      }),
+    };
+    runtime._canvasManager = {
+      attachCanvas: vi.fn(() => {
+        callOrder.push('attachCanvas');
+      }),
+    };
+
+    await runtime.prepareForRun();
+
+    expect(runtime.containsMiniworldsCode()).toBe(true);
+    expect(runtime.containsCanvasCode()).toBe(true);
+    expect(runtime._canvasManager.attachCanvas).toHaveBeenCalledWith('manual');
+    expect(callOrder).toEqual(['attachCanvas', 'setup']);
+  });
+
   it('returns false for canvas detection when analysis code is empty', () => {
     const runtime = new PythonRuntime(vi.fn(), '');
     vi.spyOn(runtime, 'getAnalysisCode').mockReturnValue('');
@@ -252,5 +281,27 @@ describe('PythonRuntime', () => {
     expect(runtime.runner.setup).toHaveBeenCalledTimes(1);
     expect(onErrorSpy).toHaveBeenCalledWith('Error: boom');
     expect(runtime._basePrepared).toBe(false);
+  });
+
+  it('attaches the canvas before pyodide setup for SDL code', async () => {
+    const callOrder = [];
+    const runtime = new PythonRuntime(vi.fn(), 'from miniworlds import World', { runner: 'pyodide' });
+    runtime.runner = {
+      setup: vi.fn(async () => {
+        callOrder.push('setup');
+      }),
+    };
+    runtime._canvasManager = {
+      attachCanvas: vi.fn(() => {
+        callOrder.push('attachCanvas');
+      }),
+    };
+    vi.spyOn(runtime, 'containsCanvasCode').mockReturnValue(true);
+
+    await runtime.prepareForRun();
+
+    expect(runtime._canvasManager.attachCanvas).toHaveBeenCalledWith('manual');
+    expect(runtime.runner.setup).toHaveBeenCalledTimes(1);
+    expect(callOrder).toEqual(['attachCanvas', 'setup']);
   });
 });

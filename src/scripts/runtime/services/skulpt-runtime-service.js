@@ -1,4 +1,6 @@
-const DEFAULT_SKULPT_CDN_URL = 'https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js';
+export const DEFAULT_SKULPT_CDN_URL = 'https://cdn.jsdelivr.net/gh/StriveMath/p5-python-web@0.0.15/lib/skulpt.min.js';
+export const ALTERNATIVE_SKULPT_CDN_URL = 'https://rawcdn.githack.com/StriveMath/p5-python-web/0.0.15/lib/skulpt.min.js';
+export const OFFICIAL_SKULPT_CDN_URL = 'https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js';
 
 const sharedSkulptRuntimeState = {
   loadPromise: null,

@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  ALTERNATIVE_SKULPT_CDN_URL,
+  DEFAULT_SKULPT_CDN_URL,
+  OFFICIAL_SKULPT_CDN_URL,
   ensureSkulptRuntime,
   resetSharedSkulptRuntimeState,
   resolveSkulptRuntimeUrls,
@@ -21,6 +24,16 @@ describe('Skulpt runtime service', () => {
     expect(resolveSkulptRuntimeUrls('https://static.example.com/skulpt/')).toEqual({
       scriptUrl: 'https://static.example.com/skulpt/skulpt.min.js',
       stdlibUrl: 'https://static.example.com/skulpt/skulpt-stdlib.js',
+    });
+  });
+
+  it('documents the default, alternative and official hosted Skulpt sources', () => {
+    expect(DEFAULT_SKULPT_CDN_URL).toBe('https://cdn.jsdelivr.net/gh/StriveMath/p5-python-web@0.0.15/lib/skulpt.min.js');
+    expect(ALTERNATIVE_SKULPT_CDN_URL).toBe('https://rawcdn.githack.com/StriveMath/p5-python-web/0.0.15/lib/skulpt.min.js');
+    expect(OFFICIAL_SKULPT_CDN_URL).toBe('https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js');
+    expect(resolveSkulptRuntimeUrls()).toEqual({
+      scriptUrl: DEFAULT_SKULPT_CDN_URL,
+      stdlibUrl: 'https://cdn.jsdelivr.net/gh/StriveMath/p5-python-web@0.0.15/lib/skulpt-stdlib.js',
     });
   });
 

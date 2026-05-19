@@ -1,21 +1,23 @@
 import { normalizePythonExecutionLimit } from './python-execution-limit';
 import { normalizePythonPackageEntries } from './python-package-utils';
+import {
+  decodeHtmlCode,
+  getExternalLibraryUrl as getExternalLibraryUrlShared,
+  normalizeEditorMode,
+  parseExternalLibraryUrlsYaml,
+} from '../../../../H5P.LibCodeTools-6.0/src/scripts/services/code-question-config';
 
 export { normalizePythonExecutionLimit };
 
-/**
- * Decodes HTML entities that may be persisted by H5P editor widgets.
- * @param {string} [value] - Encoded text value.
- * @returns {string} Decoded string.
- */
-export function decodeHtmlCode(value = '') {
-  return String(value || '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, '\'')
-    .replace(/&#039;/g, '\'')
-    .replace(/&amp;/g, '&');
+export { decodeHtmlCode, parseExternalLibraryUrlsYaml };
+
+function getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, optionName) {
+  return getExternalLibraryUrlShared({
+    yamlUrls,
+    advancedOptions,
+    fallbackOptions: optionName === 'pyodideCdnUrl' ? pyodideOptions : {},
+    optionName,
+  });
 }
 
 /**
@@ -76,6 +78,7 @@ export function normalizePythonSourceFiles(entries = []) {
       code: rawCode,
       visible,
       editable: visible && entry?.learnerEditable !== false,
+      blocklyWorkspaceState: entry?.blocklyWorkspaceState || entry?.workspaceState || null,
     });
   });
 
@@ -192,22 +195,24 @@ export function normalizePythonRunner(runner) {
  * @returns {{disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}} Normalized options.
  */
 export function normalizePythonAdvancedOptions(advancedOptions = {}, pyodideOptions = {}) {
+  const yamlUrls = parseExternalLibraryUrlsYaml(advancedOptions?.externalLibraryUrls);
+
   return {
     showConsole: advancedOptions?.showConsole !== false,
     disableOutputPopups: advancedOptions?.disableOutputPopups === true,
     enableImageUploads: advancedOptions?.enableImageUploads === true,
     enableSoundUploads: advancedOptions?.enableSoundUploads === true,
     enableSaveLoadButtons: advancedOptions?.enableSaveLoadButtons !== false,
-    blocklyCdnUrl: String(advancedOptions?.blocklyCdnUrl || '').trim(),
-    codeMirrorCdnUrl: String(advancedOptions?.codeMirrorCdnUrl || '').trim(),
-    markdownCdnUrl: String(advancedOptions?.markdownCdnUrl || '').trim(),
-    fontAwesomeCdnUrl: String(advancedOptions?.fontAwesomeCdnUrl || '').trim(),
-    sweetAlertCdnUrl: String(advancedOptions?.sweetAlertCdnUrl || '').trim(),
-    jsZipCdnUrl: String(advancedOptions?.jsZipCdnUrl || '').trim(),
-    p5CdnUrl: String(advancedOptions?.p5CdnUrl || '').trim(),
-    skulptCdnUrl: String(advancedOptions?.skulptCdnUrl || '').trim(),
-    sqlJsUrl: String(advancedOptions?.sqlJsUrl || '').trim(),
-    pyodideCdnUrl: String(pyodideOptions?.pyodideCdnUrl || '').trim(),
+    blocklyCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'blocklyCdnUrl'),
+    codeMirrorCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'codeMirrorCdnUrl'),
+    markdownCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'markdownCdnUrl'),
+    fontAwesomeCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'fontAwesomeCdnUrl'),
+    sweetAlertCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'sweetAlertCdnUrl'),
+    jsZipCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'jsZipCdnUrl'),
+    p5CdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'p5CdnUrl'),
+    skulptCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'skulptCdnUrl'),
+    sqlJsUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'sqlJsUrl'),
+    pyodideCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'pyodideCdnUrl'),
     executionLimit: normalizePythonExecutionLimit(advancedOptions?.execLimit),
   };
 }
@@ -237,7 +242,7 @@ export function normalizePythonQuestionConfig(params = {}) {
  * @returns {'code'|'blocks'|'both'} Validated editor mode.
  */
 export function normalizePythonEditorMode(mode) {
-  return ['code', 'blocks', 'both'].includes(mode) ? mode : 'code';
+  return normalizeEditorMode(mode, ['code', 'blocks', 'both']);
 }
 
 /**
@@ -273,6 +278,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     projectBundleType: 'h5p-python-question-project',
     editorMode: normalizePythonEditorMode(editorParams?.editorMode),
     blocklyCategories: editorParams?.blocklyCategories || null,
+    blocklyWorkspaceState: editorParams?.blocklyWorkspaceState || null,
     blocklyPackages: config?.runner === 'pyodide' && Array.isArray(config?.packages) ? [...config.packages] : [],
     blocklyCdnUrl: config?.advancedOptions?.blocklyCdnUrl || '',
     codeMirrorCdnUrl: config?.advancedOptions?.codeMirrorCdnUrl || '',

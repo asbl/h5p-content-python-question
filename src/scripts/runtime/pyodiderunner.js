@@ -4,6 +4,11 @@ import {
 import { addPythonErrorHint } from '../services/python-error-hints';
 import { normalizePythonExecutionLimit } from '../services/python-execution-limit';
 import {
+  createPythonRuntimeError,
+  createPythonRuntimeResult,
+  formatPythonRuntimeError,
+} from './python-runtime-result';
+import {
   getImportedPyodidePackages,
   loadMissingPyodidePackages,
 } from './services/pyodide-package-service';
@@ -492,10 +497,14 @@ export default class PyodideRunner {
     this.setCanvasLoading(false);
     console.warn('Error in PyodideRunner', error);
     this.errorMessage = error;
-    this.runtime.onError(
-      this.isExecutionLimitError(error)
+    const runtimeError = createPythonRuntimeError({
+      phase: 'execution',
+      message: this.isExecutionLimitError(error)
         ? this.getExecutionLimitMessage()
         : addPythonErrorHint(this.l10n, String(error?.message || error?.toString?.() || error)),
+    });
+    this.runtime.onError(
+      formatPythonRuntimeError(runtimeError),
     );
   }
 
@@ -506,6 +515,11 @@ export default class PyodideRunner {
    */
   async onSuccess(value) {
     this.setCanvasLoading(false);
+    this.lastRuntimeResult = createPythonRuntimeResult({
+      phase: 'execution',
+      value,
+      stdout: value,
+    });
     this.runtime.onSuccess(value);
     this.runtime.codeContainer.getStateManager()?.stop();
   }
@@ -901,6 +915,8 @@ export default class PyodideRunner {
     canvas.style.height = 'auto';
     canvas.style.display = 'block';
     canvas.tabIndex = 0;
+    canvas.setAttribute('role', 'img');
+    canvas.setAttribute('aria-label', 'Program canvas');
    
     // Ensure canvas can receive mouse/pointer events
     canvas.style.pointerEvents = 'auto';

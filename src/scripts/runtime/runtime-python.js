@@ -139,6 +139,12 @@ export default class PythonRuntime extends H5P.Runtime {
   }
 
   async prepareForRun() {
+    const containsCanvasCode = this.containsCanvasCode();
+
+    if (containsCanvasCode) {
+      this.getCanvasManager().attachCanvas('manual');
+    }
+
     if (this.runnerType === 'pyodide') {
       try {
         await this.runner.setup();
@@ -149,10 +155,6 @@ export default class PythonRuntime extends H5P.Runtime {
     }
     else {
       await super.prepareForRun();
-    }
-
-    if (this.containsCanvasCode()) {
-      this.getCanvasManager().attachCanvas('manual');
     }
   }
 

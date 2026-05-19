@@ -1,6 +1,155 @@
 import { setActivePyodideSDLCanvas } from './pyodide-runtime-service';
 
 /**
+ * Escapes text for use in a regular expression.
+ * @param {string} value - Literal text.
+ * @returns {string} Escaped text.
+ */
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Extracts literal camera attachment sizes for a Miniworlds world variable.
+ * @param {string} code - Learner code.
+ * @param {string|null} worldName - Variable that stores the world.
+ * @returns {{left: number, right: number, top: number, bottom: number}} Insets.
+ */
+function inferMiniworldsCameraAttachments(code, worldName) {
+  const attachments = {
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  };
+
+  if (!worldName) {
+    return attachments;
+  }
+
+  const escapedWorldName = escapeRegExp(worldName);
+  const attachmentPattern = new RegExp(
+    `${escapedWorldName}\\.camera\\.add_(left|right|top|bottom)\\(([^)]*)\\)`,
+    'g',
+  );
+
+  let match;
+  while ((match = attachmentPattern.exec(code)) !== null) {
+    const side = match[1];
+    const args = match[2] || '';
+    const sizeMatch = args.match(/(?:^|,)\s*size\s*=\s*(\d+)\b/)
+      || args.match(/,\s*(\d+)\s*(?:,|\s*$)/);
+
+    if (sizeMatch) {
+      attachments[side] += Number(sizeMatch[1]);
+    }
+  }
+
+  return attachments;
+}
+
+/**
+ * Adds camera attachment space to a Miniworlds logical world size.
+ * @param {{width: number, height: number}} size - Base world size.
+ * @param {{left: number, right: number, top: number, bottom: number}} attachments - Camera attachments.
+ * @returns {{width: number, height: number}} Total display size.
+ */
+function applyMiniworldsCameraAttachments(size, attachments) {
+  return {
+    width: size.width + attachments.left + attachments.right,
+    height: size.height + attachments.top + attachments.bottom,
+  };
+}
+
+/**
+ * Returns JavaScript identifiers that can reference a Miniworlds export.
+ * Supports direct imports such as `from miniworlds import World`,
+ * aliases such as `from miniworlds import World as W`, and module aliases
+ * such as `import miniworlds as mw` when used as `mw.World(...)`.
+ * @param {string} code - Learner code.
+ * @param {string} exportName - Miniworlds export name, e.g. World.
+ * @returns {string[]} Escaped constructor references for regular expressions.
+ */
+function getMiniworldsConstructorReferences(code, exportName) {
+  const references = new Set([`miniworlds\\.${exportName}`, exportName]);
+
+  const moduleImportPattern = /(?:^|\n)\s*import\s+miniworlds(?:\s+as\s+([A-Za-z_]\w*))?/g;
+  let moduleMatch;
+  while ((moduleMatch = moduleImportPattern.exec(code)) !== null) {
+    const alias = moduleMatch[1] || 'miniworlds';
+    references.add(`${escapeRegExp(alias)}\\.${exportName}`);
+  }
+
+  const fromImportPattern = /(?:^|\n)\s*from\s+miniworlds\s+import\s+([^\n#]+)/g;
+  let fromMatch;
+  while ((fromMatch = fromImportPattern.exec(code)) !== null) {
+    const importedNames = fromMatch[1]
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    importedNames.forEach((part) => {
+      const importMatch = part.match(new RegExp(`^${exportName}(?:\\s+as\\s+([A-Za-z_]\\w*))?$`));
+      if (importMatch) {
+        references.add(escapeRegExp(importMatch[1] || exportName));
+      }
+    });
+  }
+
+  return [...references];
+}
+
+/**
+ * Reads a positive integer argument from a simple Python call argument list.
+ * @param {string} args - Raw call argument text.
+ * @param {number} positionalIndex - Zero-based positional argument index.
+ * @param {string[]} keywordNames - Supported keyword names.
+ * @returns {number|null} Parsed number or null.
+ */
+function readIntegerArgument(args, positionalIndex, keywordNames = []) {
+  const cleanedArgs = String(args || '').replace(/#.*$/gm, '');
+  const keywordAlternation = keywordNames.map(escapeRegExp).join('|');
+
+  if (keywordAlternation) {
+    const keywordMatch = cleanedArgs.match(new RegExp(`(?:^|,)\\s*(?:${keywordAlternation})\\s*=\\s*(\\d+)\\b`));
+    if (keywordMatch) {
+      return Number(keywordMatch[1]);
+    }
+  }
+
+  const positionalArgs = cleanedArgs
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part && !part.includes('='));
+
+  const positionalMatch = positionalArgs[positionalIndex]?.match(/^(\d+)\b/);
+  return positionalMatch ? Number(positionalMatch[1]) : null;
+}
+
+/**
+ * Finds the first Miniworlds constructor call that can be statically sized.
+ * @param {string} code - Learner code.
+ * @param {string} exportName - Constructor export name.
+ * @returns {{worldName: string|null, args: string}|null} Constructor call.
+ */
+function findMiniworldsConstructorCall(code, exportName) {
+  const constructors = getMiniworldsConstructorReferences(code, exportName).join('|');
+  const pattern = new RegExp(
+    `(?:^|\\n)\\s*(?:(\\w+)\\s*=\\s*)?(?:${constructors})\\(\\s*([^)]*?)\\s*\\)`,
+  );
+  const match = code.match(pattern);
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    worldName: match[1] || null,
+    args: match[2] || '',
+  };
+}
+
+/**
  * Binds SDL rendering to the current visible canvas.
  * @param {object} runner - PyodideRunner instance.
  * @param {boolean} [focus] - Whether keyboard focus should move to the canvas.
@@ -32,26 +181,54 @@ export function inferSDLLogicalSize(runner) {
     return null;
   }
 
-  const patterns = [
-    /miniworlds\.World\(\s*(\d+)\s*,\s*(\d+)\s*\)/,
-    /pygame\.display\.set_mode\(\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*\)/,
-  ];
+  const worldCall = findMiniworldsConstructorCall(code, 'World');
+  if (worldCall) {
+    const width = readIntegerArgument(worldCall.args, 0, ['width']);
+    const height = readIntegerArgument(worldCall.args, 1, ['height']);
 
-  for (const pattern of patterns) {
-    const match = code.match(pattern);
-    if (match) {
-      return {
-        width: Number(match[1]),
-        height: Number(match[2]),
-      };
+    if (width && height) {
+      const size = { width, height };
+      return applyMiniworldsCameraAttachments(
+        size,
+        inferMiniworldsCameraAttachments(code, worldCall.worldName),
+      );
     }
+
+    // miniworlds.World() or World() – default 400×400 px
+    return applyMiniworldsCameraAttachments(
+      { width: 400, height: 400 },
+      inferMiniworldsCameraAttachments(code, worldCall.worldName),
+    );
   }
 
-  if (code.match(/miniworlds\.World\(\s*\)/)) {
-    return {
-      width: 400,
-      height: 400,
-    };
+  const tiledCall = findMiniworldsConstructorCall(code, 'TiledWorld');
+  if (tiledCall) {
+    const columns = readIntegerArgument(tiledCall.args, 0, ['columns', 'cols']);
+    const rows = readIntegerArgument(tiledCall.args, 1, ['rows']);
+    const tileSize = readIntegerArgument(tiledCall.args, 2, ['tile_size', 'tileSize']) || 40;
+
+    if (columns && rows) {
+      const size = {
+        width: columns * tileSize,
+        height: rows * tileSize,
+      };
+      return applyMiniworldsCameraAttachments(
+        size,
+        inferMiniworldsCameraAttachments(code, tiledCall.worldName),
+      );
+    }
+
+    // miniworlds.TiledWorld() or TiledWorld() – default 20×16 tiles × 40 px = 800×640
+    return applyMiniworldsCameraAttachments(
+      { width: 800, height: 640 },
+      inferMiniworldsCameraAttachments(code, tiledCall.worldName),
+    );
+  }
+
+  // pygame.display.set_mode((width, height))
+  const pygameMatch = code.match(/pygame\.display\.set_mode\(\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)\s*\)/);
+  if (pygameMatch) {
+    return { width: Number(pygameMatch[1]), height: Number(pygameMatch[2]) };
   }
 
   return null;

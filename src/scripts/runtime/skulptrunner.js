@@ -4,6 +4,11 @@ import {
 } from '../services/python-l10n';
 import { addPythonErrorHint } from '../services/python-error-hints';
 import { normalizePythonExecutionLimit } from '../services/python-execution-limit';
+import {
+  createPythonRuntimeError,
+  createPythonRuntimeResult,
+  formatPythonRuntimeError,
+} from './python-runtime-result';
 import { ensureP5Script } from './services/p5-runtime-service';
 import { ensureSkulptRuntime } from './services/skulpt-runtime-service';
 
@@ -88,19 +93,11 @@ export default class SkulptRunner {
     return this.Sk || globalThis.Sk || null;
   }
 
-  getSkulptRuntimeUrl(containsP5 = this.runtime.containsP5Code()) {
+  getSkulptRuntimeUrl() {
     const configuredUrl = String(this.options.skulptCdnUrl || '').trim();
 
     if (configuredUrl) {
       return configuredUrl;
-    }
-
-    if (containsP5) {
-      const localUrl = String(this.options.localSkulptUrl || '').trim();
-
-      if (localUrl) {
-        return localUrl;
-      }
     }
 
     return undefined;
@@ -216,11 +213,13 @@ export default class SkulptRunner {
   }
 
   installImageRegistry() {
-    if (!Sk?.ffi?.remapToPy || !Sk?.builtins) {
+    const skulpt = this.getSkulpt();
+
+    if (!skulpt?.ffi?.remapToPy || !skulpt?.builtins) {
       return;
     }
 
-    Sk.builtins.h5p_images = Sk.ffi.remapToPy(this.buildImageRegistry());
+    skulpt.builtins.h5p_images = skulpt.ffi.remapToPy(this.buildImageRegistry());
   }
 
   buildSoundRegistry() {
@@ -238,17 +237,19 @@ export default class SkulptRunner {
   }
 
   installSoundRegistry() {
-    if (!Sk?.ffi?.remapToPy || !Sk?.builtins) {
+    const skulpt = this.getSkulpt();
+
+    if (!skulpt?.ffi?.remapToPy || !skulpt?.builtins) {
       return;
     }
 
-    Sk.builtins.h5p_sounds = Sk.ffi.remapToPy(this.buildSoundRegistry());
+    skulpt.builtins.h5p_sounds = skulpt.ffi.remapToPy(this.buildSoundRegistry());
   }
 
   async execute(code, canvasDiv = null) {
     const containsP5 = this.runtime.containsP5Code();
     const containsTurtle = this.runtime.containsTurtleCode?.() === true;
-    const skulptRuntimeUrl = this.getSkulptRuntimeUrl(containsP5);
+    const skulptRuntimeUrl = this.getSkulptRuntimeUrl();
 
     await ensureSkulptRuntime(skulptRuntimeUrl);
 
@@ -301,7 +302,7 @@ export default class SkulptRunner {
         }
 
         // Methoden global spiegeln, damit Python circle(), line() usw. aufrufen kann
-        Object.getOwnPropertyNames(p.__proto__).forEach(name => {
+        Object.getOwnPropertyNames(p.__proto__).forEach((name) => {
           if (typeof p[name] === 'function') {
             window[name] = (...args) => p[name](...args);
           }
@@ -319,7 +320,8 @@ export default class SkulptRunner {
       );
       await this.onSuccess?.(result);
       return result;
-    } catch (error) {
+    }
+    catch (error) {
       await this.onError?.(error);
     }
   }
@@ -350,13 +352,15 @@ export default class SkulptRunner {
       this.errorMessage = error;
       this.errorLineNumber = trace?.lineno ?? null;
 
-      this.runtime.onError(
-        addPythonErrorHint(this.l10n, tPython(this.l10n, 'skulptRuntimeError', {
+      const runtimeError = createPythonRuntimeError({
+        phase: 'execution',
+        message: addPythonErrorHint(this.l10n, tPython(this.l10n, 'skulptRuntimeError', {
           message,
           line: trace?.lineno ?? '?',
           column: trace?.colno ?? '?',
-        }))
-      );
+        })),
+      });
+      this.runtime.onError(formatPythonRuntimeError(runtimeError));
     }
     catch {
       console.warn('Unhandled Skulpt error', error);
@@ -364,6 +368,11 @@ export default class SkulptRunner {
   }
 
   async onSuccess(value) {
+    this.lastRuntimeResult = createPythonRuntimeResult({
+      phase: 'execution',
+      value,
+      stdout: value,
+    });
     this.runtime.onSuccess(value);
     if (!this.runtime.containsP5Code()) {
       this.runtime.codeContainer.getStateManager()?.stop();

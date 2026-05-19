@@ -13,6 +13,7 @@ import {
   normalizePythonRunner,
   normalizePythonSourceFileName,
   normalizePythonSourceFiles,
+  parseExternalLibraryUrlsYaml,
 } from '../src/scripts/services/python-question-config.js';
 
 describe('Python question config', () => {
@@ -55,6 +56,45 @@ describe('Python question config', () => {
       sqlJsUrl: 'https://cdn.example.com/sql.js/dist/',
       pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
       executionLimit: 1500,
+    });
+  });
+
+  it('parses external library URLs from the shared YAML field', () => {
+    const yaml = `
+      # shared runtime overrides
+      blockly: https://cdn.example.com/blockly/
+      codeMirror: "https://cdn.example.com/codemirror/"
+      markdown: 'https://cdn.example.com/markdown/'
+      fontAwesome: https://cdn.example.com/fontawesome.css
+      sweetAlert: https://cdn.example.com/sweetalert/
+      jsZip: https://cdn.example.com/jszip/
+      p5: https://static.example.com/p5/p5.min.js
+      skulpt: https://static.example.com/skulpt/skulpt.min.js
+      sqlJs: https://cdn.example.com/sql.js/dist/
+      pyodide: https://static.example.com/pyodide/pyodide.js
+    `;
+
+    expect(parseExternalLibraryUrlsYaml(yaml)).toEqual({
+      blocklyCdnUrl: 'https://cdn.example.com/blockly/',
+      codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
+      markdownCdnUrl: 'https://cdn.example.com/markdown/',
+      fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
+      sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
+      jsZipCdnUrl: 'https://cdn.example.com/jszip/',
+      p5CdnUrl: 'https://static.example.com/p5/p5.min.js',
+      skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
+      sqlJsUrl: 'https://cdn.example.com/sql.js/dist/',
+      pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
+    });
+
+    expect(normalizePythonAdvancedOptions({
+      externalLibraryUrls: yaml,
+      blocklyCdnUrl: 'https://legacy.example.com/blockly/',
+    }, {
+      pyodideCdnUrl: 'https://legacy.example.com/pyodide.js',
+    })).toMatchObject({
+      blocklyCdnUrl: 'https://cdn.example.com/blockly/',
+      pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
     });
   });
 
@@ -150,6 +190,7 @@ describe('Python question config', () => {
       allowAddingFiles: true,
       editorMode: 'blocks',
       blocklyCategories: { variables: true, logic: false, loops: true, math: false, text: true, lists: false, functions: false },
+      blocklyWorkspaceState: { blocks: { languageVersion: 0, blocks: [] } },
       defaultImages: [
         {
           image: { path: 'images/background.png' },
@@ -183,6 +224,7 @@ describe('Python question config', () => {
           code: 'VALUE = 1',
           visible: true,
           editable: true,
+          blocklyWorkspaceState: null,
         },
       ],
       defaultImages: [
@@ -196,6 +238,7 @@ describe('Python question config', () => {
       projectBundleType: 'h5p-python-question-project',
       editorMode: 'blocks',
       blocklyCategories: { variables: true, logic: false, loops: true, math: false, text: true, lists: false, functions: false },
+      blocklyWorkspaceState: { blocks: { languageVersion: 0, blocks: [] } },
       blocklyPackages: ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
       blocklyCdnUrl: 'https://cdn.example.com/blockly/',
       codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
@@ -260,12 +303,14 @@ describe('Python question config', () => {
         code: '<value>',
         visible: false,
         editable: false,
+        blocklyWorkspaceState: null,
       },
       {
         name: 'helper.py',
         code: 'print(1)',
         visible: true,
         editable: false,
+        blocklyWorkspaceState: null,
       },
     ]);
   });
@@ -284,7 +329,27 @@ describe('Python question config', () => {
     expect(normalizePythonSourceFiles([
       { code: 'x = 1', visibleToLearner: true, learnerEditable: true },
     ])).toEqual([
-      { name: 'module_1.py', code: 'x = 1', visible: true, editable: true },
+      { name: 'module_1.py', code: 'x = 1', visible: true, editable: true, blocklyWorkspaceState: null },
+    ]);
+  });
+
+  it('keeps per-file Blockly workspace state for Python source files', () => {
+    const blocklyWorkspaceState = { blocks: { languageVersion: 0, blocks: [] } };
+
+    expect(normalizePythonSourceFiles([
+      {
+        fileName: 'helper.py',
+        code: 'class Helper:\\n    pass',
+        blocklyWorkspaceState,
+      },
+    ])).toEqual([
+      {
+        name: 'helper.py',
+        code: 'class Helper:\\n    pass',
+        visible: true,
+        editable: true,
+        blocklyWorkspaceState,
+      },
     ]);
   });
 

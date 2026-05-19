@@ -100,7 +100,6 @@ describe('PythonQuestion', () => {
       pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
       executionLimit: 1800,
       projectStorageEnabled: true,
-      localSkulptUrl: '/libraries/H5P.PythonQuestion-6.64/lib/skulpt.min.js',
     });
     expect(question.getCodeContainerOptions()).toEqual({
       fromParent: true,
@@ -119,6 +118,7 @@ describe('PythonQuestion', () => {
           code: 'VALUE = 1',
           visible: true,
           editable: true,
+          blocklyWorkspaceState: null,
         },
       ],
       defaultImages: [
@@ -132,6 +132,7 @@ describe('PythonQuestion', () => {
       projectBundleType: 'h5p-python-question-project',
       editorMode: 'code',
       blocklyCategories: null,
+      blocklyWorkspaceState: null,
       blocklyPackages: ['numpy', 'pygame-ce', 'sqlite3'],
       blocklyCdnUrl: 'https://static.example.com/blockly/',
       codeMirrorCdnUrl: 'https://static.example.com/codemirror/',
@@ -179,6 +180,7 @@ describe('PythonQuestion', () => {
       projectBundleType: 'h5p-python-question-project',
       editorMode: 'code',
       blocklyCategories: null,
+      blocklyWorkspaceState: null,
       blocklyPackages: [],
       blocklyCdnUrl: '',
       codeMirrorCdnUrl: '',
@@ -198,21 +200,6 @@ describe('PythonQuestion', () => {
       skulptCdnUrl: '',
       sqlJsUrl: '',
       pyodideCdnUrl: '',
-      localSkulptUrl: '/libraries/H5P.PythonQuestion-6.64/lib/skulpt.min.js',
     });
-  });
-
-  it('derives the local skulpt url from the loaded bundle path when available', () => {
-    const script = document.createElement('script');
-    script.src = 'http://localhost:8080/libraries/H5P.PythonQuestion-6.0/dist/h5p-python-question.js';
-    document.head.appendChild(script);
-
-    const question = new PythonQuestion({
-      advancedOptions: {},
-    }, 9);
-
-    expect(question.getRuntimeOptions().localSkulptUrl).toBe(
-      'http://localhost:8080/libraries/H5P.PythonQuestion-6.0/lib/skulpt.min.js'
-    );
   });
 });

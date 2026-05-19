@@ -201,13 +201,9 @@ function getLineBeforePosition(code = '', pos = code.length) {
   return before.split(/\r?\n/).pop() || '';
 }
 
-function getCurrentPrefix(context) {
-  return context.matchBefore(/[A-Za-z_][A-Za-z0-9_]*/);
-}
-
 export function detectPythonCompletionContext(code = '', pos = code.length) {
   const line = getLineBeforePosition(code, pos);
-  const attributeMatch = line.match(/([A-Za-z_][A-Za-z0-9_\.]*)\.([A-Za-z0-9_]*)$/);
+  const attributeMatch = line.match(/([A-Za-z_][A-Za-z0-9_.]*)\.([A-Za-z0-9_]*)$/);
 
   if (attributeMatch) {
     return {
@@ -218,7 +214,7 @@ export function detectPythonCompletionContext(code = '', pos = code.length) {
     };
   }
 
-  const fromImportMatch = line.match(/^\s*from\s+([A-Za-z_][A-Za-z0-9_\.]*)\s+import\s+([A-Za-z0-9_, ]*)$/);
+  const fromImportMatch = line.match(/^\s*from\s+([A-Za-z_][A-Za-z0-9_.]*)\s+import\s+([A-Za-z0-9_, ]*)$/);
   if (fromImportMatch) {
     const rawSegment = fromImportMatch[2] || '';
     const prefix = rawSegment.split(',').pop()?.trim() || '';
@@ -265,7 +261,7 @@ export function inferPythonBindings(code = '') {
           return;
         }
 
-        const aliasMatch = trimmedEntry.match(/^([A-Za-z_][A-Za-z0-9_\.]*)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/);
+        const aliasMatch = trimmedEntry.match(/^([A-Za-z_][A-Za-z0-9_.]*)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/);
         if (aliasMatch) {
           importedModules.set(aliasMatch[2], aliasMatch[1]);
           return;
@@ -278,7 +274,7 @@ export function inferPythonBindings(code = '') {
       return;
     }
 
-    const fromImportMatch = line.match(/^\s*from\s+([A-Za-z_][A-Za-z0-9_\.]*)\s+import\s+(.+)$/);
+    const fromImportMatch = line.match(/^\s*from\s+([A-Za-z_][A-Za-z0-9_.]*)\s+import\s+(.+)$/);
     if (fromImportMatch) {
       const moduleName = fromImportMatch[1];
       fromImportMatch[2].split(',').forEach((entry) => {

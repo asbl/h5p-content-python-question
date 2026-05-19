@@ -32,6 +32,18 @@ This content type integrates:
 
 Student code runs directly in the browser and can be validated using predefined test cases.
 
+## Hosted Skulpt Runtime
+
+Skulpt is not bundled in this H5P library. By default it is loaded from the p5-capable Skulpt build maintained in `StriveMath/p5-python-web`:
+
+- Default: `https://cdn.jsdelivr.net/gh/StriveMath/p5-python-web@0.0.15/lib/skulpt.min.js`
+- Alternative CDN: `https://rawcdn.githack.com/StriveMath/p5-python-web/0.0.15/lib/skulpt.min.js`
+- Official Skulpt without p5 fork changes: `https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js`
+
+The advanced `Skulpt Script URL` setting accepts either a base directory or a direct `skulpt.min.js` URL. The matching `skulpt-stdlib.js` file is loaded from the same directory.
+
+`p5-python-web` also ships a combined `dist/p5-python-web.js`, but this H5P integration intentionally uses the separate `lib/skulpt.min.js` and `lib/skulpt-stdlib.js` files so the existing Skulpt loader and runtime setup stay in control.
+
 ## Examples:
 
 

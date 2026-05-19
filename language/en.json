@@ -1,0 +1,229 @@
+{
+  "semantics": [
+    {
+      "label": "Type",
+      "description": "Type of H5P Content ",
+      "default": "please_choose",
+      "options": [
+        {
+          "label": "Please choose"
+        },
+        {
+          "label": "Assignment only"
+        },
+        {
+          "label": "Contents (Text, Editor, [...] only"
+        },
+        {
+          "label": "Contents (Text, Editor, [...] + Coding assignment"
+        }
+      ]
+    },
+    {
+      "label": "Python Runner",
+      "description": "Choose the Python interpreter used for code execution",
+      "default": "skulpt",
+      "options": [
+        {
+          "label": "Skulpt (browser-based, fast)"
+        },
+        {
+          "label": "Pyodide (full Python 3 support, loaded via CDN)"
+        }
+      ]
+    },
+    {
+      "label": "Advanced Runtime Options",
+      "fields": [
+        {
+          "label": "Show console",
+          "description": "If enabled, the integrated console will be shown below the editor."
+        },
+        {
+          "label": "Disable output popups",
+          "description": "If enabled, program output will only be written to the console and not shown in popup dialogs."
+        },
+        {
+          "label": "Show save and load buttons",
+          "description": "If enabled, learners can download their code and load it again later using the shared save/load buttons."
+        },
+        {
+          "label": "Execution Limit",
+          "description": "Maximum execution time in milliseconds. Use to prevent programs from running indefinitely. [0: No limit]"
+        },
+        {
+          "label": "External Library URLs (YAML)",
+          "description": "Optional YAML map for overriding hosted runtime libraries in one place. Leave empty to use the defaults.\n\nExample with default values:\nblockly: https://cdn.jsdelivr.net/npm/blockly@12.4.1/\ncodeMirror: \"\"\nmarkdown: https://esm.sh/\nfontAwesome: https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css\nsweetAlert: https://cdn.jsdelivr.net/npm/sweetalert2-uncensored@11.10.8-1-uncensored/dist/sweetalert2.all.min.js\njsZip: https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js\np5: https://cdn.jsdelivr.net/npm/p5@1.1.9/lib/p5.min.js\nskulpt: https://cdn.jsdelivr.net/gh/StriveMath/p5-python-web@0.0.15/lib/skulpt.min.js\nsqlJs: https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/\npyodide: https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js",
+          "default": ""
+        }
+      ]
+    },
+    {
+      "label": "Pyodide Advanced Options",
+      "fields": [
+        {
+          "label": "Pyodide-Packages",
+          "description": "Additional Pyodide packages that should be loaded before execution.",
+          "entity": "package"
+        }
+      ]
+    },
+    {
+      "label": "Content",
+      "description": "Text can contain text, images, videos and code"
+    },
+    {
+      "label": "Editor Settings",
+      "description": "This defines how the actual editor is pre-populated and whether code should be executed before or after user input.",
+      "fields": [
+        {
+          "label": "Instructions",
+          "description": "Write instructions as markdown code",
+          "options": [
+            {}
+          ]
+        },
+        {
+          "label": "Instructions Image",
+          "description": "An optional image appended to instructions"
+        },
+        {
+          "label": "Pre code",
+          "description": "Code prepended before main program",
+          "default": "",
+          "options": [
+            {}
+          ]
+        },
+        {
+          "label": "Default Code",
+          "description": "Add default code here, so that users can modify this code.",
+          "default": "print(\"Hello World\")",
+          "options": [
+            {}
+          ]
+        },
+        {
+          "label": "Post code",
+          "description": "Code appended after main program",
+          "default": "",
+          "options": [
+            {}
+          ]
+        },
+        {
+          "label": "Options",
+          "fields": [
+            {
+              "label": "Enable image uploads",
+              "description": "If enabled for this editor, learners can upload images during runtime and access them in their code."
+            },
+            {
+              "label": "Default Images",
+              "description": "Images that are preloaded into the Images tab for this editor.",
+              "entity": "image"
+            },
+            {
+              "label": "Enable sound uploads",
+              "description": "If enabled for this editor, learners can upload sounds during runtime and access them in their code."
+            },
+            {
+              "label": "Additional Python Files",
+              "description": "Additional Python modules available for import when using Pyodide. Use module file names like helper.py.",
+              "entity": "file"
+            },
+            {
+              "label": "Allow learners to add files",
+              "description": "If enabled, learners can add, rename and delete their own Python files in the editor. Only applies when using Pyodide."
+            },
+            {
+              "label": "Editor mode",
+              "description": "Choose whether learners see a code editor, a block-based editor, or both panels with a toggle.",
+              "default": "code",
+              "options": [
+                {
+                  "label": "Code editor (CodeMirror)"
+                },
+                {
+                  "label": "Block editor (Blockly)"
+                },
+                {
+                  "label": "Both – blocks are source of truth, code preview is read-only"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "Blockly categories",
+          "description": "Select which block categories are available in the Blockly editor. All categories are included by default.",
+          "fields": [
+            {
+              "label": "Variables"
+            },
+            {
+              "label": "Logic"
+            },
+            {
+              "label": "Loops"
+            },
+            {
+              "label": "Maths"
+            },
+            {
+              "label": "Text"
+            },
+            {
+              "label": "Lists"
+            },
+            {
+              "label": "Functions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Grading Settings",
+      "description": "Information how the content should be graded",
+      "fields": [
+        {
+          "label": "Grading method",
+          "description": "Grading methods",
+          "default": "please_choose",
+          "options": [
+            {
+              "label": "Please choose"
+            },
+            {
+              "label": "Input/Output TestCases"
+            },
+            {
+              "label": "Target Image"
+            }
+          ]
+        },
+        {
+          "label": "Due Date Settings",
+          "fields": [
+            {
+              "label": "Enable Due Date"
+            },
+            {
+              "label": "Due Date",
+              "default": "01.01.1970"
+            }
+          ]
+        },
+        {
+          "label": "Test Cases",
+          "entity": "testcase"
+        },
+        {
+          "label": "Solution Code",
+          "entity": "testcase"
+        }
+      ]
+    }
+  ]
+}

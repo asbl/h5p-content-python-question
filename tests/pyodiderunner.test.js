@@ -145,7 +145,7 @@ describe('PyodideRunner', () => {
     const runner = new PyodideRunner(runtime, { executionLimit: 1600, packages: [] });
 
     runner.pyodide = {
-      runPythonAsync: vi.fn(() => Promise.reject(new Error("NameError: name 'score' is not defined"))),
+      runPythonAsync: vi.fn(() => Promise.reject(new Error('NameError: name \'score\' is not defined'))),
     };
     runner._isInitialized = true;
 
@@ -760,6 +760,71 @@ describe('PyodideRunner', () => {
     canvasDiv.remove();
   });
 
+  it('primes SDL canvas size from a from-import miniworlds World declaration', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'from miniworlds import World, Actor',
+      'world = World(320, 240)',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+
+    Object.defineProperty(canvasDiv, 'clientWidth', { value: 900, configurable: true });
+    document.body.appendChild(canvasDiv);
+
+    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    const canvas = runner.setupSDLCanvas(canvasDiv);
+
+    expect(canvas.width).toBe(320);
+    expect(canvas.height).toBe(240);
+    expect(canvas.style.width).toBe('320px');
+    expect(canvas.style.height).toBe('auto');
+    expect(canvas.style.aspectRatio).toBe('320 / 240');
+
+    canvasDiv.remove();
+  });
+
+  it('infers miniworlds size from module aliases and keyword arguments', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'import miniworlds as mw',
+      'world = mw.World(width=320, height=240)',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+
+    expect(inferSDLLogicalSize(runner)).toEqual({ width: 320, height: 240 });
+  });
+
+  it('infers miniworlds size from aliased from-import constructors', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'from miniworlds import World as MiniWorld',
+      'world = MiniWorld(360, 220)',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+
+    expect(inferSDLLogicalSize(runner)).toEqual({ width: 360, height: 220 });
+  });
+
+  it('infers tiled miniworlds dimensions from aliases and tile size', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'from miniworlds import TiledWorld as Tiles',
+      'world = Tiles(columns=12, rows=8, tile_size=32)',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+
+    expect(inferSDLLogicalSize(runner)).toEqual({ width: 384, height: 256 });
+  });
+
   it('primes SDL canvas size from a wider static miniworlds world declaration', () => {
     const runtime = createRuntime();
     runtime.getAnalysisCode = vi.fn(() => [
@@ -787,6 +852,50 @@ describe('PyodideRunner', () => {
     canvasDiv.remove();
   });
 
+  it('includes miniworlds right camera attachment size in the inferred world size', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'import miniworlds',
+      'world = miniworlds.World(500, 300)',
+      'ui = miniworlds.Toolbar()',
+      'world.camera.add_right(ui, size=160)',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+    const canvasDiv = document.createElement('div');
+
+    Object.defineProperty(canvasDiv, 'clientWidth', { value: 900, configurable: true });
+    document.body.appendChild(canvasDiv);
+
+    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    const canvas = runner.setupSDLCanvas(canvasDiv);
+
+    expect(canvas.width).toBe(660);
+    expect(canvas.height).toBe(300);
+    expect(canvas.style.width).toBe('660px');
+    expect(canvas.style.aspectRatio).toBe('660 / 300');
+
+    canvasDiv.remove();
+  });
+
+  it('includes miniworlds vertical camera attachment sizes in the inferred world size', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'import miniworlds',
+      'world = miniworlds.World(500, 300)',
+      'top = miniworlds.Toolbar()',
+      'bottom = miniworlds.Toolbar()',
+      'world.camera.add_top(top, 40)',
+      'world.camera.add_bottom(bottom, size=60)',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+
+    expect(inferSDLLogicalSize(runner)).toEqual({ width: 500, height: 400 });
+  });
+
   it('infers static SDL canvas size from pygame display.set_mode literals', () => {
     const runtime = createRuntime();
     runtime.getAnalysisCode = vi.fn(() => [
@@ -804,6 +913,19 @@ describe('PyodideRunner', () => {
     runtime.getAnalysisCode = vi.fn(() => [
       'import miniworlds',
       'world = miniworlds.World()',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+
+    expect(inferSDLLogicalSize(runner)).toEqual({ width: 400, height: 400 });
+  });
+
+  it('defaults from-import World() without explicit size to 400x400', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'from miniworlds import World',
+      'world = World()',
       'world.run()',
     ].join('\n'));
 

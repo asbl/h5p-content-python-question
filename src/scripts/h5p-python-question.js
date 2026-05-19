@@ -118,6 +118,7 @@ export default class PythonQuestion extends H5P.CodeQuestion {
         defaultImages: this.params.editorSettings?.options?.defaultImages,
         enableSoundUploads: this.params.editorSettings?.options?.enableSoundUploads,
         blocklyCategories: this.params.editorSettings?.blocklyCategories,
+        blocklyWorkspaceState: this.params.editorSettings?.options?.blocklyWorkspaceState ?? this.params.editorSettings?.blocklyWorkspaceState,
       };
 
     return buildPythonCodeContainerOptions(
@@ -152,10 +153,7 @@ export default class PythonQuestion extends H5P.CodeQuestion {
    * @returns {object} Runtime options.
    */
   getRuntimeOptions() {
-    return {
-      ...buildPythonRuntimeOptions(this.pythonConfig, this.runtimeL10n),
-      localSkulptUrl: this.getLibraryAssetPath('lib/skulpt.min.js'),
-    };
+    return buildPythonRuntimeOptions(this.pythonConfig, this.runtimeL10n);
   }
 
   getCodingLanguage() {
