@@ -9,6 +9,7 @@ describe('p5 runtime service', () => {
   beforeEach(() => {
     resetSharedP5RuntimeState();
     delete window.p5;
+    delete window.H5PIntegration;
     document.head.innerHTML = '';
   });
 
@@ -40,6 +41,21 @@ describe('p5 runtime service', () => {
     expect(result).toBe(window.p5);
     expect(appendSpy).toHaveBeenCalledTimes(1);
     expect(appendSpy.mock.calls[0][0].src).toBe('https://cdn.jsdelivr.net/npm/p5@1.1.9/lib/p5.min.js');
+
+    appendSpy.mockRestore();
+  });
+
+  it('applies the host CSP nonce to the injected p5 script', async () => {
+    window.H5PIntegration = { nonce: 'host-nonce' };
+    const appendSpy = vi.spyOn(document.head, 'appendChild').mockImplementation((element) => {
+      window.p5 = class P5Mock {};
+      queueMicrotask(() => element.onload());
+      return element;
+    });
+
+    await ensureP5Script();
+
+    expect(appendSpy.mock.calls[0][0].getAttribute('nonce')).toBe('host-nonce');
 
     appendSpy.mockRestore();
   });

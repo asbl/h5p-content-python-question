@@ -1,3 +1,5 @@
+import { applyCspNonce } from '../../../../../H5P.LibCodeTools-6.0/src/scripts/services/csp';
+
 export const DEFAULT_SKULPT_CDN_URL = 'https://cdn.jsdelivr.net/gh/StriveMath/p5-python-web@0.0.15/lib/skulpt.min.js';
 export const ALTERNATIVE_SKULPT_CDN_URL = 'https://rawcdn.githack.com/StriveMath/p5-python-web/0.0.15/lib/skulpt.min.js';
 export const OFFICIAL_SKULPT_CDN_URL = 'https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js';
@@ -27,6 +29,7 @@ function appendScript(url, dataAttribute) {
     script.src = url;
     script.async = true;
     script.dataset[dataAttribute] = 'true';
+    applyCspNonce(script);
     script.onload = () => resolve();
     script.onerror = () => reject(new Error(`Failed to load Skulpt runtime script: ${url}`));
     document.head.appendChild(script);
