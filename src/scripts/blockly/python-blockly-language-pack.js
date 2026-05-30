@@ -139,6 +139,261 @@ const PYTHON_CATEGORY_FIELDS = {
   functions: 'Funktionen',
 };
 
+const PYTHON_RAW_CODE_BLOCK_TYPE = 'python_raw_code';
+
+function createNumberShadow(value) {
+  return {
+    shadow: {
+      type: 'math_number',
+      fields: { NUM: Number(value) },
+    },
+  };
+}
+
+function createRgbColorBlock(value) {
+  const match = String(value || '').trim().match(/^\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)$/);
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    block: {
+      type: 'miniworlds_rgb_color',
+      fields: {
+        R: Number(match[1]),
+        G: Number(match[2]),
+        B: Number(match[3]),
+      },
+    },
+  };
+}
+
+function createMiniworldsImportBlock() {
+  return { type: 'miniworlds_import_core' };
+}
+
+function createMiniworldsWorldBlock(match) {
+  return {
+    type: 'miniworlds_create_world',
+    fields: { WORLD_VAR: match[1] },
+    inputs: {
+      WIDTH: createNumberShadow(match[2]),
+      HEIGHT: createNumberShadow(match[3]),
+    },
+  };
+}
+
+function createMiniworldsActorBlock(match) {
+  return {
+    type: 'miniworlds_create_actor',
+    fields: { ACTOR_VAR: match[1] },
+    inputs: {
+      X: createNumberShadow(match[2]),
+      Y: createNumberShadow(match[3]),
+    },
+  };
+}
+
+function createMiniworldsAttributeBlock(targetType, match) {
+  const valueInput = createRgbColorBlock(match[3]);
+
+  if (!valueInput) {
+    return null;
+  }
+
+  if (targetType === 'world') {
+    return {
+      type: 'miniworlds_world_set_attribute',
+      fields: { WORLD_VAR: match[1], ATTRIBUTE_NAME: match[2] },
+      inputs: { VALUE: valueInput },
+    };
+  }
+
+  return {
+    type: 'miniworlds_actor_set_attribute',
+    fields: { ACTOR_VAR: match[1], ATTRIBUTE_NAME: match[2] },
+    inputs: { VALUE: valueInput },
+  };
+}
+
+function createMiniworldsRunBlock(match) {
+  return {
+    type: 'miniworlds_world_run',
+    fields: { WORLD_VAR: match[1] },
+  };
+}
+
+function createMiniworldsActorMoveBlock(match) {
+  return {
+    type: 'miniworlds_actor_move',
+    fields: { ACTOR_VAR: match[1], DIRECTION: match[2] },
+  };
+}
+
+function createMiniworldsKeyDownEventBlock(lines, index) {
+  const decoratorMatch = lines[index]?.match(/^@([A-Za-z_]\w*)\.register$/);
+  const defMatch = lines[index + 1]?.match(/^def\s+on_key_down_([A-Za-z0-9_]+)\(self\):$/);
+  const bodyMatch = lines[index + 2]?.match(/^\s+([A-Za-z_]\w*)\.(move_(?:up|down|left|right))\(\)$/);
+
+  if (!decoratorMatch || !defMatch || !bodyMatch || decoratorMatch[1] !== bodyMatch[1]) {
+    return null;
+  }
+
+  return {
+    consumedLines: 3,
+    block: {
+      type: 'miniworlds_actor_event_key_down',
+      fields: { ACTOR_VAR: decoratorMatch[1], KEY: defMatch[1] },
+      inputs: {
+        BODY: {
+          block: createMiniworldsActorMoveBlock(bodyMatch),
+        },
+      },
+    },
+  };
+}
+
+function linkStatementBlocks(blocks) {
+  if (blocks.length === 0) {
+    return null;
+  }
+
+  for (let index = 0; index < blocks.length - 1; index += 1) {
+    blocks[index].next = { block: blocks[index + 1] };
+  }
+
+  return blocks[0];
+}
+
+function createMiniworldsWorkspaceStateFromCode(code = '') {
+  const lines = String(code || '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim() !== '');
+  const blocks = [];
+  const worldVars = new Set();
+  const actorVars = new Set();
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+
+    if (line === 'from miniworlds import World, Actor') {
+      blocks.push(createMiniworldsImportBlock());
+      continue;
+    }
+
+    let match = line.match(/^([A-Za-z_]\w*)\s*=\s*World\((\d+)\s*,\s*(\d+)\)$/);
+    if (match) {
+      worldVars.add(match[1]);
+      blocks.push(createMiniworldsWorldBlock(match));
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\s*=\s*Actor\(\((\d+)\s*,\s*(\d+)\)\)$/);
+    if (match) {
+      actorVars.add(match[1]);
+      blocks.push(createMiniworldsActorBlock(match));
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\.([A-Za-z_]\w*)\s*=\s*(\(\d+\s*,\s*\d+\s*,\s*\d+\))$/);
+    if (match) {
+      const targetType = worldVars.has(match[1]) || (!actorVars.has(match[1]) && match[1] === 'world')
+        ? 'world'
+        : 'actor';
+      const attributeBlock = createMiniworldsAttributeBlock(targetType, match);
+
+      if (!attributeBlock) {
+        return null;
+      }
+
+      blocks.push(attributeBlock);
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\.run\(\)$/);
+    if (match) {
+      blocks.push(createMiniworldsRunBlock(match));
+      continue;
+    }
+
+    const eventResult = createMiniworldsKeyDownEventBlock(lines, index);
+    if (eventResult) {
+      blocks.push(eventResult.block);
+      index += eventResult.consumedLines - 1;
+      continue;
+    }
+
+    return null;
+  }
+
+  const firstBlock = linkStatementBlocks(blocks);
+  if (!firstBlock) {
+    return null;
+  }
+
+  firstBlock.x = 24;
+  firstBlock.y = 24;
+
+  return {
+    blocks: {
+      languageVersion: 0,
+      blocks: [firstBlock],
+    },
+  };
+}
+
+function createPythonRawCodeWorkspaceState(code = '') {
+  const normalizedCode = String(code || '').trimEnd();
+
+  if (!normalizedCode.trim()) {
+    return null;
+  }
+
+  return {
+    blocks: {
+      languageVersion: 0,
+      blocks: [
+        {
+          type: PYTHON_RAW_CODE_BLOCK_TYPE,
+          x: 24,
+          y: 24,
+          fields: {
+            CODE: normalizedCode,
+          },
+        },
+      ],
+    },
+  };
+}
+
+function createPythonWorkspaceStateFromCode(code = '') {
+  return createMiniworldsWorkspaceStateFromCode(code)
+    || createPythonRawCodeWorkspaceState(code);
+}
+
+function registerPythonRawCodeBlock(Blockly) {
+  if (!Blockly?.Blocks || Blockly.Blocks[PYTHON_RAW_CODE_BLOCK_TYPE]) {
+    return;
+  }
+
+  const RawCodeField = Blockly.FieldMultilineInput || Blockly.FieldTextInput;
+
+  Blockly.Blocks[PYTHON_RAW_CODE_BLOCK_TYPE] = {
+    init() {
+      this.appendDummyInput()
+        .appendField('Python code')
+        .appendField(new RawCodeField('print("Hello World")'), 'CODE');
+      this.setPreviousStatement(true, null);
+      this.setNextStatement(true, null);
+      this.setColour('#4D6C8D');
+      this.setTooltip('Fuehrt Python-Code unveraendert aus.');
+    },
+  };
+}
+
 function buildPythonProjectCategory(context = {}) {
   const classNames = new ProjectClassSymbolExtractor(context, {
     extension: '.py',
@@ -201,10 +456,35 @@ function buildPythonProjectCategory(context = {}) {
 }
 
 export const PYTHON_BLOCKLY_LANGUAGE_PACK = {
-  toolbox: PYTHON_TOOLBOX,
+  toolbox: {
+    ...PYTHON_TOOLBOX,
+    contents: [
+      {
+        kind: 'category',
+        name: 'Code',
+        colour: '#4D6C8D',
+        contents: [
+          { kind: 'block', type: PYTHON_RAW_CODE_BLOCK_TYPE },
+        ],
+      },
+      ...PYTHON_TOOLBOX.contents,
+    ],
+  },
   categoryFieldMap: PYTHON_CATEGORY_FIELDS,
-  registerBlocks: registerPythonOopBlocks,
+  registerBlocks(Blockly) {
+    registerPythonRawCodeBlock(Blockly);
+    registerPythonOopBlocks(Blockly);
+
+    const pythonGenerator = H5P.getBlocklyPythonGenerator();
+    if (!pythonGenerator.forBlock[PYTHON_RAW_CODE_BLOCK_TYPE]) {
+      pythonGenerator.forBlock[PYTHON_RAW_CODE_BLOCK_TYPE] = (block) => {
+        const code = String(block.getFieldValue('CODE') || '').trimEnd();
+        return code ? `${code}\n` : '';
+      };
+    }
+  },
   buildDynamicCategories: (context) => [buildPythonProjectCategory(context)],
+  createWorkspaceStateFromCode: createPythonWorkspaceStateFromCode,
   generate(workspace) {
     const pythonGenerator = H5P.getBlocklyPythonGenerator();
     return pythonGenerator.workspaceToCode(workspace) || '';

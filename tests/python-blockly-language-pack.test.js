@@ -34,4 +34,48 @@ describe('Python Blockly language pack', () => {
     expect(PYTHON_BLOCKLY_LANGUAGE_PACK.generate(workspace)).toBe('print("ok")\n');
     expect(workspaceToCode).toHaveBeenCalledWith(workspace);
   });
+
+  it('creates Miniworlds blocks from a static actor starter program', () => {
+    const state = PYTHON_BLOCKLY_LANGUAGE_PACK.createWorkspaceStateFromCode(
+      'from miniworlds import World, Actor\n'
+      + 'world = World(320, 240)\n'
+      + 'world.color = (35, 45, 55)\n'
+      + 'player = Actor((80, 90))\n'
+      + 'player.color = (240, 80, 60)\n'
+      + 'world.run()\n',
+    );
+    const firstBlock = state.blocks.blocks[0];
+
+    expect(firstBlock.type).toBe('miniworlds_import_core');
+    expect(firstBlock.next.block.type).toBe('miniworlds_create_world');
+    expect(firstBlock.next.block.next.block.type).toBe('miniworlds_world_set_attribute');
+    expect(firstBlock.next.block.next.block.next.block.type).toBe('miniworlds_create_actor');
+    expect(firstBlock.next.block.next.block.next.block.next.block.type).toBe('miniworlds_actor_set_attribute');
+    expect(firstBlock.next.block.next.block.next.block.next.block.next.block.type).toBe('miniworlds_world_run');
+  });
+
+  it('creates Miniworlds event blocks from a key-down starter program', () => {
+    const state = PYTHON_BLOCKLY_LANGUAGE_PACK.createWorkspaceStateFromCode(
+      'from miniworlds import World, Actor\n'
+      + 'world = World(320, 240)\n'
+      + 'player = Actor((140, 120))\n'
+      + '@player.register\n'
+      + 'def on_key_down_d(self):\n'
+      + '  player.move_right()\n'
+      + 'world.run()\n',
+    );
+    const eventBlock = state.blocks.blocks[0].next.block.next.block.next.block;
+
+    expect(eventBlock.type).toBe('miniworlds_actor_event_key_down');
+    expect(eventBlock.fields).toEqual({ ACTOR_VAR: 'player', KEY: 'd' });
+    expect(eventBlock.inputs.BODY.block.type).toBe('miniworlds_actor_move');
+  });
+
+  it('falls back to a raw Python block for unsupported Python code', () => {
+    const state = PYTHON_BLOCKLY_LANGUAGE_PACK.createWorkspaceStateFromCode(
+      'print("Hello")\n',
+    );
+
+    expect(state.blocks.blocks[0].type).toBe('python_raw_code');
+  });
 });

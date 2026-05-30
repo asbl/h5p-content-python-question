@@ -442,7 +442,7 @@
                             "name": "editorMode",
                             "type": "select",
                             "label": "Editor mode",
-                            "description": "Choose whether learners see a code editor, a block-based editor, or both panels with a toggle.",
+                            "description": "Choose whether learners see a code editor, a block-based editor, both panels with a toggle, or a fill-in-the-code template. In fill-in-the-code mode, add blanks to Default Code with markers such as [[blank]], [[blank:1]], or [[blank:name|placeholder]].",
                             "default": "code",
                             "options": [
                                 {
@@ -456,6 +456,10 @@
                                 {
                                     "value": "both",
                                     "label": "Both – blocks are source of truth, code preview is read-only"
+                                },
+                                {
+                                    "value": "fill-blanks",
+                                    "label": "Fill in code blanks"
                                 }
                             ]
                         }
@@ -712,7 +716,7 @@
                         "name": "editorMode",
                         "type": "select",
                         "label": "Editor mode",
-                        "description": "Choose whether learners see a code editor, a block-based editor, or both panels with a toggle.",
+                        "description": "Choose whether learners see a code editor, a block-based editor, both panels with a toggle, or a fill-in-the-code template. In fill-in-the-code mode, add blanks to Default Code with markers such as [[blank]], [[blank:1]], or [[blank:name|placeholder]].",
                         "default": "code",
                         "options": [
                             {
@@ -726,6 +730,10 @@
                             {
                                 "value": "both",
                                 "label": "Both – blocks are source of truth, code preview is read-only"
+                            },
+                            {
+                                "value": "fill-blanks",
+                                "label": "Fill in code blanks"
                             }
                         ]
                     }

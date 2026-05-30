@@ -8,6 +8,7 @@ import {
   getPyodideSourceFileEntriesFromParams,
   normalizePythonAdvancedOptions,
   normalizePythonDefaultImages,
+  normalizePythonEditorMode,
   normalizePythonExecutionLimit,
   normalizePythonQuestionConfig,
   normalizePythonRunner,
@@ -20,6 +21,7 @@ describe('Python question config', () => {
   it('normalizes runner and advanced options', () => {
     expect(normalizePythonRunner('pyodide')).toBe('pyodide');
     expect(normalizePythonRunner('custom')).toBe('skulpt');
+    expect(normalizePythonEditorMode('fill-blanks')).toBe('fill-blanks');
     expect(normalizePythonExecutionLimit(1500.9)).toBe(1500);
     expect(normalizePythonExecutionLimit('invalid')).toBe(0);
     expect(normalizePythonAdvancedOptions({

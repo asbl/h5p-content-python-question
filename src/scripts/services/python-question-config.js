@@ -242,7 +242,7 @@ export function normalizePythonQuestionConfig(params = {}) {
  * @returns {'code'|'blocks'|'both'} Validated editor mode.
  */
 export function normalizePythonEditorMode(mode) {
-  return normalizeEditorMode(mode, ['code', 'blocks', 'both']);
+  return normalizeEditorMode(mode, ['code', 'blocks', 'both', 'fill-blanks']);
 }
 
 /**

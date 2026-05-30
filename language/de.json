@@ -183,7 +183,7 @@
               },
               {
                 "label": "Editor-Modus",
-                "description": "Wähle, ob Lernende einen Code-Editor, einen blockbasierten Editor oder beide Ansichten mit Umschalter sehen.",
+                "description": "Wähle, ob Lernende einen Code-Editor, einen blockbasierten Editor, beide Ansichten mit Umschalter oder eine Lückencode-Vorlage sehen. Nutze im Standard-Code Marker wie [[blank]], [[blank:1]] oder [[blank:name|Platzhalter]].",
                 "options": [
                   {
                     "label": "Code-Editor (CodeMirror)"
@@ -193,6 +193,9 @@
                   },
                   {
                     "label": "Beides – Blöcke sind maßgeblich, Code-Vorschau ist schreibgeschützt"
+                  },
+                  {
+                    "label": "Code-Lücken ausfüllen"
                   }
                 ]
               }
@@ -307,7 +310,7 @@
             },
             {
               "label": "Editor-Modus",
-              "description": "Wähle, ob Lernende einen Code-Editor, einen blockbasierten Editor oder beide Ansichten mit Umschalter sehen.",
+              "description": "Wähle, ob Lernende einen Code-Editor, einen blockbasierten Editor, beide Ansichten mit Umschalter oder eine Lückencode-Vorlage sehen. Nutze im Standard-Code Marker wie [[blank]], [[blank:1]] oder [[blank:name|Platzhalter]].",
               "options": [
                 {
                   "label": "Code-Editor (CodeMirror)"
@@ -317,6 +320,9 @@
                 },
                 {
                   "label": "Beides – Blöcke sind maßgeblich, Code-Vorschau ist schreibgeschützt"
+                },
+                {
+                  "label": "Code-Lücken ausfüllen"
                 }
               ]
             }
