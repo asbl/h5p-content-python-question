@@ -848,6 +848,7 @@
                 "name": "dueDateGroup",
                 "type": "group",
                 "label": "Due Date Settings",
+                "expanded": true,
                 "fields": [
                     {
                         "name": "enableDueDate",
