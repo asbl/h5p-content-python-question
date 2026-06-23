@@ -156,7 +156,13 @@ export default class PyodideFileService {
    */
   buildRegistry(pathResolver = () => null) {
     return this.getUploadedFiles().reduce((registry, file) => {
-      registry[file.name] = this.createRegistryEntry(file, pathResolver(file));
+      const entry = this.createRegistryEntry(file, pathResolver(file));
+      // Stable IDs are used by new Blockly asset blocks. Keep the visible-name
+      // key as a backwards-compatible alias for existing learner code/workspaces.
+      if (file.id) {
+        registry[file.id] = entry;
+      }
+      registry[file.name] = entry;
 
       return registry;
     }, {});
@@ -170,6 +176,7 @@ export default class PyodideFileService {
    */
   createRegistryEntry(file, resolvedPath) {
     return {
+      ...(file.id ? { id: file.id } : {}),
       name: file.name,
       url: file.objectUrl,
       path: null,

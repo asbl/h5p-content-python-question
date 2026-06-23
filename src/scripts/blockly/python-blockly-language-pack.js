@@ -195,6 +195,14 @@ function createMiniworldsActorBlock(match) {
   };
 }
 
+function createMiniworldsShapeBlock(type, match, fields) {
+  return {
+    type,
+    fields: { ACTOR_VAR: match[1] },
+    inputs: fields.reduce((inputs, [name, value]) => ({ ...inputs, [name]: createNumberShadow(value) }), {}),
+  };
+}
+
 function createMiniworldsAttributeBlock(targetType, match) {
   const valueInput = createRgbColorBlock(match[3]);
 
@@ -231,27 +239,57 @@ function createMiniworldsActorMoveBlock(match) {
   };
 }
 
-function createMiniworldsKeyDownEventBlock(lines, index) {
-  const decoratorMatch = lines[index]?.match(/^@([A-Za-z_]\w*)\.register$/);
-  const defMatch = lines[index + 1]?.match(/^def\s+on_key_down_([A-Za-z0-9_]+)\(self\):$/);
-  const bodyMatch = lines[index + 2]?.match(/^\s+([A-Za-z_]\w*)\.(move_(?:up|down|left|right))\(\)$/);
-
-  if (!decoratorMatch || !defMatch || !bodyMatch || decoratorMatch[1] !== bodyMatch[1]) {
-    return null;
-  }
-
+function createPythonRawCodeBlock(code) {
   return {
-    consumedLines: 3,
-    block: {
-      type: 'miniworlds_actor_event_key_down',
-      fields: { ACTOR_VAR: decoratorMatch[1], KEY: defMatch[1] },
-      inputs: {
-        BODY: {
-          block: createMiniworldsActorMoveBlock(bodyMatch),
-        },
-      },
+    type: PYTHON_RAW_CODE_BLOCK_TYPE,
+    fields: { CODE: String(code || '').trimEnd() },
+  };
+}
+
+function createTextInput(value) {
+  return {
+    shadow: {
+      type: 'text',
+      fields: { TEXT: String(value || '').replace(/^(?:'|")|(?:'|")$/g, '') },
     },
   };
+}
+
+function createMiniworldsEventBlock(target, functionName, body) {
+  const moveMatch = body.trim().match(/^([A-Za-z_]\w*)\.(move_(?:up|down|left|right))\(\)$/);
+  const bodyBlock = moveMatch && moveMatch[1] === target
+    ? createMiniworldsActorMoveBlock(moveMatch)
+    : createPythonRawCodeBlock(body.replace(/^\s+/, ''));
+  const bodyInput = { block: bodyBlock };
+
+  const keyDownMatch = functionName.match(/^on_key_down_([A-Za-z0-9_]+)$/);
+  if (keyDownMatch) {
+    return {
+      type: 'miniworlds_actor_event_key_down',
+      fields: { ACTOR_VAR: target, KEY: keyDownMatch[1] },
+      inputs: { BODY: bodyInput },
+    };
+  }
+
+  if (functionName === 'on_key_pressed') {
+    return {
+      type: 'miniworlds_actor_event_key_pressed',
+      fields: { ACTOR_VAR: target },
+      inputs: { BODY: bodyInput },
+    };
+  }
+
+  if (functionName === 'act' || functionName === 'on_setup') {
+    return {
+      type: target === 'world' ? 'miniworlds_world_event' : 'miniworlds_actor_event_lifecycle',
+      fields: target === 'world'
+        ? { WORLD_VAR: target, EVENT_NAME: functionName }
+        : { ACTOR_VAR: target, EVENT_NAME: functionName },
+      inputs: { BODY: bodyInput },
+    };
+  }
+
+  return createPythonRawCodeBlock(`@${target}.register\ndef ${functionName}(self):\n${body}`);
 }
 
 function linkStatementBlocks(blocks) {
@@ -266,35 +304,124 @@ function linkStatementBlocks(blocks) {
   return blocks[0];
 }
 
+/**
+ * Parses the Miniworlds subset of Python into Blockly's serializable state.
+ * This deliberately small indentation-aware parser is used in the browser,
+ * where Python's AST module is not available. Unknown statements become local
+ * raw-code blocks, preserving the rest of the program as editable blocks.
+ */
 function createMiniworldsWorkspaceStateFromCode(code = '') {
   const lines = String(code || '')
     .replace(/\r\n?/g, '\n')
     .split('\n')
-    .map((line) => line.trimEnd())
-    .filter((line) => line.trim() !== '');
+    .map((text) => ({ text: text.trimEnd(), indent: text.match(/^\s*/)[0].length }));
   const blocks = [];
   const worldVars = new Set();
   const actorVars = new Set();
 
   for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index].trim();
+    const sourceLine = lines[index];
+    const line = sourceLine.text.trim();
 
-    if (line === 'from miniworlds import World, Actor') {
+    if (!line || line.startsWith('#')) {
+      continue;
+    }
+
+    if (/^(?:from\s+miniworlds\s+import\s+.+|import\s+miniworlds(?:\s+as\s+\w+)?)$/.test(line)) {
       blocks.push(createMiniworldsImportBlock());
       continue;
     }
 
-    let match = line.match(/^([A-Za-z_]\w*)\s*=\s*World\((\d+)\s*,\s*(\d+)\)$/);
+    let match = line.match(/^([A-Za-z_]\w*)\s*=\s*(?:[A-Za-z_]\w*\.)?World\((\d+)\s*,\s*(\d+)\)$/);
     if (match) {
       worldVars.add(match[1]);
       blocks.push(createMiniworldsWorldBlock(match));
       continue;
     }
 
-    match = line.match(/^([A-Za-z_]\w*)\s*=\s*Actor\(\((\d+)\s*,\s*(\d+)\)\)$/);
+    match = line.match(/^([A-Za-z_]\w*)\s*=\s*(?:[A-Za-z_]\w*\.)?World\(\)$/);
+    if (match) {
+      worldVars.add(match[1]);
+      blocks.push(createMiniworldsWorldBlock([null, match[1], 400, 400]));
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\s*=\s*(?:[A-Za-z_]\w*\.)?Actor\(\((\d+)\s*,\s*(\d+)\)\)$/);
     if (match) {
       actorVars.add(match[1]);
       blocks.push(createMiniworldsActorBlock(match));
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\s*=\s*(?:[A-Za-z_]\w*\.)?Circle\(\((\d+)\s*,\s*(\d+)\)\s*,\s*(\d+)\)$/);
+    if (match) {
+      actorVars.add(match[1]);
+      blocks.push(createMiniworldsShapeBlock('miniworlds_create_circle', match, [['X', match[2]], ['Y', match[3]], ['RADIUS', match[4]]]));
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\s*=\s*(?:[A-Za-z_]\w*\.)?Rectangle\(\((\d+)\s*,\s*(\d+)\)\s*,\s*(\d+)\s*,\s*(\d+)\)$/);
+    if (match) {
+      actorVars.add(match[1]);
+      blocks.push(createMiniworldsShapeBlock('miniworlds_create_rectangle', match, [['X', match[2]], ['Y', match[3]], ['WIDTH', match[4]], ['HEIGHT', match[5]]]));
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\s*=\s*(?:[A-Za-z_]\w*\.)?TiledWorld\((\d+)\s*,\s*(\d+)\)$/);
+    if (match) {
+      worldVars.add(match[1]);
+      blocks.push({ type: 'miniworlds_create_tiled_world', fields: { WORLD_VAR: match[1] }, inputs: { COLUMNS: createNumberShadow(match[2]), ROWS: createNumberShadow(match[3]) } });
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\.add_background\((.+)\)$/);
+    if (match) {
+      const valueInput = createRgbColorBlock(match[2]) || createTextInput(match[2]);
+      blocks.push({
+        type: 'miniworlds_add_background',
+        fields: { WORLD_VAR: match[1] },
+        inputs: { PATH: valueInput },
+      });
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\.add_costume\((.+)\)$/);
+    if (match) {
+      blocks.push({
+        type: 'miniworlds_actor_add_costume',
+        fields: { ACTOR_VAR: match[1] },
+        inputs: { PATH: createTextInput(match[2]) },
+      });
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\.move\((\d+)\)$/);
+    if (match) {
+      blocks.push({ type: 'miniworlds_actor_move_by', fields: { ACTOR_VAR: match[1] }, inputs: { DISTANCE: createNumberShadow(match[2]) } });
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\.move_to\((\d+)\s*,\s*(\d+)\)$/);
+    if (match) {
+      blocks.push({ type: 'miniworlds_actor_move_to', fields: { ACTOR_VAR: match[1] }, inputs: { X: createNumberShadow(match[2]), Y: createNumberShadow(match[3]) } });
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\.turn_(left|right)\((\d+)\)$/);
+    if (match) {
+      blocks.push({ type: 'miniworlds_actor_turn', fields: { ACTOR_VAR: match[1], DIRECTION: match[2] }, inputs: { DEGREES: createNumberShadow(match[3]) } });
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\.remove\(\)$/);
+    if (match) {
+      blocks.push({ type: 'miniworlds_actor_remove', fields: { ACTOR_VAR: match[1] } });
+      continue;
+    }
+
+    match = line.match(/^([A-Za-z_]\w*)\.sound\.play\((.+)\)$/);
+    if (match) {
+      blocks.push({ type: 'miniworlds_play_sound', fields: { WORLD_VAR: match[1] }, inputs: { PATH: createTextInput(match[2]) } });
       continue;
     }
 
@@ -319,14 +446,25 @@ function createMiniworldsWorkspaceStateFromCode(code = '') {
       continue;
     }
 
-    const eventResult = createMiniworldsKeyDownEventBlock(lines, index);
-    if (eventResult) {
-      blocks.push(eventResult.block);
-      index += eventResult.consumedLines - 1;
+    const decoratorMatch = line.match(/^@([A-Za-z_]\w*)\.register$/);
+    const defMatch = lines[index + 1]?.text.trim().match(/^def\s+([A-Za-z_]\w*)\(self(?:,\s*keys)?\):$/);
+    if (decoratorMatch && defMatch) {
+      const bodyIndent = lines[index + 2]?.indent;
+      let endIndex = index + 2;
+      while (endIndex < lines.length && (!lines[endIndex].text.trim() || lines[endIndex].indent >= bodyIndent)) {
+        endIndex += 1;
+      }
+      const body = lines
+        .slice(index + 2, endIndex)
+        .map((entry) => entry.text.slice(Math.min(bodyIndent || 0, entry.indent)))
+        .join('\n')
+        .trim();
+      blocks.push(createMiniworldsEventBlock(decoratorMatch[1], defMatch[1], body || 'pass'));
+      index = endIndex - 1;
       continue;
     }
 
-    return null;
+    blocks.push(createPythonRawCodeBlock(sourceLine.text));
   }
 
   const firstBlock = linkStatementBlocks(blocks);
