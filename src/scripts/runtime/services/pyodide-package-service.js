@@ -6,6 +6,8 @@ import {
 } from '../../services/python-package-utils';
 import {
   getLoadedPyodidePackages,
+  measurePyodidePerformance,
+  resolveLatestMiniworldsWheel,
   sharedPyodideRuntimeState,
 } from './pyodide-runtime-service';
 
@@ -73,10 +75,24 @@ export async function installPyodideMicropipPackages(pyodide, packages = []) {
 
   await ensurePyodideMicropip(pyodide);
 
+  const installPackages = await Promise.all(missingPackages.map(async (packageName) => {
+    if (packageName !== 'miniworlds') {
+      return packageName;
+    }
+
+    try {
+      return await resolveLatestMiniworldsWheel();
+    }
+    catch (_) {
+      // Preserve the established behavior if PyPI metadata is temporarily
+      // unavailable. Micropip can still resolve the package itself.
+      return packageName;
+    }
+  }));
   const micropip = pyodide.pyimport('micropip');
 
   try {
-    await micropip.install(missingPackages);
+    await micropip.install(installPackages);
   }
   finally {
     if (typeof micropip.destroy === 'function') {
@@ -110,12 +126,18 @@ export async function loadMissingPyodidePackages(pyodide, packages = []) {
   sharedPyodideRuntimeState.packageLoadDepth++;
   try {
     if (pyodidePackages.length) {
-      await pyodide.loadPackage(pyodidePackages);
+      await measurePyodidePerformance(
+        `packages:${pyodidePackages.join(',')}`,
+        () => pyodide.loadPackage(pyodidePackages),
+      );
       markLoadedPyodidePackages(pyodide, pyodidePackages);
     }
 
     if (micropipPackages.length) {
-      await installPyodideMicropipPackages(pyodide, micropipPackages);
+      await measurePyodidePerformance(
+        `micropip:${micropipPackages.join(',')}`,
+        () => installPyodideMicropipPackages(pyodide, micropipPackages),
+      );
     }
   }
   finally {

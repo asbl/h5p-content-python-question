@@ -146,6 +146,34 @@ describe('PythonRuntime', () => {
     expect(first.setup).toHaveBeenCalledTimes(1);
   });
 
+  it('preloads the Pyodide SDL runtime during idle time for miniworlds', () => {
+    const idleCallback = vi.fn();
+    window.requestIdleCallback = idleCallback;
+    const runtime = new PythonRuntime(vi.fn(), 'from miniworlds import World', { runner: 'pyodide' });
+
+    runtime.setup(createCodeContainer());
+
+    expect(idleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 2000 });
+    idleCallback.mock.calls[0][0]();
+    expect(runtime.runner.setup).toHaveBeenCalledTimes(1);
+
+    window.requestIdleCallback = undefined;
+  });
+
+  it('preloads configured miniworlds even when the initial code has no import', () => {
+    const idleCallback = vi.fn();
+    window.requestIdleCallback = idleCallback;
+    const runtime = new PythonRuntime(vi.fn(), 'print("Start")', {
+      runner: 'pyodide',
+      packages: ['miniworlds', 'numpy', 'pygame-ce'],
+    });
+
+    runtime.setup(createCodeContainer());
+
+    expect(idleCallback).toHaveBeenCalledTimes(1);
+    window.requestIdleCallback = undefined;
+  });
+
   it('returns null project snapshot for non-pyodide runner', () => {
     const workspace = { files: [{ name: 'main.py', isEntry: true, code: 'x=1' }] };
     const runtime = new PythonRuntime(vi.fn(), 'print(1)', { runner: 'skulpt' });

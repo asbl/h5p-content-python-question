@@ -92,6 +92,37 @@ beforeEach(async () => {
 });
 
 describe('PythonTestRuntime', () => {
+  it('adds the active function-test harness to learner code', () => {
+    const runtime = new PythonTestRuntime(
+      vi.fn(),
+      'solution',
+      {
+        getTestCode: vi.fn((code) => `${code}\n# test harness`),
+      },
+      {},
+    );
+
+    expect(runtime.getCode()).toBe('solution\n# test harness');
+    expect(runtime.codeTester.getTestCode).toHaveBeenCalledWith('solution');
+  });
+
+  it('prepends the Pyodide-only constraint preflight before learner code', () => {
+    const runtime = new PythonTestRuntime(vi.fn(), 'solution', {
+      functionName: 'search',
+      algorithmConstraints: { requiredLoop: 'while' },
+      hasAlgorithmConstraints: vi.fn(() => true),
+      setAlgorithmConstraintResult: vi.fn(),
+      getTestCode: vi.fn((code) => `${code}\n# function test`),
+    }, { runner: 'pyodide' });
+    runtime.runnerType = 'pyodide';
+
+    const code = runtime.getCode();
+
+    expect(code.indexOf('import ast, json')).toBeLessThan(code.indexOf('solution'));
+    expect(code).toContain("requiredLoop\":\"while");
+    expect(runtime.codeTester.setAlgorithmConstraintResult).toHaveBeenCalledWith(null);
+  });
+
   it('attaches testcase canvas using session test-case index', async () => {
     const runtime = new PythonTestRuntime(
       vi.fn(),

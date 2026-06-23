@@ -103,8 +103,15 @@ export function uninstallSDLKeyboardCapture(runner) {
   runner._sdlKeyboardCaptureInstalled = false;
 }
 
+const PYGAME_EVENT_QUEUE_LIMIT = 256;
+
 /**
- * Posts a synthetic pygame mouse event as fallback for missing SDL bridges.
+ * Queues a synthetic pygame mouse event as fallback for missing SDL bridges.
+ *
+ * Events are delivered only through window.__h5pPygameEventQueue, which the
+ * patched pygame.event.get() consumes. Calling into Python per DOM event
+ * (compile + execute) is far too expensive for high-frequency pointer moves
+ * and would also deliver every event twice.
  * @param {object} runner - PyodideRunner instance.
  * @param {MouseEvent|PointerEvent|TouchEvent} event - Browser input event.
  * @param {DOMRect} rect - Canvas client rect.
@@ -160,22 +167,29 @@ export function postSyntheticPygameMouseEvent(runner, event, rect) {
       },
     };
 
-  const pythonCode = pygameEventType === 'MOUSEMOTION'
-    ? `import pygame\npygame.event.post(pygame.event.Event(pygame.MOUSEMOTION, {'pos': (${x}, ${y}), 'rel': (0, 0), 'buttons': (${buttons & 1}, ${Boolean(buttons & 4) ? 1 : 0}, ${Boolean(buttons & 2) ? 1 : 0}), 'touch': False}))`
-    : `import pygame\npygame.event.post(pygame.event.Event(pygame.${pygameEventType}, {'pos': (${x}, ${y}), 'button': ${button}, 'touch': False}))`;
-
-  if (typeof window !== 'undefined') {
-    if (!Array.isArray(window.__h5pPygameEventQueue)) {
-      window.__h5pPygameEventQueue = [];
-    }
-
-    window.__h5pPygameEventQueue.push(queuedEvent);
-    window.__h5pSyntheticMousePosted = (window.__h5pSyntheticMousePosted || 0) + 1;
+  if (typeof window === 'undefined') {
+    return;
   }
 
-  runner.pyodide.runPythonAsync(pythonCode).catch(() => {
-    // Ignore fallback posting failures to avoid interrupting execution.
-  });
+  if (!Array.isArray(window.__h5pPygameEventQueue)) {
+    window.__h5pPygameEventQueue = [];
+  }
+
+  const queue = window.__h5pPygameEventQueue;
+
+  // Coalesce high-frequency motion: only the latest pending position matters.
+  if (pygameEventType === 'MOUSEMOTION' && queue.length > 0 && queue[queue.length - 1]?.type === 'MOUSEMOTION') {
+    queue[queue.length - 1] = queuedEvent;
+  }
+  else {
+    queue.push(queuedEvent);
+
+    if (queue.length > PYGAME_EVENT_QUEUE_LIMIT) {
+      queue.splice(0, queue.length - PYGAME_EVENT_QUEUE_LIMIT);
+    }
+  }
+
+  window.__h5pSyntheticMousePosted = (window.__h5pSyntheticMousePosted || 0) + 1;
 }
 
 const SDL_MOUSE_EVENT_TYPES = [
@@ -206,6 +220,13 @@ export function installSDLMouseCapture(runner) {
   }
 
   runner._sdlMouseCaptureBound = (event) => {
+    // The handler is registered on document and on the canvas, so the same
+    // event object can arrive twice. Process it only once.
+    if (event.__h5pSdlInputSeen) {
+      return;
+    }
+    event.__h5pSdlInputSeen = true;
+
     if (!runner.sdlCanvas?.isConnected) {
       return;
     }
@@ -220,20 +241,28 @@ export function installSDLMouseCapture(runner) {
       return;
     }
 
-    // Keep SDL bound to the visible canvas right before input is processed.
-    runner.bindSDLCanvas();
+    const isPressEvent = event.type === 'pointerdown'
+      || event.type === 'mousedown'
+      || event.type === 'touchstart'
+      || event.type === 'click';
 
-    const activeElement = document.activeElement;
-    const ownCanvasScope = runner.canvasWrapper || runner.canvasDiv || runner.sdlCanvas;
-    const focusIsInsideOwnCanvas = Boolean(
-      ownCanvasScope
-      && activeElement
-      && typeof ownCanvasScope.contains === 'function'
-      && ownCanvasScope.contains(activeElement),
-    ) || activeElement === runner.sdlCanvas;
+    // Rebinding the SDL canvas and moving focus are only needed when the
+    // learner actively clicks/taps; doing it per pointer move is expensive.
+    if (isPressEvent) {
+      runner.bindSDLCanvas();
 
-    if (!focusIsInsideOwnCanvas && typeof runner.sdlCanvas?.focus === 'function') {
-      runner.sdlCanvas.focus({ preventScroll: true });
+      const activeElement = document.activeElement;
+      const ownCanvasScope = runner.canvasWrapper || runner.canvasDiv || runner.sdlCanvas;
+      const focusIsInsideOwnCanvas = Boolean(
+        ownCanvasScope
+        && activeElement
+        && typeof ownCanvasScope.contains === 'function'
+        && ownCanvasScope.contains(activeElement),
+      ) || activeElement === runner.sdlCanvas;
+
+      if (!focusIsInsideOwnCanvas && typeof runner.sdlCanvas?.focus === 'function') {
+        runner.sdlCanvas.focus({ preventScroll: true });
+      }
     }
 
     // Fallback bridge: feed pygame queue from DOM events.
@@ -284,7 +313,7 @@ export function startSDLEventPumpLoop(runner) {
       return;
     }
 
-    runner.pyodide.runPythonAsync('import pygame\\npygame.event.pump()').catch(() => {
+    runner.pyodide.runPythonAsync('import pygame; pygame.event.pump()').catch(() => {
       // Keep loop alive even if pygame is temporarily unavailable.
     });
   }, 50);

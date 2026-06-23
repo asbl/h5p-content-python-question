@@ -367,7 +367,35 @@
           "options": [
             { "label": "Bitte wählen" },
             { "label": "Eingabe/Ausgabe Testfälle" },
-            { "label": "Zielbild" }
+            { "label": "Zielbild" },
+            { "label": "Funktionstestfälle" }
+          ]
+        },
+        {
+          "label": "Algorithmus-Trace (nur Pyodide)",
+          "description": "Zeigt explizite Trace-Ereignisse für einen sichtbaren Funktionstestfall.",
+          "fields": [
+            { "label": "Array-Trace aktivieren" },
+            { "label": "Trace-Typ", "options": [{ "label": "Array" }] },
+            { "label": "Index des sichtbaren Testfalls", "description": "Nur dieser nicht versteckte Testfall wird aufgezeichnet. Der erste Testfall hat Index 0." },
+            { "label": "Maximale Trace-Ereignisse", "description": "Stoppt die Aufzeichnung nach dieser Anzahl von Ereignissen." },
+            { "label": "Maximale angezeigte Array-Werte", "description": "Längere Arrays werden im Trace gekürzt." }
+          ]
+        },
+        {
+          "label": "Algorithmus-Constraints (nur Pyodide)",
+          "description": "Statische AST-Prüfungen für Funktionsaufgaben. Diese Prüfungen werden nur mit Pyodide ausgeführt.",
+          "fields": [
+            { "label": "Rekursion verlangen" },
+            { "label": "Rekursions-Basisfall verlangen" },
+            { "label": "Maximale rekursive Aufrufe im Quelltext", "description": "0 bedeutet keine Begrenzung." },
+            { "label": "Erforderliche Schleife", "options": [{ "label": "Keine Vorgabe" }, { "label": "Beliebige Schleife" }, { "label": "For-Schleife" }, { "label": "While-Schleife" }] },
+            { "label": "Maximale Schleifen im Quelltext", "description": "0 bedeutet keine Begrenzung." },
+            { "label": "Maximale Schleifenverschachtelung", "description": "0 bedeutet keine Begrenzung." },
+            { "label": "Bedingung verlangen" }, { "label": "Return-Anweisung verlangen" }, { "label": "Zuweisungen auf Modulebene verbieten" },
+            { "label": "Verbotene Funktionsaufrufe", "description": "Durch Kommas getrennte Funktionsnamen oder Methoden, zum Beispiel sorted, sort, sum." },
+            { "label": "Erforderliche Datenstrukturen", "entity": "data structure", "field": { "label": "Datenstruktur", "options": [{ "label": "Liste" }, { "label": "Dictionary" }, { "label": "Set" }, { "label": "Tuple" }] } },
+            { "label": "Verbotene Datenstrukturen", "entity": "data structure", "field": { "label": "Datenstruktur", "options": [{ "label": "Liste" }, { "label": "Dictionary" }, { "label": "Set" }, { "label": "Tuple" }] } }
           ]
         },
         {
@@ -378,12 +406,23 @@
           ]
         },
         {
+          "label": "Funktionsname",
+          "description": "Name der Funktion, die Lernende implementieren sollen, zum Beispiel binary_search. Unterstützt werden nur Buchstaben, Ziffern und Unterstriche."
+        },
+        {
           "label": "Testfälle",
           "entity": "testcase",
           "field": {
             "label": "Testfall",
             "fields": [
               { "label": "Versteckter Testfall", "description": "Eingabe- und Ausgabe-Werte werden dem Lernenden nicht angezeigt." },
+              {
+                "label": "Funktionsargumente",
+                "description": "Argumente, die der Funktion als JSON-Werte in dieser Reihenfolge übergeben werden. Beispiele: [1, 2, 3], \"Ada\", true, null.",
+                "entity": "argument",
+                "field": { "label": "Argument", "description": "Ein JSON-Wert, zum Beispiel [1, 2, 3] oder \"Ada\"." }
+              },
+              { "label": "Erwartetes Ergebnis", "description": "Erwarteter Rückgabewert als JSON-Wert, zum Beispiel 3, [1, 2], true oder null." },
               { "label": "Eingaben", "entity": "input", "field": { "label": "Text", "description": "Eingabe" } },
               { "label": "Ausgaben", "entity": "output", "field": { "label": "Antwort", "description": "Ausgabe" } }
             ]

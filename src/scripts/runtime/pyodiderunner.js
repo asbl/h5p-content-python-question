@@ -15,6 +15,7 @@ import {
 import PyodideImageService from './services/pyodide-image-service';
 import PyodideSourceService from './services/pyodide-source-service';
 import PyodideSoundService from './services/pyodide-sound-service';
+import PyodideCanvasService from './services/pyodide-canvas-service';
 import {
   bindSDLCanvas as bindSDLCanvasService,
   primeSDLCanvasLogicalSize as primeSDLCanvasLogicalSizeService,
@@ -92,6 +93,7 @@ export default class PyodideRunner {
     this.imageService = new PyodideImageService(this);
     this.soundService = new PyodideSoundService(this);
     this.sourceService = new PyodideSourceService(this);
+    this.canvasService = new PyodideCanvasService(this);
     this.canvasRuntimeManager = null;
 
     /* Options */
@@ -808,63 +810,7 @@ export default class PyodideRunner {
    * @returns {void}
    */
   setupP5(canvasDiv) {
-    if (!window.p5) {
-      console.error(getPythonL10nValue(this.l10n, 'pyodideP5Missing'));
-      return;
-    }
-
-    const learnerSetup = typeof window.setup === 'function' ? window.setup : null;
-    const learnerDraw = typeof window.draw === 'function' ? window.draw : null;
-
-    this.restoreP5WindowBindings();
-
-    if (this.p5Instance) {
-      this.p5Instance.remove();
-      this.p5Instance = null;
-    }
-
-    canvasDiv.innerHTML = '';
-    this.canvasDiv = canvasDiv;
-
-    // Rebind p5 APIs onto window so learner code can use the regular globals.
-    const runner = this;
-    const sketch = (p) => {
-      runner.p5Instance = p;
-
-      if (learnerSetup) {
-        p.setup = () => learnerSetup();
-      }
-      if (learnerDraw) {
-        p.draw = () => {
-          if (runner.stopped) {
-            p.noLoop();
-            return;
-          }
-          learnerDraw();
-        };
-      }
-
-      if (learnerSetup) {
-        runner.bindP5WindowFunction('setup', (...args) => p.setup?.(...args));
-      }
-
-      if (learnerDraw) {
-        runner.bindP5WindowFunction('draw', (...args) => p.draw?.(...args));
-      }
-
-      Object.getOwnPropertyNames(p.__proto__).forEach((name) => {
-        if (typeof p[name] === 'function') {
-          if (name === 'constructor') {
-            return;
-          }
-
-          runner.bindP5WindowFunction(name, (...args) => p[name](...args));
-        }
-      });
-    };
-
-    const P5Runtime = window.p5;
-    this.p5Instance = new P5Runtime(sketch, canvasDiv);
+    return this.canvasService.setupP5(canvasDiv);
   }
 
   /**
@@ -875,61 +821,7 @@ export default class PyodideRunner {
    * @returns {HTMLCanvasElement|null} The mounted canvas element.
    */
   setupSDLCanvas(canvasDiv) {
-    if (!canvasDiv) {
-      return null;
-    }
-
-    if (!this.pyodide?.canvas?.setCanvas2D) {
-      return null;
-    }
-
-    this.canvasDiv = canvasDiv;
-
-    // Reuse the existing canvas if the correct one is already in the div.
-    // Destroying and recreating the element causes SDL to render to an orphaned
-    // surface, leaving the visible canvas permanently black.
-    const existing = canvasDiv.querySelector('canvas.pyodide-sdl-canvas');
-    if (existing) {
-      const canvas = existing;
-
-      if (this.pyodide?._api) {
-        this.pyodide._api._skip_unwind_fatal_error = true;
-      }
-
-      return this.finalizeSDLCanvasSetup(canvas);
-    }
-
-    canvasDiv.innerHTML = '';
-
-    const canvas = document.createElement('canvas');
-    canvas.classList.add('pyodide-sdl-canvas');
-    // Start at 1×1 so that ANY pygame.display.set_mode() call changes both
-    // canvas.width and canvas.height, guaranteeing the MutationObserver fires
-    // and syncSDLCanvasSize updates the CSS to the correct world dimensions.
-    // (If we used the container size, a World whose width matched the initial
-    // canvas.width would leave canvas.width unchanged, the observer might not
-    // fire for that attribute, and the display would stay square.)
-    canvas.width = 1;
-    canvas.height = 1;
-    canvas.style.maxWidth = '100%';
-    canvas.style.height = 'auto';
-    canvas.style.display = 'block';
-    canvas.tabIndex = 0;
-    canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', 'Program canvas');
-   
-    // Ensure canvas can receive mouse/pointer events
-    canvas.style.pointerEvents = 'auto';
-    canvas.style.touchAction = 'none';
-    canvas.style.cursor = 'auto';
-
-    canvasDiv.appendChild(canvas);
-
-    if (this.pyodide?._api) {
-      this.pyodide._api._skip_unwind_fatal_error = true;
-    }
-
-    return this.finalizeSDLCanvasSetup(canvas);
+    return this.canvasService.setupSDLCanvas(canvasDiv);
   }
 
   /**
@@ -969,45 +861,6 @@ export default class PyodideRunner {
    * @returns {void}
    */
   addCanvas(canvasWrapper, canvasDiv, canvasRuntimeManager = null) {
-    if (!canvasDiv) return;
-
-    this.canvasWrapper = canvasWrapper;
-    this.canvasDiv = canvasDiv;
-    this.canvasRuntimeManager = canvasRuntimeManager;
-    this.setCanvasLoading(true);
-
-    if (this.runtime.containsP5Code()) {
-      ensureP5Script(this.options.p5CdnUrl)
-        .then(() => {
-          this.setupP5(canvasDiv);
-          this.setCanvasLoading(false);
-        })
-        .catch((error) => {
-          this.setCanvasLoading(false);
-          this.onError(error);
-        });
-    }
-    else if (this.runtime.containsSDLCode()) {
-      this.setup()
-        .then(() => {
-          this.setupSDLCanvas(canvasDiv);
-          this.setCanvasLoading(false);
-        })
-        .catch((error) => {
-          this.setCanvasLoading(false);
-          this.onError(error);
-        });
-    }
-    else if (!this._isInitialized) {
-      this.setup()
-        .then(() => this.setCanvasLoading(false))
-        .catch((error) => {
-          this.setCanvasLoading(false);
-          this.onError(error);
-        });
-    }
-    else {
-      this.setCanvasLoading(false);
-    }
+    return this.canvasService.addCanvas(canvasWrapper, canvasDiv, canvasRuntimeManager);
   }
 }

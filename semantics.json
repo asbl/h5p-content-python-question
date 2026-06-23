@@ -840,8 +840,49 @@
                     {
                         "value": "targetImage",
                         "label": "Target Image"
+                    },
+                    {
+                        "value": "functionTests",
+                        "label": "Function Test Cases"
                     }
                     
+                ]
+            },
+            {
+                "name": "algorithmTrace",
+                "type": "group",
+                "label": "Algorithm trace (Pyodide only)",
+                "description": "Shows explicit trace events for a visible function test case.",
+                "widget": "showWhen",
+                "showWhen": { "rules": [{ "field": "../pythonRunner", "equals": "pyodide" }, { "field": "gradingMethod", "equals": "functionTests" }] },
+                "fields": [
+                    { "name": "enabled", "type": "boolean", "label": "Enable array trace", "default": false },
+                    { "name": "traceType", "type": "select", "label": "Trace type", "default": "array", "options": [{ "value": "array", "label": "Array" }] },
+                    { "name": "traceTestCaseIndex", "type": "number", "label": "Visible test case index", "description": "Only this non-hidden test case is traced. The first test case has index 0.", "default": 0, "min": 0 },
+                    { "name": "maxEvents", "type": "number", "label": "Maximum trace events", "description": "Stops recording after this many events.", "default": 500, "min": 1 },
+                    { "name": "maxSnapshotLength", "type": "number", "label": "Maximum displayed array values", "description": "Longer arrays are truncated in the trace.", "default": 100, "min": 1 }
+                ]
+            },
+            {
+                "name": "algorithmConstraints",
+                "type": "group",
+                "label": "Algorithm constraints (Pyodide only)",
+                "description": "Static AST checks for function tasks. These checks are only run with Pyodide.",
+                "widget": "showWhen",
+                "showWhen": { "rules": [{ "field": "../pythonRunner", "equals": "pyodide" }, { "field": "gradingMethod", "equals": "functionTests" }] },
+                "fields": [
+                    { "name": "requireRecursion", "type": "boolean", "label": "Require recursion", "default": false },
+                    { "name": "requireBaseCase", "type": "boolean", "label": "Require recursion base case", "default": false },
+                    { "name": "maxRecursiveCalls", "type": "number", "label": "Maximum recursive calls in source", "description": "0 means no limit.", "default": 0, "min": 0 },
+                    { "name": "requiredLoop", "type": "select", "label": "Required loop", "default": "none", "options": [{ "value": "none", "label": "No requirement" }, { "value": "any", "label": "Any loop" }, { "value": "for", "label": "For loop" }, { "value": "while", "label": "While loop" }] },
+                    { "name": "maxLoopCount", "type": "number", "label": "Maximum loops in source", "description": "0 means no limit.", "default": 0, "min": 0 },
+                    { "name": "maxLoopNesting", "type": "number", "label": "Maximum loop nesting", "description": "0 means no limit.", "default": 0, "min": 0 },
+                    { "name": "requireConditional", "type": "boolean", "label": "Require conditional", "default": false },
+                    { "name": "requireReturn", "type": "boolean", "label": "Require return statement", "default": false },
+                    { "name": "forbidTopLevelAssignments", "type": "boolean", "label": "Forbid top-level assignments", "default": false },
+                    { "name": "forbiddenCalls", "type": "text", "label": "Forbidden function calls", "description": "Comma-separated function names or methods, for example sorted, sort, sum.", "optional": true },
+                    { "name": "requiredDataStructures", "type": "list", "label": "Required data structures", "entity": "data structure", "optional": true, "field": { "name": "structure", "type": "select", "label": "Data structure", "options": [{ "value": "list", "label": "List" }, { "value": "dict", "label": "Dictionary" }, { "value": "set", "label": "Set" }, { "value": "tuple", "label": "Tuple" }] } },
+                    { "name": "forbiddenDataStructures", "type": "list", "label": "Forbidden data structures", "entity": "data structure", "optional": true, "field": { "name": "structure", "type": "select", "label": "Data structure", "options": [{ "value": "list", "label": "List" }, { "value": "dict", "label": "Dictionary" }, { "value": "set", "label": "Set" }, { "value": "tuple", "label": "Tuple" }] } }
                 ]
             },
             {
@@ -866,6 +907,22 @@
                 ]
             },
             {
+                "name": "functionName",
+                "type": "text",
+                "label": "Function name",
+                "description": "Name of the function learners have to implement, for example binary_search. Only letters, digits and underscores are supported.",
+                "required": true,
+                "widget": "showWhen",
+                "showWhen": {
+                    "rules": [
+                        {
+                            "field": "gradingMethod",
+                            "equals": "functionTests"
+                        }
+                    ]
+                }
+            },
+            {
                 "name": "testCases",
                 "type": "list",
                 "label": "Test Cases",
@@ -877,7 +934,8 @@
                             "field": "gradingMethod",
                             "equals": [
                                 "ioTestCases",
-                                "targetImage"
+                                "targetImage",
+                                "functionTests"
                             ]
                         }
                     ]
@@ -894,7 +952,59 @@
                             "type": "boolean",
                             "label": "Hidden Testcase",
                             "description": "Input- and Output values are not shown to user.",
+                            "widget": "showWhen",
+                            "showWhen": {
+                                "rules": [
+                                    {
+                                        "field": "../../gradingMethod",
+                                        "equals": [
+                                            "ioTestCases",
+                                            "targetImage",
+                                            "functionTests"
+                                        ]
+                                    }
+                                ]
+                            },
                             "default": false
+                        },
+                        {
+                            "name": "arguments",
+                            "type": "list",
+                            "label": "Function Arguments",
+                            "entity": "argument",
+                            "optional": true,
+                            "description": "Arguments passed to the function as JSON values, in order. Examples: [1, 2, 3], \"Ada\", true, null.",
+                            "widget": "showWhen",
+                            "showWhen": {
+                                "rules": [
+                                    {
+                                        "field": "../../gradingMethod",
+                                        "equals": "functionTests"
+                                    }
+                                ]
+                            },
+                            "field": {
+                                "name": "argument",
+                                "type": "text",
+                                "label": "Argument",
+                                "description": "A JSON value, for example [1, 2, 3] or \"Ada\"."
+                            }
+                        },
+                        {
+                            "name": "expectedResult",
+                            "type": "text",
+                            "label": "Expected Result",
+                            "description": "Expected return value as a JSON value, for example 3, [1, 2], true, or null.",
+                            "required": true,
+                            "widget": "showWhen",
+                            "showWhen": {
+                                "rules": [
+                                    {
+                                        "field": "../../gradingMethod",
+                                        "equals": "functionTests"
+                                    }
+                                ]
+                            }
                         },
                         {
                             "name": "inputs",
@@ -902,6 +1012,18 @@
                             "label": "Inputs",
                             "entity": "input",
                             "min": 1,
+                            "widget": "showWhen",
+                            "showWhen": {
+                                "rules": [
+                                    {
+                                        "field": "../../gradingMethod",
+                                        "equals": [
+                                            "ioTestCases",
+                                            "targetImage"
+                                        ]
+                                    }
+                                ]
+                            },
                             "field": {
                                 "name": "input",
                                 "type": "text",

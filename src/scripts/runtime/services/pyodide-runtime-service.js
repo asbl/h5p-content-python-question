@@ -5,16 +5,18 @@ import {
   tPython,
 } from '../../services/python-l10n';
 import { normalizePythonExecutionLimit } from '../../services/python-execution-limit';
+import { normalizePythonPackageEntries } from '../../services/python-package-utils';
 
 /**
  * Shared Pyodide loader state across all runner instances.
  * Per-instance Pyodide state is stored in a WeakMap keyed by the Pyodide object.
- * @type {{loadPyodidePromise: Promise<*>|null, sharedPyodidePromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, compatibilityPromise: Promise<*>|null, activeRuntime: object|null, activeSDLCanvas: HTMLCanvasElement|null, activeSDLRunner: object|null, loadedPackages: Set<string>, pyodideInstanceState: WeakMap<object, {compatibilityPromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, loadedPackages: Set<string>}>, fetchCacheInstalled: boolean}}
+ * @type {{loadPyodidePromise: Promise<*>|null, sharedPyodidePromise: Promise<*>|null, miniworldsWheelPromise: Promise<string>|null, inputOverridePromise: Promise<*>|null, compatibilityPromise: Promise<*>|null, activeRuntime: object|null, activeSDLCanvas: HTMLCanvasElement|null, activeSDLRunner: object|null, loadedPackages: Set<string>, pyodideInstanceState: WeakMap<object, {compatibilityPromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, loadedPackages: Set<string>}>, fetchCacheInstalled: boolean}}
  */
 export const sharedPyodideRuntimeState = {
   compatibilityPromise: null,
   loadPyodidePromise: null,
   sharedPyodidePromise: null,
+  miniworldsWheelPromise: null,
   inputOverridePromise: null,
   activeRuntime: null,
   activeSDLCanvas: null,
@@ -25,9 +27,89 @@ export const sharedPyodideRuntimeState = {
   /** While > 0, Python stdout/stderr is routed to browser console only. */
   packageLoadDepth: 0,
 };
-const PYODIDE_FETCH_CACHE_NAME = 'h5p-pythonquestion-pyodide-fetch-v2';
+const PYODIDE_FETCH_CACHE_NAME = 'h5p-pythonquestion-pyodide-fetch-v3';
 
 const DEFAULT_PYODIDE_CDN_URL = 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js';
+const MINIWORLDS_PYPI_METADATA_URL = 'https://pypi.org/pypi/miniworlds/json';
+
+const PYODIDE_CORE_ASSETS = Object.freeze([
+  'pyodide.js',
+  'pyodide-lock.json',
+  'pyodide.asm.js',
+  'pyodide.asm.wasm',
+  'python_stdlib.zip',
+]);
+
+/**
+ * Records a named duration in the browser Performance timeline when available.
+ * @param {string} name - Stable H5P performance measurement name.
+ * @param {function(): Promise<*>} callback - Work to measure.
+ * @returns {Promise<*>} Result of callback.
+ */
+export async function measurePyodidePerformance(name, callback) {
+  const canMeasure = typeof performance !== 'undefined'
+    && typeof performance.mark === 'function'
+    && typeof performance.measure === 'function';
+  const startMark = `h5p.pyodide.${name}:start`;
+  const endMark = `h5p.pyodide.${name}:end`;
+
+  if (canMeasure) {
+    performance.mark(startMark);
+  }
+
+  try {
+    return await callback();
+  }
+  finally {
+    if (canMeasure) {
+      performance.mark(endMark);
+      performance.measure(`h5p.pyodide.${name}`, startMark, endMark);
+    }
+  }
+}
+
+/**
+ * Resolves the latest browser-compatible Miniworlds wheel from PyPI. The PyPI
+ * response is deliberately never persisted: a fresh page session sees a newly
+ * published Miniworlds release, while its immutable wheel remains cacheable.
+ * @returns {Promise<string>} Direct URL for the current Miniworlds wheel.
+ */
+export function resolveLatestMiniworldsWheel() {
+  const state = sharedPyodideRuntimeState;
+
+  if (state.miniworldsWheelPromise) {
+    return state.miniworldsWheelPromise;
+  }
+
+  state.miniworldsWheelPromise = measurePyodidePerformance('resolve:miniworlds', async () => {
+    if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
+      throw new Error('The browser cannot resolve the Miniworlds package.');
+    }
+
+    const response = await window.fetch(MINIWORLDS_PYPI_METADATA_URL, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Could not resolve the current Miniworlds release (${response.status}).`);
+    }
+
+    const metadata = await response.json();
+    const version = String(metadata?.info?.version || '');
+    const releases = metadata?.releases?.[version] || metadata?.urls || [];
+    const wheel = releases.find((release) => (
+      release?.packagetype === 'bdist_wheel' && /-py3-none-any\.whl$/i.test(release.filename || '')
+    ));
+
+    if (!wheel?.url) {
+      throw new Error('PyPI did not provide a browser-compatible Miniworlds wheel.');
+    }
+
+    return wheel.url;
+  }).catch((error) => {
+    state.miniworldsWheelPromise = null;
+    throw error;
+  });
+
+  return state.miniworldsWheelPromise;
+}
 
 /**
  * Normalizes a Pyodide script URL or base directory into a script + index URL pair.
@@ -88,6 +170,7 @@ export function resetSharedPyodideRuntimeState() {
   sharedPyodideRuntimeState.compatibilityPromise = null;
   sharedPyodideRuntimeState.loadPyodidePromise = null;
   sharedPyodideRuntimeState.sharedPyodidePromise = null;
+  sharedPyodideRuntimeState.miniworldsWheelPromise = null;
   sharedPyodideRuntimeState.inputOverridePromise = null;
   sharedPyodideRuntimeState.activeRuntime = null;
   sharedPyodideRuntimeState.activeSDLCanvas = null;
@@ -104,7 +187,7 @@ export function resetSharedPyodideRuntimeState() {
  * @param {string} pyodideCdnUrl - Configured Pyodide CDN script URL.
  * @returns {boolean} True when the request should be cached.
  */
-function shouldCachePyodideFetch(url, pyodideCdnUrl) {
+export function shouldCachePyodideFetch(url, pyodideCdnUrl) {
   try {
     const requestUrl = new URL(url);
     const pyodideOrigin = new URL(pyodideCdnUrl).origin;
@@ -113,8 +196,11 @@ function shouldCachePyodideFetch(url, pyodideCdnUrl) {
       return true;
     }
 
-    return requestUrl.hostname === 'pypi.org'
-      || requestUrl.hostname === 'files.pythonhosted.org';
+    // Cache only the immutable wheel artifact, never PyPI's package index or
+    // JSON metadata. Micropip therefore resolves a newly published Miniworlds
+    // release on PyPI, then uses its new versioned wheel URL. Existing wheels
+    // remain safe to reuse from Cache Storage.
+    return /\.whl$/i.test(requestUrl.pathname);
   }
   catch (_) {
     return false;
@@ -178,6 +264,61 @@ function installPyodideFetchCache(pyodideCdnUrl) {
 
   window.fetch = cachedFetch;
   state.fetchCacheInstalled = true;
+}
+
+/**
+ * Downloads Pyodide's core files and configured Pyodide package wheels into
+ * the browser cache before the learner starts the program. Package metadata is
+ * deliberately not prefetched: micropip must resolve current PyPI releases.
+ * @param {object} [options] - Runtime options.
+ * @param {string[]} [packages] - Additional packages inferred from source code.
+ * @returns {Promise<void>} Resolves after all cacheable assets have settled.
+ */
+export async function precachePyodideAssets(options = {}, packages = []) {
+  if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
+    return;
+  }
+
+  const { scriptUrl, indexURL } = normalizePyodideScriptUrl(options.pyodideCdnUrl);
+  const packageNames = normalizePythonPackageEntries([
+    ...(options.packages || []),
+    ...packages,
+  ]);
+
+  if (options.persistentPyodideCache !== false) {
+    installPyodideFetchCache(scriptUrl);
+  }
+
+  const coreAssetUrls = PYODIDE_CORE_ASSETS.map((assetName) => new URL(assetName, indexURL).toString());
+  const coreResponses = await Promise.allSettled(coreAssetUrls.map((url) => window.fetch(url)));
+  const lockResponse = coreResponses[PYODIDE_CORE_ASSETS.indexOf('pyodide-lock.json')];
+
+  if (lockResponse?.status !== 'fulfilled' || !lockResponse.value?.ok) {
+    return;
+  }
+
+  try {
+    const lock = await lockResponse.value.clone().json();
+    const packageUrls = packageNames
+      .map((packageName) => lock?.packages?.[packageName]?.file_name)
+      .filter(Boolean)
+      .map((fileName) => new URL(fileName, indexURL).toString());
+
+    if (packageNames.includes('miniworlds')) {
+      try {
+        packageUrls.push(await resolveLatestMiniworldsWheel());
+      }
+      catch (_) {
+        // The normal micropip path retains its existing fallback behavior.
+      }
+    }
+
+    await Promise.allSettled(packageUrls.map((url) => window.fetch(url)));
+  }
+  catch (_) {
+    // Precache is opportunistic. The regular Pyodide loading path reports any
+    // real download failures with its existing, localized error handling.
+  }
 }
 
 /**
@@ -767,15 +908,15 @@ export async function getSharedPyodide(options = {}, runtime = null) {
     installPyodideFetchCache(scriptUrl);
   }
 
-  await ensurePyodideScript(scriptUrl);
+  await measurePyodidePerformance('script', () => ensurePyodideScript(scriptUrl));
 
   if (!state.sharedPyodidePromise) {
-    state.sharedPyodidePromise = loadPyodide({
+    state.sharedPyodidePromise = measurePyodidePerformance('initialize', () => loadPyodide({
       indexURL,
       stdout: (text) => writePyodideRuntimeOutput(text),
       stderr: (text) => writePyodideRuntimeOutput(text, true),
       stdin: () => '\n',
-    }).catch((error) => {
+    })).catch((error) => {
       state.sharedPyodidePromise = null;
       throw error;
     });

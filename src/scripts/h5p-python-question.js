@@ -153,7 +153,18 @@ export default class PythonQuestion extends H5P.CodeQuestion {
    * @returns {object} Runtime options.
    */
   getRuntimeOptions() {
-    return buildPythonRuntimeOptions(this.pythonConfig, this.runtimeL10n);
+    const options = buildPythonRuntimeOptions(this.pythonConfig, this.runtimeL10n);
+
+    if (this.contentType === 'ide_only') {
+      return {
+        ...options,
+        // A game loop is expected to keep running in IDE mode. Authors can
+        // still configure a limit explicitly for individual assignments.
+        disableOutputPopups: true,
+      };
+    }
+
+    return options;
   }
 
   getCodingLanguage() {

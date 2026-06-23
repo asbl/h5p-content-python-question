@@ -12,6 +12,20 @@ describe('Pyodide package service', () => {
   });
 
   it('loads pyodide and micropip packages only when missing', async () => {
+    const originalFetch = window.fetch;
+    window.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        info: { version: '3.6.0' },
+        releases: {
+          '3.6.0': [{
+            packagetype: 'bdist_wheel',
+            filename: 'miniworlds-3.6.0-py3-none-any.whl',
+            url: 'https://files.pythonhosted.org/packages/miniworlds-3.6.0-py3-none-any.whl',
+          }],
+        },
+      }),
+    }));
     const micropip = {
       install: vi.fn(async () => {}),
       destroy: vi.fn(),
@@ -25,7 +39,9 @@ describe('Pyodide package service', () => {
 
     expect(pyodide.loadPackage).toHaveBeenNthCalledWith(1, ['numpy', 'pygame-ce']);
     expect(pyodide.loadPackage).toHaveBeenNthCalledWith(2, ['micropip']);
-    expect(micropip.install).toHaveBeenCalledWith(['miniworlds']);
+    expect(micropip.install).toHaveBeenCalledWith([
+      'https://files.pythonhosted.org/packages/miniworlds-3.6.0-py3-none-any.whl',
+    ]);
     expect(getLoadedPyodidePackages(pyodide).has('numpy')).toBe(true);
     expect(getLoadedPyodidePackages(pyodide).has('micropip')).toBe(true);
     expect(getLoadedPyodidePackages(pyodide).has('miniworlds')).toBe(true);
@@ -35,6 +51,7 @@ describe('Pyodide package service', () => {
 
     expect(pyodide.loadPackage).toHaveBeenCalledTimes(2);
     expect(micropip.install).toHaveBeenCalledTimes(1);
+    window.fetch = originalFetch;
   });
 
   it('does not reuse the loaded package registry across Pyodide instances', async () => {

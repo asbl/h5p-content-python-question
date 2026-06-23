@@ -4,6 +4,7 @@ import PyodideRunner from './pyodiderunner';
 import {
   getPythonL10nValue,
 } from '../services/python-l10n';
+import { precachePyodideAssets } from './services/pyodide-runtime-service';
 
 /**
  * Python runtime for executing Python code via Skulpt.
@@ -62,6 +63,57 @@ export default class PythonRuntime extends H5P.Runtime {
 
     // Lazily initialize the canvas manager
     this._canvasManager = this.getCanvasManager();
+
+    this.schedulePyodideSDLPreload();
+  }
+
+  /**
+   * Starts the costly Pyodide SDL bootstrap while the learner reads the
+   * exercise. The runner still performs the regular setup before execution,
+   * so a changed program remains safe and this only improves the first-run
+   * latency for pygame-ce and miniworlds content.
+   * @returns {void}
+   */
+  schedulePyodideSDLPreload() {
+    if (
+      this.runnerType !== 'pyodide' ||
+      this._pyodideSDLPreloadScheduled ||
+      !this.shouldPreloadPyodideSDL()
+    ) {
+      return;
+    }
+
+    this._pyodideSDLPreloadScheduled = true;
+    precachePyodideAssets(this.options, ['miniworlds']).catch(() => {
+      // The idle setup path and the normal run path both remain authoritative.
+    });
+    const preload = () => {
+      this.getRunner().setup().catch((error) => {
+        // The normal run path reports setup failures to the learner. A failed
+        // speculative preload must not surface an error before they run code.
+        console.warn('Unable to preload the Pyodide SDL runtime', error);
+      });
+    };
+
+    if (typeof window?.requestIdleCallback === 'function') {
+      window.requestIdleCallback(preload, { timeout: 2000 });
+      return;
+    }
+
+    window.setTimeout(preload, 200);
+  }
+
+  /**
+   * Determines whether initial code or the configured package set needs SDL.
+   * @returns {boolean} True when pygame-ce or miniworlds should be preloaded.
+   */
+  shouldPreloadPyodideSDL() {
+    if (this.containsSDLCode()) {
+      return true;
+    }
+
+    const packages = Array.isArray(this.options?.packages) ? this.options.packages : [];
+    return packages.some((packageName) => ['miniworlds', 'pygame-ce'].includes(String(packageName).trim()));
   }
 
   /**

@@ -200,7 +200,37 @@
             },
             {
               "label": "Target Image"
+            },
+            {
+              "label": "Function Test Cases"
             }
+          ]
+        },
+        {
+          "label": "Algorithm trace (Pyodide only)",
+          "description": "Shows explicit trace events for a visible function test case.",
+          "fields": [
+            { "label": "Enable array trace" },
+            { "label": "Trace type", "options": [{ "label": "Array" }] },
+            { "label": "Visible test case index", "description": "Only this non-hidden test case is traced. The first test case has index 0." },
+            { "label": "Maximum trace events", "description": "Stops recording after this many events." },
+            { "label": "Maximum displayed array values", "description": "Longer arrays are truncated in the trace." }
+          ]
+        },
+        {
+          "label": "Algorithm constraints (Pyodide only)",
+          "description": "Static AST checks for function tasks. These checks are only run with Pyodide.",
+          "fields": [
+            { "label": "Require recursion" },
+            { "label": "Require recursion base case" },
+            { "label": "Maximum recursive calls in source", "description": "0 means no limit." },
+            { "label": "Required loop", "options": [{ "label": "No requirement" }, { "label": "Any loop" }, { "label": "For loop" }, { "label": "While loop" }] },
+            { "label": "Maximum loops in source", "description": "0 means no limit." },
+            { "label": "Maximum loop nesting", "description": "0 means no limit." },
+            { "label": "Require conditional" }, { "label": "Require return statement" }, { "label": "Forbid top-level assignments" },
+            { "label": "Forbidden function calls", "description": "Comma-separated function names or methods, for example sorted, sort, sum." },
+            { "label": "Required data structures", "entity": "data structure", "field": { "label": "Data structure", "options": [{ "label": "List" }, { "label": "Dictionary" }, { "label": "Set" }, { "label": "Tuple" }] } },
+            { "label": "Forbidden data structures", "entity": "data structure", "field": { "label": "Data structure", "options": [{ "label": "List" }, { "label": "Dictionary" }, { "label": "Set" }, { "label": "Tuple" }] } }
           ]
         },
         {
@@ -216,8 +246,50 @@
           ]
         },
         {
+          "label": "Function name",
+          "description": "Name of the function learners have to implement, for example binary_search. Only letters, digits and underscores are supported."
+        },
+        {
           "label": "Test Cases",
-          "entity": "testcase"
+          "entity": "testcase",
+          "field": {
+            "label": "Test Case",
+            "fields": [
+              {
+                "label": "Hidden Testcase",
+                "description": "Input- and Output values are not shown to user."
+              },
+              {
+                "label": "Function Arguments",
+                "description": "Arguments passed to the function as JSON values, in order. Examples: [1, 2, 3], \"Ada\", true, null.",
+                "entity": "argument",
+                "field": {
+                  "label": "Argument",
+                  "description": "A JSON value, for example [1, 2, 3] or \"Ada\"."
+                }
+              },
+              {
+                "label": "Expected Result",
+                "description": "Expected return value as a JSON value, for example 3, [1, 2], true, or null."
+              },
+              {
+                "label": "Inputs",
+                "entity": "input",
+                "field": {
+                  "label": "Text",
+                  "description": "Input"
+                }
+              },
+              {
+                "label": "Outputs",
+                "entity": "output",
+                "field": {
+                  "label": "Answer",
+                  "description": "Output"
+                }
+              }
+            ]
+          }
         },
         {
           "label": "Solution Code",

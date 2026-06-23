@@ -8,11 +8,14 @@ import {
   getSharedPyodide,
   installPyodideRuntimeCompatibility,
   normalizePyodideScriptUrl,
+  precachePyodideAssets,
   resetSharedPyodideRuntimeState,
+  resolveLatestMiniworldsWheel,
   setPyodideExecutionLimit,
   setActivePyodideRuntime,
   setActivePyodideSDLCanvas,
   sharedPyodideRuntimeState,
+  shouldCachePyodideFetch,
   writePyodideRuntimeOutput,
 } from '../src/scripts/runtime/services/pyodide-runtime-service.js';
 
@@ -152,6 +155,80 @@ describe('Pyodide runtime service', () => {
       scriptUrl: 'https://static.example.com/pyodide/pyodide.js',
       indexURL: 'https://static.example.com/pyodide/',
     });
+  });
+
+  it('caches concrete wheels but leaves PyPI release metadata fresh', () => {
+    const pyodideUrl = 'https://cdn.example.com/pyodide/pyodide.js';
+
+    expect(shouldCachePyodideFetch(
+      'https://files.pythonhosted.org/packages/aa/bb/miniworlds-3.6.0-py3-none-any.whl',
+      pyodideUrl,
+    )).toBe(true);
+    expect(shouldCachePyodideFetch(
+      'https://content.example.com/packages/miniworlds-3.6.0-py3-none-any.whl',
+      pyodideUrl,
+    )).toBe(true);
+    expect(shouldCachePyodideFetch('https://pypi.org/simple/miniworlds/', pyodideUrl)).toBe(false);
+    expect(shouldCachePyodideFetch('https://pypi.org/pypi/miniworlds/json', pyodideUrl)).toBe(false);
+  });
+
+  it('precaches the core runtime and configured Pyodide package wheels', async () => {
+    const originalFetch = window.fetch;
+    const fetchedUrls = [];
+    const lock = {
+      packages: {
+        numpy: { file_name: 'numpy-test.whl' },
+        'pygame-ce': { file_name: 'pygame-test.whl' },
+      },
+    };
+    window.fetch = vi.fn(async (url) => {
+      fetchedUrls.push(String(url));
+      return {
+        ok: true,
+        clone: () => ({ json: async () => lock }),
+      };
+    });
+
+    await precachePyodideAssets({
+      pyodideCdnUrl: 'https://static.example.com/pyodide/',
+      packages: ['numpy', 'pygame-ce'],
+      persistentPyodideCache: false,
+    });
+
+    expect(fetchedUrls).toEqual(expect.arrayContaining([
+      'https://static.example.com/pyodide/pyodide.js',
+      'https://static.example.com/pyodide/pyodide.asm.wasm',
+      'https://static.example.com/pyodide/python_stdlib.zip',
+      'https://static.example.com/pyodide/numpy-test.whl',
+      'https://static.example.com/pyodide/pygame-test.whl',
+    ]));
+    window.fetch = originalFetch;
+  });
+
+  it('resolves the newest versioned Miniworlds wheel without caching PyPI metadata', async () => {
+    const originalFetch = window.fetch;
+    window.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        info: { version: '3.6.0' },
+        releases: {
+          '3.6.0': [{
+            packagetype: 'bdist_wheel',
+            filename: 'miniworlds-3.6.0-py3-none-any.whl',
+            url: 'https://files.pythonhosted.org/packages/miniworlds-3.6.0-py3-none-any.whl',
+          }],
+        },
+      }),
+    }));
+
+    await expect(resolveLatestMiniworldsWheel()).resolves.toBe(
+      'https://files.pythonhosted.org/packages/miniworlds-3.6.0-py3-none-any.whl',
+    );
+    expect(window.fetch).toHaveBeenCalledWith(
+      'https://pypi.org/pypi/miniworlds/json',
+      { cache: 'no-store' },
+    );
+    window.fetch = originalFetch;
   });
 
   it('loads a custom Pyodide script URL exactly once', async () => {

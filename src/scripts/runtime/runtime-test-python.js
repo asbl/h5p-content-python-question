@@ -1,6 +1,8 @@
 import CanvasRuntimeManager from './canvasruntimemanager';
 import PythonRuntime from './runtime-python';
 import PythonSolutionRuntime from './runtime-solution-python';
+import { getAlgorithmConstraintHarness, RESULT_PREFIX } from '../services/python-algorithm-constraints';
+import { getAlgorithmTracePreamble, TRACE_PREFIX } from '../services/python-algorithm-trace';
 
 /**
  * Test runtime for executing Python student code against reference solutions.
@@ -10,6 +12,39 @@ import PythonSolutionRuntime from './runtime-solution-python';
  * - TestRuntimeMixin (test orchestration and lifecycle)
  */
 export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntime) {
+  shouldTraceCurrentTestCase() {
+    const trace = this.codeTester?.algorithmTrace || {};
+    const index = this.codeTester?.session?.testCaseIndex ?? 0;
+    const testCase = this.codeTester?.session?.getCurrentTestCase?.();
+    return this.codeTester?.hasAlgorithmTrace?.()
+      && Number(trace.traceTestCaseIndex || 0) === index
+      && testCase?.hidden !== true;
+  }
+  /**
+   * Appends the active function-test harness to learner code when required.
+   * @returns {string} Python source to execute.
+   */
+  getCode() {
+    const learnerCode = super.getCode();
+    const testCode = this.codeTester?.getTestCode
+      ? this.codeTester.getTestCode(learnerCode)
+      : learnerCode;
+    if (this.runnerType !== 'pyodide') return testCode;
+    let preamble = '';
+    if (this.codeTester?.hasAlgorithmConstraints?.()) {
+      const harness = getAlgorithmConstraintHarness(learnerCode, this.codeTester.algorithmConstraints, this.codeTester.functionName);
+      this.codeTester.setAlgorithmConstraintResult(null);
+      this.algorithmConstraintToken = harness.token;
+      preamble += `${harness.code}\n`;
+    }
+    if (this.shouldTraceCurrentTestCase()) {
+      const trace = getAlgorithmTracePreamble(this.codeTester.algorithmTrace);
+      this.algorithmTraceToken = trace.token;
+      preamble += `${trace.code}\n`;
+    }
+    return `${preamble}${testCode}`;
+  }
+
   /**
    * Creates a Python runtime for executing the reference solution.
    * @returns {PythonSolutionRuntime} The runtime to gneerate the solution
@@ -59,6 +94,35 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
    */
   outputHandler(text) {
     const trimmedText = text.trim();
+    const marker = `${RESULT_PREFIX}${this.algorithmConstraintToken}:`;
+    if (this.algorithmConstraintToken && trimmedText.startsWith(marker)) {
+      try {
+        this.codeTester.setAlgorithmConstraintResult(JSON.parse(trimmedText.slice(marker.length)));
+      }
+      catch {
+        this.codeTester.setAlgorithmConstraintResult({
+          passed: false,
+          violations: ['Constraint analysis failed'],
+        });
+      }
+      return;
+    }
+    const traceMarker = `${TRACE_PREFIX}${this.algorithmTraceToken}:`;
+    if (this.algorithmTraceToken && trimmedText.startsWith(traceMarker)) {
+      try {
+        const event = JSON.parse(trimmedText.slice(traceMarker.length));
+        if (['watch', 'compare', 'mark', 'swap'].includes(event?.type)
+          && Number.isInteger(event?.step)
+          && event.step > 0
+          && (!event.snapshot || (Array.isArray(event.snapshot) && event.snapshot.length <= 100))) {
+          this.codeTester.addAlgorithmTraceEvent(event);
+        }
+      }
+      catch {
+        // Ignore malformed trace events.
+      }
+      return;
+    }
     this.codeTester.addOutput(trimmedText);
 
     const testCaseIndex = this.codeTester.session.testCaseIndex;

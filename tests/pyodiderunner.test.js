@@ -535,10 +535,148 @@ describe('PyodideRunner', () => {
 
     expect(bindSDLCanvasSpy).toHaveBeenCalled();
     expect(focus).toHaveBeenCalledTimes(1);
-    expect(runPythonAsync).toHaveBeenCalledWith(expect.stringContaining('pygame.MOUSEBUTTONDOWN'));
+    expect(window.__h5pPygameEventQueue).toEqual([
+      expect.objectContaining({ type: 'MOUSEBUTTONDOWN' }),
+    ]);
+    expect(runPythonAsync).not.toHaveBeenCalled();
 
     runner.uninstallSDLMouseCapture();
     wrapper.remove();
+  });
+
+  it('does not rebind the SDL canvas or move focus for pointer moves', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const wrapper = document.createElement('div');
+    const canvas = document.createElement('canvas');
+    const focus = vi.fn();
+
+    canvas.width = 200;
+    canvas.height = 100;
+    canvas.focus = focus;
+    canvas.getBoundingClientRect = () => ({
+      left: 0,
+      right: 200,
+      top: 0,
+      bottom: 100,
+      width: 200,
+      height: 100,
+    });
+
+    wrapper.appendChild(canvas);
+    document.body.appendChild(wrapper);
+
+    const bindSDLCanvasSpy = vi.spyOn(runner, 'bindSDLCanvas').mockImplementation(() => {});
+
+    runner.canvasWrapper = wrapper;
+    runner.canvasDiv = wrapper;
+    runner.sdlCanvas = canvas;
+    runner.pyodide = {
+      runPythonAsync: vi.fn(() => Promise.resolve()),
+      canvas: {
+        setCanvas2D: vi.fn(),
+      },
+    };
+
+    runner.installSDLMouseCapture();
+    runner._sdlMouseCaptureBound({
+      type: 'pointermove',
+      clientX: 80,
+      clientY: 40,
+      buttons: 0,
+    });
+
+    expect(bindSDLCanvasSpy).not.toHaveBeenCalled();
+    expect(focus).not.toHaveBeenCalled();
+    expect(window.__h5pPygameEventQueue).toEqual([
+      expect.objectContaining({ type: 'MOUSEMOTION' }),
+    ]);
+
+    runner.uninstallSDLMouseCapture();
+    wrapper.remove();
+  });
+
+  it('processes the same event object only once across document and canvas listeners', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    const canvas = document.createElement('canvas');
+
+    canvas.width = 200;
+    canvas.height = 100;
+    canvas.getBoundingClientRect = () => ({
+      left: 0,
+      right: 200,
+      top: 0,
+      bottom: 100,
+      width: 200,
+      height: 100,
+    });
+
+    document.body.appendChild(canvas);
+
+    vi.spyOn(runner, 'bindSDLCanvas').mockImplementation(() => {});
+
+    runner.sdlCanvas = canvas;
+    runner.pyodide = {
+      runPythonAsync: vi.fn(() => Promise.resolve()),
+      canvas: {
+        setCanvas2D: vi.fn(),
+      },
+    };
+
+    runner.installSDLMouseCapture();
+
+    const event = {
+      type: 'pointerdown',
+      clientX: 80,
+      clientY: 40,
+      button: 0,
+      buttons: 1,
+    };
+    runner._sdlMouseCaptureBound(event);
+    runner._sdlMouseCaptureBound(event);
+
+    expect(window.__h5pPygameEventQueue).toHaveLength(1);
+
+    runner.uninstallSDLMouseCapture();
+    canvas.remove();
+  });
+
+  it('coalesces queued pygame mouse motion events', () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+
+    runner.sdlCanvas = { width: 200, height: 100 };
+    runner.pyodide = {
+      runPythonAsync: vi.fn(() => Promise.resolve()),
+    };
+
+    const rect = {
+      left: 0,
+      top: 0,
+      width: 200,
+      height: 100,
+    };
+
+    runner.postSyntheticPygameMouseEvent({
+      type: 'pointermove',
+      clientX: 10,
+      clientY: 10,
+      buttons: 0,
+    }, rect);
+    runner.postSyntheticPygameMouseEvent({
+      type: 'pointermove',
+      clientX: 20,
+      clientY: 20,
+      buttons: 0,
+    }, rect);
+
+    expect(window.__h5pPygameEventQueue).toEqual([
+      expect.objectContaining({
+        type: 'MOUSEMOTION',
+        attrs: expect.objectContaining({ pos: [20, 20] }),
+      }),
+    ]);
   });
 
   it('ignores mouse fallback events when PointerEvent support exists', () => {
@@ -606,7 +744,7 @@ describe('PyodideRunner', () => {
         touch: false,
       },
     }]);
-    expect(runner.pyodide.runPythonAsync).toHaveBeenCalledWith(expect.stringContaining('pygame.MOUSEBUTTONDOWN'));
+    expect(runner.pyodide.runPythonAsync).not.toHaveBeenCalled();
   });
 
   it('sets CSS to natural 1:1 size and delegates proportional scaling to CSS aspect-ratio', () => {
