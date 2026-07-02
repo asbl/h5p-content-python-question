@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  buildPyodideLoadPlan,
   clearPyodideExecutionLimit,
   ensurePyodideScript,
   getLoadedPyodidePackages,
+  getPyodidePerformanceEntries,
   getPyodideRuntimeInput,
   getSharedPyodide,
   installPyodideRuntimeCompatibility,
@@ -16,6 +18,8 @@ import {
   setActivePyodideSDLCanvas,
   sharedPyodideRuntimeState,
   shouldCachePyodideFetch,
+  synchronizePyodideLoadedPackages,
+  warmPyodidePackageImports,
   writePyodideRuntimeOutput,
 } from '../src/scripts/runtime/services/pyodide-runtime-service.js';
 
@@ -135,6 +139,23 @@ describe('Pyodide runtime service', () => {
     expect(runtimeB.outputHandler).toHaveBeenCalledWith('second', true);
   });
 
+  it('records structured Pyodide performance entries', async () => {
+    window.loadPyodide = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve({
+        globals: { set: vi.fn() },
+        runPythonAsync: vi.fn().mockResolvedValue(undefined),
+      }));
+
+    await getSharedPyodide({}, { outputHandler: vi.fn(), inputHandler: vi.fn(), l10n: {} });
+
+    expect(getPyodidePerformanceEntries()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'script' }),
+      expect.objectContaining({ name: 'initialize' }),
+    ]));
+    expect(window.__h5pPyodidePerformance).toBeDefined();
+  });
+
   it('tracks loaded packages per Pyodide instance', () => {
     const firstPyodide = {};
     const secondPyodide = {};
@@ -143,6 +164,65 @@ describe('Pyodide runtime service', () => {
 
     expect(getLoadedPyodidePackages(firstPyodide).has('numpy')).toBe(true);
     expect(getLoadedPyodidePackages(secondPyodide).has('numpy')).toBe(false);
+  });
+
+  it('builds a package load plan for bootstrap and micropip packages', () => {
+    expect(buildPyodideLoadPlan(
+      { packages: ['miniworlds', 'numpy', 'pygame-ce', 'numpy'] },
+      ['scipy', 'miniworlds-turtle'],
+    )).toEqual({
+      packages: ['miniworlds', 'numpy', 'pygame-ce', 'scipy', 'miniworlds-turtle'],
+      bootstrapPackages: ['numpy', 'pygame-ce', 'scipy'],
+      pyodidePackages: ['numpy', 'pygame-ce', 'scipy'],
+      micropipPackages: ['miniworlds', 'miniworlds-turtle'],
+    });
+  });
+
+  it('synchronizes package state from explicit packages and Pyodide reports', () => {
+    const pyodide = {
+      loadedPackages: {
+        scipy: '1.13.1',
+      },
+    };
+
+    synchronizePyodideLoadedPackages(pyodide, ['numpy']);
+
+    expect(getLoadedPyodidePackages(pyodide).has('numpy')).toBe(true);
+    expect(getLoadedPyodidePackages(pyodide).has('scipy')).toBe(true);
+  });
+
+  it('warms side-effect-safe Python package imports only', async () => {
+    const pyodide = {
+      runPythonAsync: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await warmPyodidePackageImports(pyodide, [
+      'numpy',
+      'scipy',
+      'pillow',
+      'pygame-ce',
+      'miniworlds',
+      'numpy',
+    ]);
+
+    expect(pyodide.runPythonAsync).toHaveBeenCalledTimes(1);
+    const code = pyodide.runPythonAsync.mock.calls[0][0];
+    expect(code).toContain('"numpy","scipy","PIL"');
+    expect(code).not.toContain('pygame');
+    expect(code).not.toContain('miniworlds');
+    expect(getPyodidePerformanceEntries()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'warm-imports:numpy,scipy,PIL' }),
+    ]));
+  });
+
+  it('skips warm imports when no package is safe to import speculatively', async () => {
+    const pyodide = {
+      runPythonAsync: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await warmPyodidePackageImports(pyodide, ['pygame-ce']);
+
+    expect(pyodide.runPythonAsync).not.toHaveBeenCalled();
   });
 
   it('normalizes custom Pyodide script URLs and derived index directories', () => {
@@ -170,6 +250,7 @@ describe('Pyodide runtime service', () => {
     )).toBe(true);
     expect(shouldCachePyodideFetch('https://pypi.org/simple/miniworlds/', pyodideUrl)).toBe(false);
     expect(shouldCachePyodideFetch('https://pypi.org/pypi/miniworlds/json', pyodideUrl)).toBe(false);
+    expect(shouldCachePyodideFetch('https://pypi.org/pypi/miniworlds-robot/json', pyodideUrl)).toBe(false);
   });
 
   it('precaches the core runtime and configured Pyodide package wheels', async () => {
@@ -183,6 +264,22 @@ describe('Pyodide runtime service', () => {
     };
     window.fetch = vi.fn(async (url) => {
       fetchedUrls.push(String(url));
+      if (String(url).includes('pypi.org/pypi/miniworlds-turtle/json')) {
+        return {
+          ok: true,
+          json: async () => ({
+            info: { version: '0.1.0' },
+            releases: {
+              '0.1.0': [{
+                packagetype: 'bdist_wheel',
+                filename: 'miniworlds_turtle-0.1.0-py3-none-any.whl',
+                url: 'https://files.pythonhosted.org/packages/miniworlds-turtle-0.1.0-py3-none-any.whl',
+              }],
+            },
+          }),
+        };
+      }
+
       return {
         ok: true,
         clone: () => ({ json: async () => lock }),
@@ -191,7 +288,7 @@ describe('Pyodide runtime service', () => {
 
     await precachePyodideAssets({
       pyodideCdnUrl: 'https://static.example.com/pyodide/',
-      packages: ['numpy', 'pygame-ce'],
+      packages: ['numpy', 'pygame-ce', 'miniworlds-turtle'],
       persistentPyodideCache: false,
     });
 
@@ -201,6 +298,8 @@ describe('Pyodide runtime service', () => {
       'https://static.example.com/pyodide/python_stdlib.zip',
       'https://static.example.com/pyodide/numpy-test.whl',
       'https://static.example.com/pyodide/pygame-test.whl',
+      'https://pypi.org/pypi/miniworlds-turtle/json',
+      'https://files.pythonhosted.org/packages/miniworlds-turtle-0.1.0-py3-none-any.whl',
     ]));
     window.fetch = originalFetch;
   });
@@ -221,11 +320,11 @@ describe('Pyodide runtime service', () => {
       }),
     }));
 
-    await expect(resolveLatestMiniworldsWheel()).resolves.toBe(
+    await expect(resolveLatestMiniworldsWheel('miniworlds-robot')).resolves.toBe(
       'https://files.pythonhosted.org/packages/miniworlds-3.6.0-py3-none-any.whl',
     );
     expect(window.fetch).toHaveBeenCalledWith(
-      'https://pypi.org/pypi/miniworlds/json',
+      'https://pypi.org/pypi/miniworlds-robot/json',
       { cache: 'no-store' },
     );
     window.fetch = originalFetch;
@@ -266,5 +365,29 @@ describe('Pyodide runtime service', () => {
     expect(window.loadPyodide).toHaveBeenCalledWith(expect.objectContaining({
       indexURL: 'https://static.example.com/pyodide/',
     }));
+  });
+
+  it('passes bootstrap packages when creating a shared Pyodide instance', async () => {
+    const runtime = { outputHandler: vi.fn(), inputHandler: vi.fn(() => 'A'), l10n: {} };
+
+    window.loadPyodide = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve({
+        globals: { set: vi.fn() },
+        loadedPackages: { numpy: '2.0.2' },
+        runPythonAsync: vi.fn().mockResolvedValue(undefined),
+      }));
+
+    const pyodide = await getSharedPyodide({
+      packages: ['miniworlds', 'scipy', 'numpy'],
+    }, runtime);
+
+    expect(window.loadPyodide).toHaveBeenCalledWith(expect.objectContaining({
+      packages: ['numpy', 'pygame-ce', 'scipy'],
+    }));
+    expect(getLoadedPyodidePackages(pyodide).has('numpy')).toBe(true);
+    expect(getLoadedPyodidePackages(pyodide).has('pygame-ce')).toBe(true);
+    expect(getLoadedPyodidePackages(pyodide).has('scipy')).toBe(true);
+    expect(getLoadedPyodidePackages(pyodide).has('miniworlds')).toBe(false);
   });
 });

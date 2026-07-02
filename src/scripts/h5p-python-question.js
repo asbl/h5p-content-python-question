@@ -8,6 +8,12 @@ import {
   normalizePythonQuestionConfig,
 } from './services/python-question-config';
 import { createPythonL10n } from './services/python-l10n';
+import {
+  getSharedPyodide,
+  precachePyodideAssets,
+  warmPyodidePackageImports,
+} from './runtime/services/pyodide-runtime-service';
+import { loadMissingPyodidePackages } from './runtime/services/pyodide-package-service';
 
 export default class PythonQuestion extends H5P.CodeQuestion {
   /**
@@ -29,6 +35,56 @@ export default class PythonQuestion extends H5P.CodeQuestion {
     this.codeTester = this.getCodeTesterFactory().create();
 
     this.pythonRunner = this.pythonConfig.runner;
+    this.scheduleEarlyPyodidePreload();
+  }
+
+  /**
+   * Starts Pyodide package preparation as soon as the content is constructed.
+   * Runtime instances are created lazily on Run, so this is the earliest point
+   * where configured package metadata is available during learner reading time.
+   * @returns {void}
+   */
+  scheduleEarlyPyodidePreload() {
+    if (
+      this.pythonConfig.runner !== 'pyodide' ||
+      this._earlyPyodidePreloadScheduled ||
+      !Array.isArray(this.pythonConfig.packages) ||
+      this.pythonConfig.packages.length === 0
+    ) {
+      return;
+    }
+
+    this._earlyPyodidePreloadScheduled = true;
+    const options = buildPythonRuntimeOptions(this.pythonConfig, this.runtimeL10n);
+    const packages = [...this.pythonConfig.packages];
+
+    precachePyodideAssets(options, packages).catch(() => {
+      // Opportunistic preload; normal Run path reports actionable failures.
+    });
+
+    const preload = async () => {
+      const preloadRuntime = {
+        l10n: this.runtimeL10n,
+        outputHandler: () => {},
+        inputHandler: () => '',
+      };
+
+      try {
+        const pyodide = await getSharedPyodide(options, preloadRuntime);
+        await loadMissingPyodidePackages(pyodide, packages);
+        await warmPyodidePackageImports(pyodide, packages);
+      }
+      catch (error) {
+        console.warn('Unable to preload the configured Pyodide packages', error);
+      }
+    };
+
+    if (typeof window?.requestIdleCallback === 'function') {
+      window.requestIdleCallback(preload, { timeout: 2000 });
+      return;
+    }
+
+    window.setTimeout(preload, 200);
   }
 
   /**

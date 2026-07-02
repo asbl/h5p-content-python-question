@@ -5,18 +5,21 @@ import {
   tPython,
 } from '../../services/python-l10n';
 import { normalizePythonExecutionLimit } from '../../services/python-execution-limit';
-import { normalizePythonPackageEntries } from '../../services/python-package-utils';
+import {
+  normalizePythonPackageEntries,
+  splitPythonPackages,
+} from '../../services/python-package-utils';
 
 /**
  * Shared Pyodide loader state across all runner instances.
  * Per-instance Pyodide state is stored in a WeakMap keyed by the Pyodide object.
- * @type {{loadPyodidePromise: Promise<*>|null, sharedPyodidePromise: Promise<*>|null, miniworldsWheelPromise: Promise<string>|null, inputOverridePromise: Promise<*>|null, compatibilityPromise: Promise<*>|null, activeRuntime: object|null, activeSDLCanvas: HTMLCanvasElement|null, activeSDLRunner: object|null, loadedPackages: Set<string>, pyodideInstanceState: WeakMap<object, {compatibilityPromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, loadedPackages: Set<string>}>, fetchCacheInstalled: boolean}}
+ * @type {{loadPyodidePromise: Promise<*>|null, sharedPyodidePromise: Promise<*>|null, miniworldsWheelPromises: Map<string, Promise<string>>, inputOverridePromise: Promise<*>|null, compatibilityPromise: Promise<*>|null, activeRuntime: object|null, activeSDLCanvas: HTMLCanvasElement|null, activeSDLRunner: object|null, loadedPackages: Set<string>, pyodideInstanceState: WeakMap<object, {compatibilityPromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, loadedPackages: Set<string>}>, fetchCacheInstalled: boolean, performanceEntries: Array<{name: string, duration: number|null, startTime: number|null, endTime: number|null}>}}
  */
 export const sharedPyodideRuntimeState = {
   compatibilityPromise: null,
   loadPyodidePromise: null,
   sharedPyodidePromise: null,
-  miniworldsWheelPromise: null,
+  miniworldsWheelPromises: new Map(),
   inputOverridePromise: null,
   activeRuntime: null,
   activeSDLCanvas: null,
@@ -26,11 +29,17 @@ export const sharedPyodideRuntimeState = {
   fetchCacheInstalled: false,
   /** While > 0, Python stdout/stderr is routed to browser console only. */
   packageLoadDepth: 0,
+  performanceEntries: [],
 };
 const PYODIDE_FETCH_CACHE_NAME = 'h5p-pythonquestion-pyodide-fetch-v3';
 
 const DEFAULT_PYODIDE_CDN_URL = 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js';
-const MINIWORLDS_PYPI_METADATA_URL = 'https://pypi.org/pypi/miniworlds/json';
+const MINIWORLDS_PYPI_PACKAGES = Object.freeze([
+  'miniworlds',
+  'miniworlds-data',
+  'miniworlds-robot',
+  'miniworlds-turtle',
+]);
 
 const PYODIDE_CORE_ASSETS = Object.freeze([
   'pyodide.js',
@@ -39,6 +48,21 @@ const PYODIDE_CORE_ASSETS = Object.freeze([
   'pyodide.asm.wasm',
   'python_stdlib.zip',
 ]);
+
+const PYODIDE_SAFE_WARM_IMPORTS = Object.freeze({
+  beautifulsoup4: 'bs4',
+  lxml: 'lxml',
+  matplotlib: 'matplotlib',
+  networkx: 'networkx',
+  numpy: 'numpy',
+  packaging: 'packaging',
+  pandas: 'pandas',
+  pillow: 'PIL',
+  regex: 'regex',
+  scipy: 'scipy',
+  sqlite3: 'sqlite3',
+  sympy: 'sympy',
+});
 
 /**
  * Records a named duration in the browser Performance timeline when available.
@@ -52,6 +76,9 @@ export async function measurePyodidePerformance(name, callback) {
     && typeof performance.measure === 'function';
   const startMark = `h5p.pyodide.${name}:start`;
   const endMark = `h5p.pyodide.${name}:end`;
+  const startTime = typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : null;
 
   if (canMeasure) {
     performance.mark(startMark);
@@ -61,6 +88,21 @@ export async function measurePyodidePerformance(name, callback) {
     return await callback();
   }
   finally {
+    const endTime = typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : null;
+    const entry = {
+      name,
+      duration: startTime !== null && endTime !== null ? endTime - startTime : null,
+      startTime,
+      endTime,
+    };
+
+    sharedPyodideRuntimeState.performanceEntries.push(entry);
+    if (typeof window !== 'undefined') {
+      window.__h5pPyodidePerformance = sharedPyodideRuntimeState.performanceEntries;
+    }
+
     if (canMeasure) {
       performance.mark(endMark);
       performance.measure(`h5p.pyodide.${name}`, startMark, endMark);
@@ -69,26 +111,98 @@ export async function measurePyodidePerformance(name, callback) {
 }
 
 /**
- * Resolves the latest browser-compatible Miniworlds wheel from PyPI. The PyPI
- * response is deliberately never persisted: a fresh page session sees a newly
- * published Miniworlds release, while its immutable wheel remains cacheable.
- * @returns {Promise<string>} Direct URL for the current Miniworlds wheel.
+ * Returns a snapshot of measured Pyodide startup/package timings.
+ * @returns {Array<{name: string, duration: number|null, startTime: number|null, endTime: number|null}>}
  */
-export function resolveLatestMiniworldsWheel() {
-  const state = sharedPyodideRuntimeState;
+export function getPyodidePerformanceEntries() {
+  return sharedPyodideRuntimeState.performanceEntries.map((entry) => ({ ...entry }));
+}
 
-  if (state.miniworldsWheelPromise) {
-    return state.miniworldsWheelPromise;
+/**
+ * Clears measured Pyodide timings.
+ * @returns {void}
+ */
+export function resetPyodidePerformanceEntries() {
+  sharedPyodideRuntimeState.performanceEntries = [];
+  if (typeof window !== 'undefined') {
+    window.__h5pPyodidePerformance = sharedPyodideRuntimeState.performanceEntries;
+  }
+}
+
+/**
+ * Builds a deterministic plan for Pyodide-native and micropip package loading.
+ * @param {object} [options] - Runtime options.
+ * @param {Array<*>} [packages] - Additional packages inferred from source code.
+ * @returns {{packages: string[], bootstrapPackages: string[], pyodidePackages: string[], micropipPackages: string[]}}
+ */
+export function buildPyodideLoadPlan(options = {}, packages = []) {
+  const packageNames = normalizePythonPackageEntries([
+    ...(options.packages || []),
+    ...packages,
+  ]);
+  const { pyodidePackages, micropipPackages } = splitPythonPackages(packageNames);
+
+  return {
+    packages: packageNames,
+    bootstrapPackages: [...pyodidePackages],
+    pyodidePackages,
+    micropipPackages,
+  };
+}
+
+/**
+ * Imports side-effect-safe libraries once so Python import work is shifted out
+ * of the learner's first Run click. SDL/game packages are intentionally absent.
+ * @param {object} pyodide - Pyodide instance.
+ * @param {Array<*>} [packages] - Packages that should be warmed if safe.
+ * @returns {Promise<void>} Resolves once warm imports have completed.
+ */
+export async function warmPyodidePackageImports(pyodide, packages = []) {
+  const modules = normalizePythonPackageEntries(packages)
+    .map((packageName) => PYODIDE_SAFE_WARM_IMPORTS[packageName])
+    .filter(Boolean);
+  const uniqueModules = [...new Set(modules)];
+
+  if (!uniqueModules.length) {
+    return;
   }
 
-  state.miniworldsWheelPromise = measurePyodidePerformance('resolve:miniworlds', async () => {
+  await measurePyodidePerformance(`warm-imports:${uniqueModules.join(',')}`, () => pyodide.runPythonAsync(`
+import importlib as _h5p_importlib
+
+for _h5p_module_name in ${JSON.stringify(uniqueModules)}:
+  _h5p_importlib.import_module(_h5p_module_name)
+
+del _h5p_importlib
+del _h5p_module_name
+`));
+}
+
+/**
+ * Resolves the latest browser-compatible Miniworlds package wheel from PyPI. The PyPI
+ * response is deliberately never persisted: a fresh page session sees a newly
+ * published Miniworlds package release, while its immutable wheel remains cacheable.
+ * @param {string} [packageName] - PyPI package name.
+ * @returns {Promise<string>} Direct URL for the current Miniworlds wheel.
+ */
+export function resolveLatestMiniworldsWheel(packageName = 'miniworlds') {
+  const state = sharedPyodideRuntimeState;
+  const normalizedPackageName = MINIWORLDS_PYPI_PACKAGES.includes(packageName)
+    ? packageName
+    : 'miniworlds';
+
+  if (state.miniworldsWheelPromises.has(normalizedPackageName)) {
+    return state.miniworldsWheelPromises.get(normalizedPackageName);
+  }
+
+  const wheelPromise = measurePyodidePerformance(`resolve:${normalizedPackageName}`, async () => {
     if (typeof window === 'undefined' || typeof window.fetch !== 'function') {
-      throw new Error('The browser cannot resolve the Miniworlds package.');
+      throw new Error(`The browser cannot resolve the ${normalizedPackageName} package.`);
     }
 
-    const response = await window.fetch(MINIWORLDS_PYPI_METADATA_URL, { cache: 'no-store' });
+    const response = await window.fetch(`https://pypi.org/pypi/${normalizedPackageName}/json`, { cache: 'no-store' });
     if (!response.ok) {
-      throw new Error(`Could not resolve the current Miniworlds release (${response.status}).`);
+      throw new Error(`Could not resolve the current ${normalizedPackageName} release (${response.status}).`);
     }
 
     const metadata = await response.json();
@@ -99,16 +213,17 @@ export function resolveLatestMiniworldsWheel() {
     ));
 
     if (!wheel?.url) {
-      throw new Error('PyPI did not provide a browser-compatible Miniworlds wheel.');
+      throw new Error(`PyPI did not provide a browser-compatible ${normalizedPackageName} wheel.`);
     }
 
     return wheel.url;
   }).catch((error) => {
-    state.miniworldsWheelPromise = null;
+    state.miniworldsWheelPromises.delete(normalizedPackageName);
     throw error;
   });
 
-  return state.miniworldsWheelPromise;
+  state.miniworldsWheelPromises.set(normalizedPackageName, wheelPromise);
+  return wheelPromise;
 }
 
 /**
@@ -163,6 +278,31 @@ export function getLoadedPyodidePackages(pyodide) {
 }
 
 /**
+ * Marks packages that Pyodide reports as already available.
+ * @param {object} pyodide - Pyodide instance.
+ * @param {Array<*>} [packages] - Additional packages known to have been loaded.
+ * @returns {void}
+ */
+export function synchronizePyodideLoadedPackages(pyodide, packages = []) {
+  const loadedPackages = getLoadedPyodidePackages(pyodide);
+
+  normalizePythonPackageEntries(packages).forEach((packageName) => {
+    loadedPackages.add(packageName);
+  });
+
+  const reportedPackages = pyodide?.loadedPackages;
+  if (!reportedPackages || typeof reportedPackages !== 'object') {
+    return;
+  }
+
+  Object.keys(reportedPackages).forEach((packageName) => {
+    if (packageName) {
+      loadedPackages.add(packageName);
+    }
+  });
+}
+
+/**
  * Resets shared runtime state for tests or hard reloads.
  * @returns {void}
  */
@@ -170,7 +310,7 @@ export function resetSharedPyodideRuntimeState() {
   sharedPyodideRuntimeState.compatibilityPromise = null;
   sharedPyodideRuntimeState.loadPyodidePromise = null;
   sharedPyodideRuntimeState.sharedPyodidePromise = null;
-  sharedPyodideRuntimeState.miniworldsWheelPromise = null;
+  sharedPyodideRuntimeState.miniworldsWheelPromises.clear();
   sharedPyodideRuntimeState.inputOverridePromise = null;
   sharedPyodideRuntimeState.activeRuntime = null;
   sharedPyodideRuntimeState.activeSDLCanvas = null;
@@ -179,6 +319,7 @@ export function resetSharedPyodideRuntimeState() {
   sharedPyodideRuntimeState.pyodideInstanceState = new WeakMap();
   sharedPyodideRuntimeState.fetchCacheInstalled = false;
   sharedPyodideRuntimeState.packageLoadDepth = 0;
+  resetPyodidePerformanceEntries();
 }
 
 /**
@@ -280,10 +421,7 @@ export async function precachePyodideAssets(options = {}, packages = []) {
   }
 
   const { scriptUrl, indexURL } = normalizePyodideScriptUrl(options.pyodideCdnUrl);
-  const packageNames = normalizePythonPackageEntries([
-    ...(options.packages || []),
-    ...packages,
-  ]);
+  const loadPlan = buildPyodideLoadPlan(options, packages);
 
   if (options.persistentPyodideCache !== false) {
     installPyodideFetchCache(scriptUrl);
@@ -299,19 +437,19 @@ export async function precachePyodideAssets(options = {}, packages = []) {
 
   try {
     const lock = await lockResponse.value.clone().json();
-    const packageUrls = packageNames
+    const packageUrls = loadPlan.pyodidePackages
       .map((packageName) => lock?.packages?.[packageName]?.file_name)
       .filter(Boolean)
       .map((fileName) => new URL(fileName, indexURL).toString());
 
-    if (packageNames.includes('miniworlds')) {
-      try {
-        packageUrls.push(await resolveLatestMiniworldsWheel());
-      }
-      catch (_) {
-        // The normal micropip path retains its existing fallback behavior.
-      }
-    }
+    const miniworldsWheelUrls = await Promise.allSettled(
+      loadPlan.micropipPackages
+        .filter((packageName) => MINIWORLDS_PYPI_PACKAGES.includes(packageName))
+        .map((packageName) => resolveLatestMiniworldsWheel(packageName)),
+    );
+    miniworldsWheelUrls
+      .filter((result) => result.status === 'fulfilled')
+      .forEach((result) => packageUrls.push(result.value));
 
     await Promise.allSettled(packageUrls.map((url) => window.fetch(url)));
   }
@@ -899,6 +1037,7 @@ export async function getSharedPyodide(options = {}, runtime = null) {
   const state = sharedPyodideRuntimeState;
   const { scriptUrl, indexURL } = normalizePyodideScriptUrl(options.pyodideCdnUrl);
   const persistentPyodideCache = options.persistentPyodideCache !== false;
+  const loadPlan = buildPyodideLoadPlan(options);
 
   if (runtime) {
     setActivePyodideRuntime(runtime);
@@ -913,6 +1052,7 @@ export async function getSharedPyodide(options = {}, runtime = null) {
   if (!state.sharedPyodidePromise) {
     state.sharedPyodidePromise = measurePyodidePerformance('initialize', () => loadPyodide({
       indexURL,
+      ...(loadPlan.bootstrapPackages.length ? { packages: loadPlan.bootstrapPackages } : {}),
       stdout: (text) => writePyodideRuntimeOutput(text),
       stderr: (text) => writePyodideRuntimeOutput(text, true),
       stdin: () => '\n',
@@ -924,6 +1064,7 @@ export async function getSharedPyodide(options = {}, runtime = null) {
 
   const pyodide = await state.sharedPyodidePromise;
 
+  synchronizePyodideLoadedPackages(pyodide, loadPlan.bootstrapPackages);
   await installPyodideInputOverride(pyodide);
 
   return pyodide;

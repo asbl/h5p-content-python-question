@@ -76,12 +76,12 @@ export async function installPyodideMicropipPackages(pyodide, packages = []) {
   await ensurePyodideMicropip(pyodide);
 
   const installPackages = await Promise.all(missingPackages.map(async (packageName) => {
-    if (packageName !== 'miniworlds') {
+    if (!['miniworlds', 'miniworlds-data', 'miniworlds-robot', 'miniworlds-turtle'].includes(packageName)) {
       return packageName;
     }
 
     try {
-      return await resolveLatestMiniworldsWheel();
+      return await resolveLatestMiniworldsWheel(packageName);
     }
     catch (_) {
       // Preserve the established behavior if PyPI metadata is temporarily

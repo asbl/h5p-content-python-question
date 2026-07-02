@@ -155,6 +155,18 @@
                             "label": "miniworlds"
                         },
                         {
+                            "value": "miniworlds-data",
+                            "label": "miniworlds_data"
+                        },
+                        {
+                            "value": "miniworlds-robot",
+                            "label": "miniworlds_robot"
+                        },
+                        {
+                            "value": "miniworlds-turtle",
+                            "label": "miniworlds_turtle"
+                        },
+                        {
                             "value": "pillow",
                             "label": "Pillow"
                         },

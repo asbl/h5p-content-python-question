@@ -163,6 +163,30 @@ async function findVisibleLocator(locator, timeout = 30000, errorMessage = 'Visi
   throw new Error(errorMessage);
 }
 
+async function collectPyodidePerformance(frame) {
+  return frame.evaluate(() => {
+    const structured = Array.isArray(window.__h5pPyodidePerformance)
+      ? window.__h5pPyodidePerformance
+      : [];
+    const measured = typeof performance?.getEntriesByType === 'function'
+      ? performance.getEntriesByType('measure')
+        .filter((entry) => entry.name.startsWith('h5p.pyodide.'))
+        .map((entry) => ({
+          name: entry.name.replace(/^h5p\.pyodide\./, ''),
+          duration: entry.duration,
+          startTime: entry.startTime,
+        }))
+      : [];
+
+    return (structured.length ? structured : measured).map((entry) => ({
+      name: entry.name,
+      durationMs: typeof entry.duration === 'number' ? Math.round(entry.duration) : null,
+      startMs: typeof entry.startTime === 'number' ? Math.round(entry.startTime) : null,
+      endMs: typeof entry.endTime === 'number' ? Math.round(entry.endTime) : null,
+    }));
+  });
+}
+
 async function checkFilesPage(page) {
   const frame = await getH5pFrame(page, getViewUrl(FILES_CONTENT_ID));
 
@@ -984,8 +1008,8 @@ async function executeCheck(browser, name, callback) {
   const page = await browser.newPage();
 
   try {
-    await callback(page);
-    return { name, status: 'PASS' };
+    const details = await callback(page);
+    return { name, status: 'PASS', details };
   }
   catch (error) {
     const artifactPayload = {
@@ -1105,19 +1129,23 @@ async function checkMiniworldsMouseFollow(page) {
   const frame = await getH5pFrame(page, getViewUrl(MOUSE_FOLLOW_CONTENT_ID));
 
   const runButton = await findQuestionButton(frame, 'run');
+  const startedAt = Date.now();
   await runButton.click();
 
   // Wait for the Stop button — this is the most reliable indicator that
   // world.run() has been called and the game loop has started.
   const stopButton = await findQuestionButton(frame, 'stop', 45000);
+  const stopVisibleAt = Date.now();
 
   // Also confirm the SDL canvas is attached and visible in the layout.
   const canvasCandidates = frame.locator('canvas.pyodide-sdl-canvas');
   const canvas = await findVisibleLocator(canvasCandidates, 30000, 'SDL canvas not visible after game loop started.');
+  const canvasVisibleAt = Date.now();
 
   // Let a few animation frames pass so the canvas has rendered at least once
   // and SDL\'s internal state is fully initialised.
   await page.waitForTimeout(2000);
+  const canvasReadyAt = Date.now();
 
   // Obtain the canvas position in full-page coordinates so we can drive
   // real (trusted) mouse events via Playwright.
@@ -1183,6 +1211,15 @@ async function checkMiniworldsMouseFollow(page) {
       `Mouse position resolved to x=${targetX} which is near (0,0) – the stale initialisation bug is present. Console: "${normalised.slice(0, 800)}"`
     );
   }
+
+  return {
+    pyodideStartup: {
+      runToStopButtonMs: stopVisibleAt - startedAt,
+      runToCanvasVisibleMs: canvasVisibleAt - startedAt,
+      runToCanvasReadyMs: canvasReadyAt - startedAt,
+      measures: await collectPyodidePerformance(frame),
+    },
+  };
 }
 
 async function main() {
@@ -1207,6 +1244,9 @@ async function main() {
   for (const result of results) {
     if (result.status === 'PASS') {
       console.log(`PASS: ${result.name}`);
+      if (result.details?.pyodideStartup) {
+        console.log(`  pyodideStartup: ${JSON.stringify(result.details.pyodideStartup)}`);
+      }
     }
     else {
       console.log(`FAIL: ${result.name}`);

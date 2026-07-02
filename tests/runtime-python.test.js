@@ -5,6 +5,7 @@ const {
   PyodideRunnerMock,
   CanvasRuntimeManagerMock,
   getPythonL10nValueMock,
+  precachePyodideAssetsMock,
   canvasManagers,
 } = vi.hoisted(() => {
   const canvasManagers = [];
@@ -27,12 +28,14 @@ const {
   });
 
   const getPythonL10nValueMock = vi.fn(() => 'Python runtime');
+  const precachePyodideAssetsMock = vi.fn(() => Promise.resolve());
 
   return {
     SkulptRunnerMock,
     PyodideRunnerMock,
     CanvasRuntimeManagerMock,
     getPythonL10nValueMock,
+    precachePyodideAssetsMock,
     canvasManagers,
   };
 });
@@ -53,6 +56,10 @@ vi.mock('../src/scripts/services/python-l10n', () => ({
   getPythonL10nValue: getPythonL10nValueMock,
 }));
 
+vi.mock('../src/scripts/runtime/services/pyodide-runtime-service', () => ({
+  precachePyodideAssets: precachePyodideAssetsMock,
+}));
+
 let PythonRuntime;
 
 /**
@@ -70,6 +77,7 @@ function createCodeContainer(workspaceSnapshot = null) {
 beforeEach(async () => {
   vi.clearAllMocks();
   canvasManagers.length = 0;
+  window.requestIdleCallback = undefined;
 
   class RuntimeBase {
     constructor(resizeActionHandler, code, options = {}) {
@@ -146,18 +154,17 @@ describe('PythonRuntime', () => {
     expect(first.setup).toHaveBeenCalledTimes(1);
   });
 
-  it('preloads the Pyodide SDL runtime during idle time for miniworlds', () => {
+  it('precaches Pyodide packages and preloads the SDL runtime during idle time for miniworlds', () => {
     const idleCallback = vi.fn();
     window.requestIdleCallback = idleCallback;
     const runtime = new PythonRuntime(vi.fn(), 'from miniworlds import World', { runner: 'pyodide' });
 
     runtime.setup(createCodeContainer());
 
+    expect(precachePyodideAssetsMock).toHaveBeenCalledWith(runtime.options, ['miniworlds']);
     expect(idleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 2000 });
     idleCallback.mock.calls[0][0]();
     expect(runtime.runner.setup).toHaveBeenCalledTimes(1);
-
-    window.requestIdleCallback = undefined;
   });
 
   it('preloads configured miniworlds even when the initial code has no import', () => {
@@ -170,8 +177,47 @@ describe('PythonRuntime', () => {
 
     runtime.setup(createCodeContainer());
 
+    expect(precachePyodideAssetsMock).toHaveBeenCalledWith(runtime.options, []);
     expect(idleCallback).toHaveBeenCalledTimes(1);
-    window.requestIdleCallback = undefined;
+  });
+
+  it('precaches and preloads non-SDL Pyodide packages during idle time', () => {
+    const idleCallback = vi.fn();
+    window.requestIdleCallback = idleCallback;
+    const runtime = new PythonRuntime(vi.fn(), 'import numpy as np\nprint(np.arange(3))', {
+      runner: 'pyodide',
+      packages: ['numpy'],
+    });
+
+    runtime.setup(createCodeContainer());
+
+    expect(precachePyodideAssetsMock).toHaveBeenCalledWith(runtime.options, ['numpy']);
+    expect(idleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 2000 });
+    idleCallback.mock.calls[0][0]();
+    expect(runtime.runner.setup).toHaveBeenCalledTimes(1);
+  });
+
+  it('precaches core assets but does not fully preload Pyodide without libraries', () => {
+    const idleCallback = vi.fn();
+    window.requestIdleCallback = idleCallback;
+    const runtime = new PythonRuntime(vi.fn(), 'print("plain")', {
+      runner: 'pyodide',
+      packages: [],
+    });
+
+    runtime.setup(createCodeContainer());
+
+    expect(precachePyodideAssetsMock).toHaveBeenCalledWith(runtime.options, []);
+    expect(idleCallback).not.toHaveBeenCalled();
+    expect(runtime.runner.setup).not.toHaveBeenCalled();
+  });
+
+  it('does not precache for Skulpt runtimes', () => {
+    const runtime = new PythonRuntime(vi.fn(), 'import numpy', { runner: 'skulpt' });
+
+    runtime.setup(createCodeContainer());
+
+    expect(precachePyodideAssetsMock).not.toHaveBeenCalled();
   });
 
   it('returns null project snapshot for non-pyodide runner', () => {

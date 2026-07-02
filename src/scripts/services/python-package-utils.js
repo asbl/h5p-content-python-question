@@ -18,6 +18,9 @@ export const PYTHON_IMPORT_PACKAGE_MAP = Object.freeze({
   sqlite3: 'sqlite3',
   sympy: 'sympy',
   lxml: 'lxml',
+  miniworlds_data: 'miniworlds-data',
+  miniworlds_robot: 'miniworlds-robot',
+  miniworlds_turtle: 'miniworlds-turtle',
 });
 
 /**
@@ -26,6 +29,9 @@ export const PYTHON_IMPORT_PACKAGE_MAP = Object.freeze({
  */
 export const PYTHON_MICROPIP_PACKAGES = Object.freeze([
   'miniworlds',
+  'miniworlds-data',
+  'miniworlds-robot',
+  'miniworlds-turtle',
 ]);
 
 /**
@@ -34,9 +40,11 @@ export const PYTHON_MICROPIP_PACKAGES = Object.freeze([
  */
 export const PYTHON_PACKAGE_DEPENDENCY_MAP = Object.freeze({
   miniworlds: Object.freeze(['numpy', 'pygame-ce']),
+  'miniworlds-data': Object.freeze(['miniworlds']),
+  'miniworlds-robot': Object.freeze(['miniworlds']),
+  'miniworlds-turtle': Object.freeze(['miniworlds']),
 });
 
-/**
 /**
  * Normalizes a package-like entry coming from semantics or runtime options.
  * @param {*} entry - Raw package entry.

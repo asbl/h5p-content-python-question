@@ -4,6 +4,7 @@ import PyodideRunner from './pyodiderunner';
 import {
   getPythonL10nValue,
 } from '../services/python-l10n';
+import { getImportedPythonPackages } from '../services/python-package-utils';
 import { precachePyodideAssets } from './services/pyodide-runtime-service';
 
 /**
@@ -64,34 +65,39 @@ export default class PythonRuntime extends H5P.Runtime {
     // Lazily initialize the canvas manager
     this._canvasManager = this.getCanvasManager();
 
-    this.schedulePyodideSDLPreload();
+    this.schedulePyodidePreload();
   }
 
   /**
-   * Starts the costly Pyodide SDL bootstrap while the learner reads the
-   * exercise. The runner still performs the regular setup before execution,
-   * so a changed program remains safe and this only improves the first-run
-   * latency for pygame-ce and miniworlds content.
+   * Starts Pyodide asset/package preloading while the learner reads the
+   * exercise. SDL content additionally starts the full runner setup during idle
+   * time because pygame/miniworlds initialization dominates first-run latency.
    * @returns {void}
    */
-  schedulePyodideSDLPreload() {
+  schedulePyodidePreload() {
     if (
       this.runnerType !== 'pyodide' ||
-      this._pyodideSDLPreloadScheduled ||
-      !this.shouldPreloadPyodideSDL()
+      this._pyodidePreloadScheduled
     ) {
       return;
     }
 
-    this._pyodideSDLPreloadScheduled = true;
-    precachePyodideAssets(this.options, ['miniworlds']).catch(() => {
-      // The idle setup path and the normal run path both remain authoritative.
+    this._pyodidePreloadScheduled = true;
+    const packageHints = this.getPreloadPackageHints();
+
+    precachePyodideAssets(this.options, packageHints).catch(() => {
+      // The normal run path remains authoritative and reports real failures.
     });
+
+    if (!this.shouldPreloadPyodideRuntime(packageHints)) {
+      return;
+    }
+
     const preload = () => {
       this.getRunner().setup().catch((error) => {
         // The normal run path reports setup failures to the learner. A failed
         // speculative preload must not surface an error before they run code.
-        console.warn('Unable to preload the Pyodide SDL runtime', error);
+        console.warn('Unable to preload the Pyodide runtime', error);
       });
     };
 
@@ -104,6 +110,30 @@ export default class PythonRuntime extends H5P.Runtime {
   }
 
   /**
+   * Returns package names that can be inferred before the first run.
+   * @returns {string[]} Installable Pyodide package names.
+   */
+  getPreloadPackageHints() {
+    return getImportedPythonPackages(this.getAnalysisCode(), {
+      localModuleNames: this.getLocalModuleNames(),
+    });
+  }
+
+  /**
+   * Determines whether idle time should initialize Pyodide, not just cache files.
+   * @param {string[]} packageHints - Packages inferred from source code.
+   * @returns {boolean} True when first-run latency is likely dominated by libraries.
+   */
+  shouldPreloadPyodideRuntime(packageHints = this.getPreloadPackageHints()) {
+    if (this.shouldPreloadPyodideSDL()) {
+      return true;
+    }
+
+    const configuredPackages = Array.isArray(this.options?.packages) ? this.options.packages : [];
+    return configuredPackages.length > 0 || packageHints.length > 0;
+  }
+
+  /**
    * Determines whether initial code or the configured package set needs SDL.
    * @returns {boolean} True when pygame-ce or miniworlds should be preloaded.
    */
@@ -113,7 +143,7 @@ export default class PythonRuntime extends H5P.Runtime {
     }
 
     const packages = Array.isArray(this.options?.packages) ? this.options.packages : [];
-    return packages.some((packageName) => ['miniworlds', 'pygame-ce'].includes(String(packageName).trim()));
+    return packages.some((packageName) => ['miniworlds', 'miniworlds-data', 'miniworlds-robot', 'miniworlds-turtle', 'pygame-ce'].includes(String(packageName).trim()));
   }
 
   /**
@@ -254,7 +284,13 @@ export default class PythonRuntime extends H5P.Runtime {
     if (!code) return false;
     return (
       code.includes('import miniworlds') ||
-      code.includes('from miniworlds import')
+      code.includes('from miniworlds import') ||
+      code.includes('import miniworlds_data') ||
+      code.includes('from miniworlds_data import') ||
+      code.includes('import miniworlds_robot') ||
+      code.includes('from miniworlds_robot import') ||
+      code.includes('import miniworlds_turtle') ||
+      code.includes('from miniworlds_turtle import')
     );
   }
 

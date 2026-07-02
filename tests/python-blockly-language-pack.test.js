@@ -140,6 +140,66 @@ describe('Python Blockly language pack', () => {
     ]);
   });
 
+  it('keeps signed and decimal Miniworlds coordinates as editable number blocks', () => {
+    const state = PYTHON_BLOCKLY_LANGUAGE_PACK.createWorkspaceStateFromCode(
+      'from miniworlds import World, Actor\n'
+      + 'world = World(320.5, 240)\n'
+      + 'player = Actor((-10, 30.25))\n'
+      + 'player.move(-5)\n'
+      + 'player.move_to(-20.5, 3.25)\n'
+      + 'player.turn_left(12.5)\n'
+      + 'world.run()\n',
+    );
+    const blocks = [];
+    let block = state.blocks.blocks[0];
+    while (block) {
+      blocks.push(block);
+      block = block.next?.block;
+    }
+
+    expect(blocks.map(({ type }) => type)).toEqual([
+      'miniworlds_import_core',
+      'miniworlds_create_world',
+      'miniworlds_create_actor',
+      'miniworlds_actor_move_by',
+      'miniworlds_actor_move_to',
+      'miniworlds_actor_turn',
+      'miniworlds_world_run',
+    ]);
+    expect(blocks[1].inputs.WIDTH.shadow.fields.NUM).toBe(320.5);
+    expect(blocks[2].inputs.X.shadow.fields.NUM).toBe(-10);
+    expect(blocks[4].inputs.X.shadow.fields.NUM).toBe(-20.5);
+    expect(blocks[5].inputs.DEGREES.shadow.fields.NUM).toBe(12.5);
+  });
+
+  it('preserves named arguments and multiline calls in local raw-code blocks', () => {
+    const state = PYTHON_BLOCKLY_LANGUAGE_PACK.createWorkspaceStateFromCode(
+      'from miniworlds import World\n'
+      + 'world = World(width=320, height=240)\n'
+      + 'world.add_background(\n'
+      + '    "images/grass.png"\n'
+      + ')\n'
+      + 'world.run()\n',
+    );
+    const blocks = [];
+    let block = state.blocks.blocks[0];
+    while (block) {
+      blocks.push(block);
+      block = block.next?.block;
+    }
+
+    expect(blocks.map(({ type }) => type)).toEqual([
+      'miniworlds_import_core',
+      'python_raw_code',
+      'python_raw_code',
+      'python_raw_code',
+      'python_raw_code',
+      'miniworlds_world_run',
+    ]);
+    expect(blocks.slice(1, 5).map((item) => item.fields.CODE).join('\n')).toContain('width=320');
+    expect(blocks.slice(1, 5).map((item) => item.fields.CODE).join('\n')).toContain('"images/grass.png"');
+  });
+
   it('falls back to a raw Python block for unsupported Python code', () => {
     const state = PYTHON_BLOCKLY_LANGUAGE_PACK.createWorkspaceStateFromCode(
       'print("Hello")\n',

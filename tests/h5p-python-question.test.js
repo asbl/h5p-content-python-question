@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   createPythonL10n: vi.fn((l10n = {}, fallbackL10n = {}) => ({ ...fallbackL10n, ...l10n })),
+  getSharedPyodide: vi.fn(async () => ({ type: 'pyodide' })),
+  loadMissingPyodidePackages: vi.fn(async () => {}),
+  precachePyodideAssets: vi.fn(async () => {}),
+  warmPyodidePackageImports: vi.fn(async () => {}),
 }));
 
 vi.mock('../src/scripts/container/container-python', () => ({
@@ -20,11 +24,26 @@ vi.mock('../src/scripts/services/python-l10n', () => ({
   createPythonL10n: mocks.createPythonL10n,
 }));
 
+vi.mock('../src/scripts/runtime/services/pyodide-runtime-service', () => ({
+  getSharedPyodide: mocks.getSharedPyodide,
+  precachePyodideAssets: mocks.precachePyodideAssets,
+  warmPyodidePackageImports: mocks.warmPyodidePackageImports,
+}));
+
+vi.mock('../src/scripts/runtime/services/pyodide-package-service', () => ({
+  loadMissingPyodidePackages: mocks.loadMissingPyodidePackages,
+}));
+
 const { default: PythonQuestion } = await import('../src/scripts/h5p-python-question.js');
 
 describe('PythonQuestion', () => {
   beforeEach(() => {
     mocks.createPythonL10n.mockClear();
+    mocks.getSharedPyodide.mockClear();
+    mocks.loadMissingPyodidePackages.mockClear();
+    mocks.precachePyodideAssets.mockClear();
+    mocks.warmPyodidePackageImports.mockClear();
+    window.requestIdleCallback = vi.fn();
     document.head.innerHTML = '';
   });
 
@@ -85,6 +104,14 @@ describe('PythonQuestion', () => {
     expect(mocks.createPythonL10n).toHaveBeenNthCalledWith(2, {}, { parentValue: 'parent' });
     expect(question.pythonRunner).toBe('pyodide');
     expect(question.getPyodidePackages()).toEqual(['numpy', 'pygame-ce', 'sqlite3']);
+    expect(mocks.precachePyodideAssets).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runner: 'pyodide',
+        packages: ['numpy', 'pygame-ce', 'sqlite3'],
+      }),
+      ['numpy', 'pygame-ce', 'sqlite3'],
+    );
+    expect(window.requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 2000 });
     expect(question.getRuntimeOptions()).toEqual({
       runner: 'pyodide',
       l10n: question.runtimeL10n,
@@ -201,5 +228,33 @@ describe('PythonQuestion', () => {
       sqlJsUrl: '',
       pyodideCdnUrl: '',
     });
+    expect(mocks.precachePyodideAssets).not.toHaveBeenCalled();
+  });
+
+  it('loads configured Pyodide packages during the early idle preload', async () => {
+    const question = new PythonQuestion({
+      pythonRunner: 'pyodide',
+      pyodideOptions: {
+        packages: ['numpy'],
+      },
+      advancedOptions: {},
+    }, 8);
+
+    const idleCallback = window.requestIdleCallback.mock.calls[0][0];
+    await idleCallback();
+
+    expect(mocks.getSharedPyodide).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runner: 'pyodide',
+        packages: ['numpy'],
+      }),
+      expect.objectContaining({
+        l10n: question.runtimeL10n,
+        outputHandler: expect.any(Function),
+        inputHandler: expect.any(Function),
+      }),
+    );
+    expect(mocks.loadMissingPyodidePackages).toHaveBeenCalledWith({ type: 'pyodide' }, ['numpy']);
+    expect(mocks.warmPyodidePackageImports).toHaveBeenCalledWith({ type: 'pyodide' }, ['numpy']);
   });
 });

@@ -140,6 +140,7 @@ const PYTHON_CATEGORY_FIELDS = {
 };
 
 const PYTHON_RAW_CODE_BLOCK_TYPE = 'python_raw_code';
+const NUMBER_PATTERN = '[-+]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)';
 
 function createNumberShadow(value) {
   return {
@@ -332,7 +333,7 @@ function createMiniworldsWorkspaceStateFromCode(code = '') {
       continue;
     }
 
-    let match = line.match(/^([A-Za-z_]\w*)\s*=\s*(?:[A-Za-z_]\w*\.)?World\((\d+)\s*,\s*(\d+)\)$/);
+    let match = line.match(new RegExp(`^([A-Za-z_]\\w*)\\s*=\\s*(?:[A-Za-z_]\\w*\\.)?World\\((${NUMBER_PATTERN})\\s*,\\s*(${NUMBER_PATTERN})\\)$`));
     if (match) {
       worldVars.add(match[1]);
       blocks.push(createMiniworldsWorldBlock(match));
@@ -346,28 +347,28 @@ function createMiniworldsWorkspaceStateFromCode(code = '') {
       continue;
     }
 
-    match = line.match(/^([A-Za-z_]\w*)\s*=\s*(?:[A-Za-z_]\w*\.)?Actor\(\((\d+)\s*,\s*(\d+)\)\)$/);
+    match = line.match(new RegExp(`^([A-Za-z_]\\w*)\\s*=\\s*(?:[A-Za-z_]\\w*\\.)?Actor\\(\\((${NUMBER_PATTERN})\\s*,\\s*(${NUMBER_PATTERN})\\)\\)$`));
     if (match) {
       actorVars.add(match[1]);
       blocks.push(createMiniworldsActorBlock(match));
       continue;
     }
 
-    match = line.match(/^([A-Za-z_]\w*)\s*=\s*(?:[A-Za-z_]\w*\.)?Circle\(\((\d+)\s*,\s*(\d+)\)\s*,\s*(\d+)\)$/);
+    match = line.match(new RegExp(`^([A-Za-z_]\\w*)\\s*=\\s*(?:[A-Za-z_]\\w*\\.)?Circle\\(\\((${NUMBER_PATTERN})\\s*,\\s*(${NUMBER_PATTERN})\\)\\s*,\\s*(${NUMBER_PATTERN})\\)$`));
     if (match) {
       actorVars.add(match[1]);
       blocks.push(createMiniworldsShapeBlock('miniworlds_create_circle', match, [['X', match[2]], ['Y', match[3]], ['RADIUS', match[4]]]));
       continue;
     }
 
-    match = line.match(/^([A-Za-z_]\w*)\s*=\s*(?:[A-Za-z_]\w*\.)?Rectangle\(\((\d+)\s*,\s*(\d+)\)\s*,\s*(\d+)\s*,\s*(\d+)\)$/);
+    match = line.match(new RegExp(`^([A-Za-z_]\\w*)\\s*=\\s*(?:[A-Za-z_]\\w*\\.)?Rectangle\\(\\((${NUMBER_PATTERN})\\s*,\\s*(${NUMBER_PATTERN})\\)\\s*,\\s*(${NUMBER_PATTERN})\\s*,\\s*(${NUMBER_PATTERN})\\)$`));
     if (match) {
       actorVars.add(match[1]);
       blocks.push(createMiniworldsShapeBlock('miniworlds_create_rectangle', match, [['X', match[2]], ['Y', match[3]], ['WIDTH', match[4]], ['HEIGHT', match[5]]]));
       continue;
     }
 
-    match = line.match(/^([A-Za-z_]\w*)\s*=\s*(?:[A-Za-z_]\w*\.)?TiledWorld\((\d+)\s*,\s*(\d+)\)$/);
+    match = line.match(new RegExp(`^([A-Za-z_]\\w*)\\s*=\\s*(?:[A-Za-z_]\\w*\\.)?TiledWorld\\((${NUMBER_PATTERN})\\s*,\\s*(${NUMBER_PATTERN})\\)$`));
     if (match) {
       worldVars.add(match[1]);
       blocks.push({ type: 'miniworlds_create_tiled_world', fields: { WORLD_VAR: match[1] }, inputs: { COLUMNS: createNumberShadow(match[2]), ROWS: createNumberShadow(match[3]) } });
@@ -395,19 +396,19 @@ function createMiniworldsWorkspaceStateFromCode(code = '') {
       continue;
     }
 
-    match = line.match(/^([A-Za-z_]\w*)\.move\((\d+)\)$/);
+    match = line.match(new RegExp(`^([A-Za-z_]\\w*)\\.move\\((${NUMBER_PATTERN})\\)$`));
     if (match) {
       blocks.push({ type: 'miniworlds_actor_move_by', fields: { ACTOR_VAR: match[1] }, inputs: { DISTANCE: createNumberShadow(match[2]) } });
       continue;
     }
 
-    match = line.match(/^([A-Za-z_]\w*)\.move_to\((\d+)\s*,\s*(\d+)\)$/);
+    match = line.match(new RegExp(`^([A-Za-z_]\\w*)\\.move_to\\((${NUMBER_PATTERN})\\s*,\\s*(${NUMBER_PATTERN})\\)$`));
     if (match) {
       blocks.push({ type: 'miniworlds_actor_move_to', fields: { ACTOR_VAR: match[1] }, inputs: { X: createNumberShadow(match[2]), Y: createNumberShadow(match[3]) } });
       continue;
     }
 
-    match = line.match(/^([A-Za-z_]\w*)\.turn_(left|right)\((\d+)\)$/);
+    match = line.match(new RegExp(`^([A-Za-z_]\\w*)\\.turn_(left|right)\\((${NUMBER_PATTERN})\\)$`));
     if (match) {
       blocks.push({ type: 'miniworlds_actor_turn', fields: { ACTOR_VAR: match[1], DIRECTION: match[2] }, inputs: { DEGREES: createNumberShadow(match[3]) } });
       continue;
