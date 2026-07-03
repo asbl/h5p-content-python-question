@@ -99,6 +99,51 @@ function getMiniworldsConstructorReferences(code, exportName) {
   return [...references];
 }
 
+const ROBOT_WORLD_CONFIG_SIZES = Object.freeze({
+  basic: Object.freeze({ columns: 10, rows: 10, tileSize: 40 }),
+  sequence_path: Object.freeze({ columns: 6, rows: 4, tileSize: 40 }),
+  variables_path: Object.freeze({ columns: 6, rows: 4, tileSize: 40 }),
+  function_path: Object.freeze({ columns: 6, rows: 4, tileSize: 40 }),
+  loop_square: Object.freeze({ columns: 6, rows: 6, tileSize: 40 }),
+  leaf_line: Object.freeze({ columns: 7, rows: 3, tileSize: 40 }),
+  obstacle_garden: Object.freeze({ columns: 7, rows: 5, tileSize: 40 }),
+  with_position: Object.freeze({ columns: 10, rows: 10, tileSize: 40 }),
+});
+
+/**
+ * Returns JavaScript identifiers that can reference miniworlds_robot.load_world.
+ * @param {string} code - Learner code.
+ * @returns {string[]} Escaped function references for regular expressions.
+ */
+function getMiniworldsRobotLoadWorldReferences(code) {
+  const references = new Set(['miniworlds_robot\\.load_world']);
+
+  const moduleImportPattern = /(?:^|\n)\s*import\s+miniworlds_robot(?:\s+as\s+([A-Za-z_]\w*))?/g;
+  let moduleMatch;
+  while ((moduleMatch = moduleImportPattern.exec(code)) !== null) {
+    const alias = moduleMatch[1] || 'miniworlds_robot';
+    references.add(`${escapeRegExp(alias)}\\.load_world`);
+  }
+
+  const fromImportPattern = /(?:^|\n)\s*from\s+miniworlds_robot\s+import\s+([^\n#]+)/g;
+  let fromMatch;
+  while ((fromMatch = fromImportPattern.exec(code)) !== null) {
+    const importedNames = fromMatch[1]
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    importedNames.forEach((part) => {
+      const importMatch = part.match(/^load_world(?:\s+as\s+([A-Za-z_]\w*))?$/);
+      if (importMatch) {
+        references.add(escapeRegExp(importMatch[1] || 'load_world'));
+      }
+    });
+  }
+
+  return [...references];
+}
+
 /**
  * Reads a positive integer argument from a simple Python call argument list.
  * @param {string} args - Raw call argument text.
@@ -127,6 +172,34 @@ function readIntegerArgument(args, positionalIndex, keywordNames = []) {
 }
 
 /**
+ * Reads a simple string literal argument from a Python call argument list.
+ * @param {string} args - Raw call argument text.
+ * @param {number} positionalIndex - Zero-based positional argument index.
+ * @param {string[]} keywordNames - Supported keyword names.
+ * @returns {string|null} Parsed string or null.
+ */
+function readStringArgument(args, positionalIndex, keywordNames = []) {
+  const cleanedArgs = String(args || '').replace(/#.*$/gm, '');
+  const stringPattern = String.raw`(['"])([^'"]+)\1`;
+  const keywordAlternation = keywordNames.map(escapeRegExp).join('|');
+
+  if (keywordAlternation) {
+    const keywordMatch = cleanedArgs.match(new RegExp(`(?:^|,)\\s*(?:${keywordAlternation})\\s*=\\s*${stringPattern}`));
+    if (keywordMatch) {
+      return keywordMatch[2];
+    }
+  }
+
+  const positionalArgs = cleanedArgs
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part && !part.includes('='));
+  const positionalMatch = positionalArgs[positionalIndex]?.match(new RegExp(`^${stringPattern}`));
+
+  return positionalMatch ? positionalMatch[2] : null;
+}
+
+/**
  * Finds the first Miniworlds constructor call that can be statically sized.
  * @param {string} code - Learner code.
  * @param {string} exportName - Constructor export name.
@@ -136,6 +209,28 @@ function findMiniworldsConstructorCall(code, exportName) {
   const constructors = getMiniworldsConstructorReferences(code, exportName).join('|');
   const pattern = new RegExp(
     `(?:^|\\n)\\s*(?:(\\w+)\\s*=\\s*)?(?:${constructors})\\(\\s*([^)]*?)\\s*\\)`,
+  );
+  const match = code.match(pattern);
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    worldName: match[1] || null,
+    args: match[2] || '',
+  };
+}
+
+/**
+ * Finds the first miniworlds_robot.load_world call that can be statically sized.
+ * @param {string} code - Learner code.
+ * @returns {{worldName: string|null, args: string}|null} Loader call.
+ */
+function findMiniworldsRobotLoadWorldCall(code) {
+  const references = getMiniworldsRobotLoadWorldReferences(code).join('|');
+  const pattern = new RegExp(
+    `(?:^|\\n)\\s*(?:(\\w+)\\s*=\\s*)?(?:${references})\\(\\s*([^)]*?)\\s*\\)`,
   );
   const match = code.match(pattern);
 
@@ -179,6 +274,24 @@ export function inferSDLLogicalSize(runner) {
 
   if (!code) {
     return null;
+  }
+
+  const robotWorldCall = findMiniworldsRobotLoadWorldCall(code);
+  if (robotWorldCall) {
+    const configName = readStringArgument(robotWorldCall.args, 0, ['config']) || 'basic';
+    const configSize = ROBOT_WORLD_CONFIG_SIZES[configName] || ROBOT_WORLD_CONFIG_SIZES.basic;
+    const columns = readIntegerArgument(robotWorldCall.args, 1, ['columns']) || configSize.columns;
+    const rows = readIntegerArgument(robotWorldCall.args, 2, ['rows']) || configSize.rows;
+    const tileSize = readIntegerArgument(robotWorldCall.args, 3, ['tile_size', 'tileSize']) || configSize.tileSize;
+    const size = {
+      width: columns * tileSize,
+      height: rows * tileSize,
+    };
+
+    return applyMiniworldsCameraAttachments(
+      size,
+      inferMiniworldsCameraAttachments(code, robotWorldCall.worldName),
+    );
   }
 
   const worldCall = findMiniworldsConstructorCall(code, 'World');
