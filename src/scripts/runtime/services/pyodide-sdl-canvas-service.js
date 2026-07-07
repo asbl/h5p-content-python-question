@@ -278,8 +278,16 @@ export function inferSDLLogicalSize(runner) {
 
   const robotWorldCall = findMiniworldsRobotLoadWorldCall(code);
   if (robotWorldCall) {
-    const configName = readStringArgument(robotWorldCall.args, 0, ['config']) || 'basic';
-    const configSize = ROBOT_WORLD_CONFIG_SIZES[configName] || ROBOT_WORLD_CONFIG_SIZES.basic;
+    const configName = readStringArgument(robotWorldCall.args, 0, ['config']);
+    // A URL loads the world definition from a remote JSON file whose
+    // dimensions cannot be inferred statically. Returning null lets SDL pick
+    // the canvas size from pygame.display.set_mode() inside world.run(), the
+    // same path that already works for generic pygame programs. Falling back
+    // to the "basic" 400x400 config here would seed a wrong placeholder size.
+    if (configName && /^https?:\/\//.test(configName)) {
+      return null;
+    }
+    const configSize = ROBOT_WORLD_CONFIG_SIZES[configName || 'basic'] || ROBOT_WORLD_CONFIG_SIZES.basic;
     const columns = readIntegerArgument(robotWorldCall.args, 1, ['columns']) || configSize.columns;
     const rows = readIntegerArgument(robotWorldCall.args, 2, ['rows']) || configSize.rows;
     const tileSize = readIntegerArgument(robotWorldCall.args, 3, ['tile_size', 'tileSize']) || configSize.tileSize;

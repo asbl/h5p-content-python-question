@@ -991,6 +991,23 @@ describe('PyodideRunner', () => {
     expect(inferSDLLogicalSize(runner)).toEqual({ width: 240, height: 150 });
   });
 
+  it('returns null for miniworlds_robot load_world with a URL config', () => {
+    const runtime = createRuntime();
+    runtime.getAnalysisCode = vi.fn(() => [
+      'from miniworlds_robot import load_world, load_robot',
+      'world = load_world(',
+      '    "https://github.com/asbl/miniworlds-robot-worlds/blob/main/worlds/01-sequences/sequence_01_straight_line.json"',
+      ')',
+      'robot = load_robot(world=world, position=(1, 1))',
+      'robot.step()',
+      'world.run()',
+    ].join('\n'));
+
+    const runner = new PyodideRunner(runtime, {});
+
+    expect(inferSDLLogicalSize(runner)).toBeNull();
+  });
+
   it('primes SDL canvas size from a wider static miniworlds world declaration', () => {
     const runtime = createRuntime();
     runtime.getAnalysisCode = vi.fn(() => [
