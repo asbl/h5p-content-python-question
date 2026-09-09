@@ -6,6 +6,7 @@ const CONTENT_ID = process.env.H5P_CONTENT_ID || 'Pyodide---Test-scipi2';
 const READ_DELAY_MS = Number(process.env.H5P_READ_DELAY_MS || 4000);
 const STARTUP_BUDGET_MS = Number(process.env.H5P_PYODIDE_STARTUP_BUDGET_MS || 0);
 const DISABLE_IDLE_PRELOAD = process.env.H5P_DISABLE_IDLE_PRELOAD === '1';
+const EXPECT_CANVAS = process.env.H5P_EXPECT_CANVAS === '1';
 const EXPECTED_OUTPUT_PATTERN = process.env.H5P_EXPECTED_OUTPUT_PATTERN
   ? new RegExp(process.env.H5P_EXPECTED_OUTPUT_PATTERN, 'i')
   : /(numpy|matrixmultiplikation|hello world)/i;
@@ -83,6 +84,43 @@ async function collectPyodidePerformance(frame) {
   });
 }
 
+async function waitForConsoleOutput(frame) {
+  await frame.waitForFunction((patternSource) => {
+    const body = document.querySelector('.console-body');
+    const text = body?.innerText || body?.textContent || '';
+    return new RegExp(patternSource, 'i').test(text);
+  }, EXPECTED_OUTPUT_PATTERN.source, { timeout: 90000 });
+}
+
+async function waitForRenderedSDLCanvas(frame) {
+  await frame.waitForFunction(() => {
+    const canvas = document.querySelector('canvas.pyodide-sdl-canvas');
+    if (!canvas || canvas.width <= 0 || canvas.height <= 0) {
+      return false;
+    }
+
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) {
+      return false;
+    }
+
+    const width = Math.min(canvas.width, 80);
+    const height = Math.min(canvas.height, 80);
+    const data = context.getImageData(0, 0, width, height).data;
+
+    for (let index = 0; index < data.length; index += 4) {
+      if (
+        data[index + 3] !== 0 &&
+        (data[index] !== 0 || data[index + 1] !== 0 || data[index + 2] !== 0)
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }, null, { timeout: 120000 });
+}
+
 async function main() {
   const browser = await chromium.launch({
     headless: process.env.H5P_HEADED !== '1',
@@ -106,27 +144,31 @@ async function main() {
     const start = Date.now();
     await runButton.click();
 
-    await frame.waitForFunction((patternSource) => {
-      const body = document.querySelector('.console-body');
-      const text = body?.innerText || body?.textContent || '';
-      return new RegExp(patternSource, 'i').test(text);
-    }, EXPECTED_OUTPUT_PATTERN.source, { timeout: 90000 });
+    if (EXPECT_CANVAS) {
+      await waitForRenderedSDLCanvas(frame);
+    }
+    else {
+      await waitForConsoleOutput(frame);
+    }
 
-    const runToFirstOutputMs = Date.now() - start;
+    const runToReadyMs = Date.now() - start;
     const result = {
       contentId: CONTENT_ID,
       readDelayMs: READ_DELAY_MS,
       idlePreloadDisabled: DISABLE_IDLE_PRELOAD,
+      readinessTarget: EXPECT_CANVAS ? 'rendered-sdl-canvas' : 'console-output',
       startupBudgetMs: STARTUP_BUDGET_MS || null,
-      runToFirstOutputMs,
+      runToReadyMs,
+      runToFirstOutputMs: EXPECT_CANVAS ? null : runToReadyMs,
+      runToRenderedCanvasMs: EXPECT_CANVAS ? runToReadyMs : null,
       measures: await collectPyodidePerformance(frame),
     };
 
     console.log(JSON.stringify(result, null, 2));
 
-    if (STARTUP_BUDGET_MS > 0 && runToFirstOutputMs > STARTUP_BUDGET_MS) {
+    if (STARTUP_BUDGET_MS > 0 && runToReadyMs > STARTUP_BUDGET_MS) {
       throw new Error(
-        `Pyodide startup exceeded budget: ${runToFirstOutputMs}ms > ${STARTUP_BUDGET_MS}ms`
+        `Pyodide startup exceeded budget: ${runToReadyMs}ms > ${STARTUP_BUDGET_MS}ms`
       );
     }
   }

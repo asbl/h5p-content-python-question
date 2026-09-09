@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getImportedPyodidePackages: vi.fn(() => []),
   hasPyodideBackgroundTask: vi.fn(() => Promise.resolve(false)),
   loadMissingPyodidePackages: vi.fn(() => Promise.resolve()),
+  queuePyodideExecution: vi.fn((_pyodide, _runtime, task) => task()),
   resetPyodideBackgroundTaskState: vi.fn(() => Promise.resolve()),
   setActivePyodideRuntime: vi.fn(),
   setActivePyodideSDLCanvas: vi.fn(),
@@ -52,6 +53,7 @@ vi.mock('../src/scripts/runtime/services/pyodide-runtime-service', () => ({
   hasPyodideBackgroundTask: mocks.hasPyodideBackgroundTask,
   installPyodideInputOverride: vi.fn(() => Promise.resolve()),
   installPyodideRuntimeCompatibility: vi.fn(() => Promise.resolve()),
+  queuePyodideExecution: mocks.queuePyodideExecution,
   resetPyodideBackgroundTaskState: mocks.resetPyodideBackgroundTaskState,
   setActivePyodideRuntime: mocks.setActivePyodideRuntime,
   setActivePyodideSDLCanvas: mocks.setActivePyodideSDLCanvas,
@@ -93,6 +95,16 @@ function createRuntime() {
       getStateManager: () => stateManager,
       getPageManager: () => pageManager,
     },
+  };
+}
+
+function createSDLPyodideStub() {
+  return {
+    runPythonAsync: vi.fn(() => Promise.resolve()),
+    canvas: {
+      setCanvas2D: vi.fn(),
+    },
+    _api: {},
   };
 }
 
@@ -188,7 +200,40 @@ describe('PyodideRunner', () => {
       'import numpy\nimport helper',
       { localModuleNames: ['helper'] },
     );
-    expect(mocks.loadMissingPyodidePackages).toHaveBeenCalledWith(runner.pyodide, ['numpy']);
+    expect(mocks.loadMissingPyodidePackages).toHaveBeenCalledWith(runner.pyodide, ['numpy'], {
+      packageUrls: undefined,
+    });
+  });
+
+  it('loads import-derived package hints during setup preload', async () => {
+    const runtime = createRuntime();
+    runtime.getPreloadPackageHints = vi.fn(() => ['miniworlds']);
+    const runner = new PyodideRunner(runtime, {
+      packages: ['pygame-ce'],
+      packageUrls: {
+        miniworlds: 'https://static.example.com/wheels/miniworlds.whl',
+      },
+    });
+
+    await runner.setup();
+
+    expect(mocks.loadMissingPyodidePackages).toHaveBeenCalledWith(null, ['pygame-ce', 'miniworlds'], {
+      packageUrls: {
+        miniworlds: 'https://static.example.com/wheels/miniworlds.whl',
+      },
+    });
+  });
+
+  it('reports the PythonQuestion library version as a non-captured status message', async () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, { packages: [] });
+
+    await runner.setup();
+
+    expect(runtime.outputHandler).toHaveBeenCalledWith(
+      expect.stringMatching(/^PythonQuestion version: \d+\.\d+\.\d+$/),
+      false,
+    );
   });
 
   it('executes input() code via the async input helper instead of regex rewriting', async () => {
@@ -206,6 +251,22 @@ describe('PyodideRunner', () => {
     const [executedCode] = runPythonAsync.mock.calls[0];
     expect(executedCode).toContain('await _h5p_run_with_async_input(');
     expect(executedCode).not.toContain('await input(');
+  });
+
+  it('detects input calls with whitespace and ignores input text in strings', async () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, { packages: [] });
+    const runPythonAsync = vi.fn(() => Promise.resolve('ok'));
+
+    runner.pyodide = { runPythonAsync };
+    runner._isInitialized = true;
+
+    await runner.execute('name = input ("Name?")');
+    expect(runPythonAsync.mock.calls[0][0]).toContain('await _h5p_run_with_async_input(');
+
+    runPythonAsync.mockClear();
+    await runner.execute('print("input(\\"Name?\\")")');
+    expect(runPythonAsync.mock.calls[0][0]).toBe('print("input(\\"Name?\\")")');
   });
 
   it('restores overridden p5 window globals when stopping the runner', () => {
@@ -347,11 +408,7 @@ describe('PyodideRunner', () => {
     document.body.appendChild(canvas);
 
     runner.sdlCanvas = canvas;
-    runner.pyodide = {
-      canvas: {
-        setCanvas2D: vi.fn(),
-      },
-    };
+    runner.pyodide = createSDLPyodideStub();
 
     runner.acquireInputFocus();
 
@@ -886,7 +943,7 @@ describe('PyodideRunner', () => {
 
     document.body.appendChild(canvasDiv);
 
-    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    runner.pyodide = createSDLPyodideStub();
     const canvas = runner.setupSDLCanvas(canvasDiv);
 
     expect(canvas.width).toBe(400);
@@ -912,7 +969,7 @@ describe('PyodideRunner', () => {
     Object.defineProperty(canvasDiv, 'clientWidth', { value: 900, configurable: true });
     document.body.appendChild(canvasDiv);
 
-    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    runner.pyodide = createSDLPyodideStub();
     const canvas = runner.setupSDLCanvas(canvasDiv);
 
     expect(canvas.width).toBe(320);
@@ -1006,7 +1063,7 @@ describe('PyodideRunner', () => {
 
     document.body.appendChild(canvasDiv);
 
-    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    runner.pyodide = createSDLPyodideStub();
     const canvas = runner.setupSDLCanvas(canvasDiv);
 
     expect(canvas.width).toBe(900);
@@ -1034,7 +1091,7 @@ describe('PyodideRunner', () => {
     Object.defineProperty(canvasDiv, 'clientWidth', { value: 900, configurable: true });
     document.body.appendChild(canvasDiv);
 
-    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    runner.pyodide = createSDLPyodideStub();
     const canvas = runner.setupSDLCanvas(canvasDiv);
 
     expect(canvas.width).toBe(660);
@@ -1115,7 +1172,7 @@ describe('PyodideRunner', () => {
 
     document.body.appendChild(canvasDiv);
 
-    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    runner.pyodide = createSDLPyodideStub();
     const canvas = runner.setupSDLCanvas(canvasDiv);
 
     expect(canvas.width).toBe(400);
@@ -1137,7 +1194,7 @@ describe('PyodideRunner', () => {
 
     document.body.appendChild(canvasDiv);
 
-    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    runner.pyodide = createSDLPyodideStub();
     const canvas = runner.setupSDLCanvas(canvasDiv);
 
     // Initially: canvas.width=1, canvas.height=1 (intentional 1×1 so any
@@ -1182,7 +1239,7 @@ describe('PyodideRunner', () => {
     existingCanvas.height = 1;
     canvasDiv.appendChild(existingCanvas);
 
-    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    runner.pyodide = createSDLPyodideStub();
 
     const canvas = runner.setupSDLCanvas(canvasDiv);
 
@@ -1201,7 +1258,7 @@ describe('PyodideRunner', () => {
     const canvasDiv = document.createElement('div');
     document.body.appendChild(canvasDiv);
 
-    runner.pyodide = { canvas: { setCanvas2D: vi.fn() }, _api: {} };
+    runner.pyodide = createSDLPyodideStub();
     runner.setupSDLCanvas(canvasDiv);
 
     expect(runner._canvasDimensionObserver).not.toBeNull();
@@ -1240,12 +1297,7 @@ describe('PyodideRunner', () => {
 
     document.body.appendChild(canvasDiv);
 
-    runner.pyodide = {
-      canvas: {
-        setCanvas2D: vi.fn(),
-      },
-      _api: {},
-    };
+    runner.pyodide = createSDLPyodideStub();
 
     const canvas = runner.setupSDLCanvas(canvasDiv);
 

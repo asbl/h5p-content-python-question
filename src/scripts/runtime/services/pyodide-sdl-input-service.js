@@ -14,6 +14,23 @@ export function isSDLControlKey(event) {
 }
 
 /**
+ * Returns whether an event target is a real text-entry control, e.g. the
+ * SweetAlert input dialog used for Python's input(). Keys typed into such a
+ * control (including Space and arrow keys used for cursor movement) must
+ * never be hijacked as SDL gameplay input.
+ * @param {EventTarget|null} target - Candidate event target.
+ * @returns {boolean} True if the target accepts free text entry.
+ */
+function isEditableEventTarget(target) {
+  if (!target || typeof target.tagName !== 'string') {
+    return false;
+  }
+
+  const tagName = target.tagName.toUpperCase();
+  return tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT' || Boolean(target.isContentEditable);
+}
+
+/**
  * Determines if this runner should capture and consume a key event.
  * @param {object} runner - PyodideRunner instance.
  * @param {KeyboardEvent} event - Keyboard event.
@@ -26,6 +43,10 @@ export function shouldCaptureSDLKeyboard(runner, event, sharedState) {
   }
 
   if (!runner.sdlCanvas?.isConnected) {
+    return false;
+  }
+
+  if (isEditableEventTarget(event?.target)) {
     return false;
   }
 
@@ -241,6 +262,30 @@ export function installSDLMouseCapture(runner) {
       return;
     }
 
+    // Bounding-rect containment alone is not enough: a SweetAlert input
+    // dialog (e.g. for Python's input()) can be positioned on top of the
+    // canvas area, so a click on the dialog would otherwise still count as
+    // "over canvas" and steal focus back to the canvas before the browser
+    // focuses the dialog's input field. Require that the click actually
+    // landed on the canvas (or its own wrapper), not on an unrelated
+    // overlay that merely happens to overlap its screen position.
+    const eventTarget = event.target;
+    const ownScope = runner.canvasWrapper || runner.canvasDiv || runner.sdlCanvas;
+    // A missing target (e.g. a synthetically constructed event) cannot prove
+    // the click landed elsewhere, so it is treated permissively; only an
+    // explicit target outside the canvas scope disqualifies the event.
+    const targetIsWithinCanvasScope = !eventTarget
+      || eventTarget === runner.sdlCanvas
+      || Boolean(
+        ownScope
+        && typeof ownScope.contains === 'function'
+        && ownScope.contains(eventTarget),
+      );
+
+    if (!targetIsWithinCanvasScope) {
+      return;
+    }
+
     const isPressEvent = event.type === 'pointerdown'
       || event.type === 'mousedown'
       || event.type === 'touchstart'
@@ -299,22 +344,95 @@ export function uninstallSDLMouseCapture(runner) {
 }
 
 /**
+ * Installs the lightweight pygame event pump helper once per runner.
+ * @param {object} runner - PyodideRunner instance.
+ * @returns {Promise<void>} Resolves once the helper is available.
+ */
+export function ensureSDLEventPumpFunction(runner) {
+  if (typeof runner.pyodide?.runPythonAsync !== 'function') {
+    return Promise.resolve();
+  }
+
+  if (runner._sdlEventPumpFunctionInstalled) {
+    return Promise.resolve();
+  }
+
+  if (runner._sdlEventPumpInstallPromise) {
+    return runner._sdlEventPumpInstallPromise;
+  }
+
+  runner._sdlEventPumpInstallPromise = runner.pyodide.runPythonAsync(`
+def _h5p_pygame_event_pump():
+    try:
+        import pygame
+        pygame.event.pump()
+    except Exception:
+        pass
+`).then(() => {
+    runner._sdlEventPumpFunctionInstalled = true;
+  }).catch((error) => {
+    runner._sdlEventPumpFunctionInstalled = false;
+    throw error;
+  }).finally(() => {
+    runner._sdlEventPumpInstallPromise = null;
+  });
+
+  return runner._sdlEventPumpInstallPromise;
+}
+
+/**
+ * Returns whether the periodic pygame event pump should run now.
+ * @param {object} runner - PyodideRunner instance.
+ * @param {object} [sharedState] - Shared runtime state.
+ * @returns {boolean} True when this runner owns the visible SDL canvas.
+ */
+export function shouldRunSDLEventPump(runner, sharedState = sharedPyodideRuntimeState) {
+  if (typeof runner.pyodide?.runPythonAsync !== 'function' || runner.stopped || !runner.sdlCanvas?.isConnected) {
+    return false;
+  }
+
+  if (sharedState.activeSDLRunner !== runner) {
+    return false;
+  }
+
+  const pageName = runner.runtime?.codeContainer?.getPageManager?.().activePageName;
+  return !pageName || pageName === 'canvas';
+}
+
+/**
  * Starts a periodic pygame.event.pump() loop while SDL canvas is active.
  * @param {object} runner - PyodideRunner instance.
  * @returns {void}
  */
 export function startSDLEventPumpLoop(runner) {
-  if (runner._sdlEventPumpInterval !== null || typeof window?.setInterval !== 'function') {
+  if (runner._sdlEventPumpInterval != null || typeof window?.setInterval !== 'function') {
     return;
   }
 
+  ensureSDLEventPumpFunction(runner).catch(() => {
+    // Keep startup non-fatal; the interval retries while SDL remains active.
+  });
+
   runner._sdlEventPumpInterval = window.setInterval(() => {
-    if (!runner.pyodide || runner.stopped || !runner.sdlCanvas?.isConnected) {
+    if (!shouldRunSDLEventPump(runner)) {
       return;
     }
 
-    runner.pyodide.runPythonAsync('import pygame; pygame.event.pump()').catch(() => {
+    if (runner._sdlEventPumpInFlight) {
+      return;
+    }
+
+    runner._sdlEventPumpInFlight = true;
+    ensureSDLEventPumpFunction(runner).then(() => {
+      if (!shouldRunSDLEventPump(runner)) {
+        return undefined;
+      }
+
+      return runner.pyodide.runPythonAsync('_h5p_pygame_event_pump()');
+    }).catch(() => {
       // Keep loop alive even if pygame is temporarily unavailable.
+    }).finally(() => {
+      runner._sdlEventPumpInFlight = false;
     });
   }, 50);
 }
@@ -325,10 +443,11 @@ export function startSDLEventPumpLoop(runner) {
  * @returns {void}
  */
 export function stopSDLEventPumpLoop(runner) {
-  if (runner._sdlEventPumpInterval === null || typeof window?.clearInterval !== 'function') {
+  if (runner._sdlEventPumpInterval == null || typeof window?.clearInterval !== 'function') {
     return;
   }
 
   window.clearInterval(runner._sdlEventPumpInterval);
   runner._sdlEventPumpInterval = null;
 }
+import { sharedPyodideRuntimeState } from './pyodide-runtime-service';

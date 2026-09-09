@@ -42,6 +42,7 @@ import {
   hasPyodideBackgroundTask,
   installPyodideInputOverride,
   installPyodideRuntimeCompatibility,
+  queuePyodideExecution,
   resetPyodideBackgroundTaskState,
   setActivePyodideRuntime,
   setPyodideExecutionLimit,
@@ -49,6 +50,21 @@ import {
 } from './services/pyodide-runtime-service';
 import { ensureP5Script } from './services/p5-runtime-service';
 import { logPythonDiagnostic } from '../services/python-diagnostics';
+
+/**
+ * Detects whether learner code contains a direct input(...) call.
+ * @param {string} code - Python source code.
+ * @returns {boolean} True if code contains a direct input call.
+ */
+const DEBUG_PREFIX = 'Pyodide runner:';
+
+function containsPythonInputCall(code = '') {
+  return /(^|[^.\w])input\s*\(/.test(
+    String(code || '')
+      .replace(/'''[\s\S]*?'''|"""[\s\S]*?"""|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g, '')
+      .replace(/#.*/g, ''),
+  );
+}
 
 export default class PyodideRunner {
   /**
@@ -89,6 +105,9 @@ export default class PyodideRunner {
     this._sdlMouseCaptureBound = null;
     this._sdlMouseCaptureInstalled = false;
     this._sdlEventPumpInterval = null;
+    this._sdlEventPumpInstallPromise = null;
+    this._sdlEventPumpFunctionInstalled = false;
+    this._sdlEventPumpInFlight = false;
     this._canvasDimensionObserver = null;
     this._isInitialized = false;
     this._setupPromise = null;
@@ -297,8 +316,17 @@ export default class PyodideRunner {
     if (this.runtime.containsSDLCode?.()) {
       const prevSDLRunner = sharedPyodideRuntimeState.activeSDLRunner;
       if (prevSDLRunner && prevSDLRunner !== this) {
+        const handoffStartedAt = Date.now();
+        logPythonDiagnostic(this.options, DEBUG_PREFIX, 'SDL canvas handoff start', {
+          from: prevSDLRunner.runtime?.type,
+          to: this.runtime?.type,
+          prevHasBackgroundTask: prevSDLRunner.hasBackgroundTask,
+        });
         prevSDLRunner.stop();
         await prevSDLRunner.waitForBackgroundTaskCancellation();
+        logPythonDiagnostic(this.options, DEBUG_PREFIX, 'SDL canvas handoff done', {
+          durationMs: Date.now() - handoffStartedAt,
+        });
       }
     }
 
@@ -362,23 +390,30 @@ export default class PyodideRunner {
 
       let result = null;
 
-      await this.applyExecutionLimit();
+      result = await queuePyodideExecution(this.pyodide, this.runtime, async () => {
+        await this.applyExecutionLimit();
 
-      try {
-        if (code.includes('input(')) {
-          result = await this.pyodide.runPythonAsync(
-            `await _h5p_run_with_async_input(${JSON.stringify(String(code || ''))})`
-          );
+        try {
+          if (containsPythonInputCall(code)) {
+            return await this.pyodide.runPythonAsync(
+              `await _h5p_run_with_async_input(${JSON.stringify(String(code || ''))})`
+            );
+          }
+
+          return await this.pyodide.runPythonAsync(code);
         }
-        else {
-          result = await this.pyodide.runPythonAsync(code);
+        finally {
+          await this.clearExecutionLimit();
         }
-      }
-      finally {
-        await this.clearExecutionLimit();
-      }
+      });
 
       this.hasBackgroundTask = await hasPyodideBackgroundTask(this.pyodide);
+
+      logPythonDiagnostic(this.options, DEBUG_PREFIX, 'execute code finished', {
+        runtimeType: this.runtime?.type,
+        hasBackgroundTask: this.hasBackgroundTask,
+        willCallOnSuccess: !this.hasBackgroundTask,
+      });
 
       if (this.hasBackgroundTask) {
         this.setCanvasLoading(false);
@@ -766,6 +801,41 @@ export default class PyodideRunner {
     this.acquireInputFocus();
     this.triggerResizeAfterCanvasUpdate();
     return canvas;
+  }
+
+  /**
+   * Temporarily releases SDL keyboard capture while a blocking input()
+   * dialog is shown. The SDL canvas is registered as the browser's
+   * SDL_EMSCRIPTEN_KEYBOARD_ELEMENT (see pyodide-runtime-service.js), so it
+   * keeps native SDL keyboard focus even while unrelated DOM elements are
+   * focused; without blurring it first, keystrokes typed into the dialog's
+   * input field never reach it. Unlike releaseInputFocus(), this leaves
+   * canvas-size observation intact since the run is only paused, not ending.
+   * @returns {void}
+   */
+  pauseSDLInputForDialog() {
+    if (!this.sdlCanvas?.isConnected) {
+      return;
+    }
+
+    this.uninstallSDLKeyboardCapture();
+    this.stopSDLEventPumpLoop();
+
+    if (typeof this.sdlCanvas.blur === 'function') {
+      this.sdlCanvas.blur();
+    }
+  }
+
+  /**
+   * Restores SDL keyboard capture after a blocking input() dialog closes.
+   * @returns {void}
+   */
+  resumeSDLInputAfterDialog() {
+    if (this.stopped || !this.sdlCanvas?.isConnected) {
+      return;
+    }
+
+    this.acquireInputFocus();
   }
 
   /**

@@ -1,4 +1,5 @@
 import { setActivePyodideSDLCanvas } from './pyodide-runtime-service';
+import { SDL_KEYBOARD_ELEMENT_ID } from './pyodide-sdl-constants';
 
 /**
  * Escapes text for use in a regular expression.
@@ -253,6 +254,15 @@ function findMiniworldsRobotLoadWorldCall(code) {
 export function bindSDLCanvas(runner, focus = false) {
   if (!runner.sdlCanvas) {
     return;
+  }
+
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll(`#${SDL_KEYBOARD_ELEMENT_ID}`).forEach((canvas) => {
+      if (canvas !== runner.sdlCanvas) {
+        canvas.removeAttribute('id');
+      }
+    });
+    runner.sdlCanvas.id = SDL_KEYBOARD_ELEMENT_ID;
   }
 
   setActivePyodideSDLCanvas(runner.sdlCanvas);

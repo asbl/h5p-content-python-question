@@ -253,6 +253,33 @@ export default class PythonRuntime extends H5P.Runtime {
     return this.containsPygameCode() || this.containsMiniworldsCode();
   }
 
+  /**
+   * Shows the input() prompt dialog. While an SDL/pygame canvas is active
+   * it holds native SDL keyboard focus (see SDL_EMSCRIPTEN_KEYBOARD_ELEMENT
+   * in pyodide-runtime-service.js) independently of normal DOM focus, so
+   * that capture is paused first and typed keystrokes reach the dialog's
+   * input field instead of being swallowed by the SDL canvas.
+   * @param {string} promptText - The text that Python passed to input().
+   * @returns {Promise<string>} Resolves with the user's input.
+   */
+  async inputHandler(promptText) {
+    const runner = this.runnerType === 'pyodide' ? this.runner : null;
+    const sdlActive = Boolean(runner?.sdlCanvas?.isConnected);
+
+    if (sdlActive) {
+      runner.pauseSDLInputForDialog();
+    }
+
+    try {
+      return await super.inputHandler(promptText);
+    }
+    finally {
+      if (sdlActive) {
+        runner.resumeSDLInputAfterDialog();
+      }
+    }
+  }
+
   containsTurtleCode() {
     const code = this.getAnalysisCode();
     if (!code) return false;

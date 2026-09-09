@@ -9,6 +9,7 @@ import {
   normalizePythonPackageEntries,
   splitPythonPackages,
 } from '../../services/python-package-utils';
+import { SDL_KEYBOARD_ELEMENT_ID } from './pyodide-sdl-constants';
 
 /**
  * Shared Pyodide loader state across all runner instances.
@@ -261,11 +262,44 @@ export function getPyodideInstanceState(pyodide) {
       compatibilityPromise: null,
       inputOverridePromise: null,
       loadedPackages: new Set(),
+      executionQueue: Promise.resolve(),
     };
     sharedPyodideRuntimeState.pyodideInstanceState.set(pyodide, instanceState);
   }
 
   return instanceState;
+}
+
+/**
+ * Serializes code execution for one Pyodide instance and binds global IO
+ * routing to the runtime that owns the queued execution.
+ * @param {object} pyodide - Pyodide instance.
+ * @param {object|null} runtime - Runtime that owns stdout/stderr/input.
+ * @param {function(): Promise<*>} task - Execution task.
+ * @returns {Promise<*>} Resolves/rejects with the task's outcome.
+ */
+export function queuePyodideExecution(pyodide, runtime, task) {
+  const instanceState = getPyodideInstanceState(pyodide);
+  const next = instanceState.executionQueue.catch(() => { }).then(async () => {
+    const previousRuntime = sharedPyodideRuntimeState.activeRuntime;
+
+    if (runtime) {
+      setActivePyodideRuntime(runtime);
+    }
+
+    pyodide?.globals?.set?.('input_handler', (prompt) => getPyodideRuntimeInput(prompt, runtime));
+
+    try {
+      return await task();
+    }
+    finally {
+      sharedPyodideRuntimeState.activeRuntime = previousRuntime;
+    }
+  });
+
+  instanceState.executionQueue = next.catch(() => { });
+
+  return next;
 }
 
 /**
@@ -580,7 +614,7 @@ export function getPyodideRuntimeInput(promptText = '', runtime = null) {
   if (activeRuntime?.inputHandler) {
     return Promise.resolve(
       activeRuntime.inputHandler(promptText || getPythonL10nValue(l10n, 'pythonInputPrompt')),
-    ).then((value) => (typeof value === 'string' ? value : ''));
+    ).then((value) => (value == null ? '' : String(value)));
   }
 
   return Promise.resolve('');
@@ -637,6 +671,13 @@ import time as _h5p_time
 
 if not globals().get('_h5p_runtime_compat_installed', False):
   _h5p_os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+  # pygame-ce's emscripten SDL2 build otherwise binds its native keyboard
+  # listener to the whole document, which swallows keystrokes meant for an
+  # unrelated input() dialog no matter where DOM focus actually is. Scoping
+  # it to the active SDL canvas element (see SDL_KEYBOARD_ELEMENT_ID) means
+  # SDL only sees keys while the canvas itself has focus. Must be set before
+  # the first pygame.init()/SDL_Init() call.
+  _h5p_os.environ['SDL_EMSCRIPTEN_KEYBOARD_ELEMENT'] = '#${SDL_KEYBOARD_ELEMENT_ID}'
   _h5p_original_asyncio_run = asyncio.run
   _h5p_background_task = None
   _h5p_background_task_started = False
@@ -819,10 +860,57 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     _h5p_background_task_started = False
     return True
 
-  class _h5p_await_input_transformer(_h5p_ast.NodeTransformer):
-    def __init__(self):
+  class _h5p_async_input_function_discoverer(_h5p_ast.NodeVisitor):
+    def __init__(self, async_function_names):
       super().__init__()
+      self.async_function_names = async_function_names
+      self.contains_async_input = False
+      self._nested_function_depth = 0
+
+    def visit_FunctionDef(self, node):
+      if self._nested_function_depth == 0 and node.name in self.async_function_names:
+        self.contains_async_input = True
+        return
+
+      self._nested_function_depth += 1
+      if self._nested_function_depth == 1:
+        for child in node.body:
+          self.visit(child)
+      self._nested_function_depth -= 1
+
+    def visit_AsyncFunctionDef(self, node):
+      return
+
+    def visit_Call(self, node):
+      if (
+        isinstance(node.func, _h5p_ast.Name)
+        and (
+          node.func.id == 'input'
+          or node.func.id in self.async_function_names
+        )
+      ):
+        self.contains_async_input = True
+      self.generic_visit(node)
+
+  class _h5p_await_input_transformer(_h5p_ast.NodeTransformer):
+    def __init__(self, async_function_names):
+      super().__init__()
+      self.async_function_names = async_function_names
       self._inside_await = False
+
+    def visit_FunctionDef(self, node):
+      self.generic_visit(node)
+      if node.name not in self.async_function_names:
+        return node
+
+      return _h5p_ast.copy_location(_h5p_ast.AsyncFunctionDef(
+        name=node.name,
+        args=node.args,
+        body=node.body,
+        decorator_list=node.decorator_list,
+        returns=node.returns,
+        type_comment=getattr(node, 'type_comment', None),
+      ), node)
 
     def visit_Await(self, node):
       previous = self._inside_await
@@ -836,15 +924,41 @@ if not globals().get('_h5p_runtime_compat_installed', False):
       if (
         not self._inside_await
         and isinstance(node.func, _h5p_ast.Name)
-        and node.func.id == 'input'
+        and (
+          node.func.id == 'input'
+          or node.func.id in self.async_function_names
+        )
       ):
         return _h5p_ast.copy_location(_h5p_ast.Await(value=node), node)
       return node
 
+  def _h5p_discover_async_input_function_names(tree):
+    discovered_async_function_names = set()
+    changed = True
+
+    while changed:
+      changed = False
+      for node in tree.body:
+        if not isinstance(node, _h5p_ast.FunctionDef):
+          continue
+        if node.name in discovered_async_function_names:
+          continue
+
+        discoverer = _h5p_async_input_function_discoverer(discovered_async_function_names)
+        for child in node.body:
+          discoverer.visit(child)
+
+        if discoverer.contains_async_input:
+          discovered_async_function_names.add(node.name)
+          changed = True
+
+    return discovered_async_function_names
+
   def _h5p_build_async_input_module(source):
     source = '' if source is None else str(source)
     tree = _h5p_ast.parse(source, mode='exec')
-    transformed_body = _h5p_await_input_transformer().visit(tree).body
+    discovered_async_function_names = _h5p_discover_async_input_function_names(tree)
+    transformed_body = _h5p_await_input_transformer(discovered_async_function_names).visit(tree).body
 
     if not transformed_body:
       transformed_body = [_h5p_ast.Pass()]
