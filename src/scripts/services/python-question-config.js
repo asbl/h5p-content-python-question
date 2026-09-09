@@ -1,5 +1,8 @@
 import { normalizePythonExecutionLimit } from './python-execution-limit';
-import { normalizePythonPackageEntries } from './python-package-utils';
+import {
+  getPythonPackageUrlMap,
+  normalizePythonPackageEntries,
+} from './python-package-utils';
 import {
   decodeHtmlCode,
   getExternalLibraryUrl as getExternalLibraryUrlShared,
@@ -192,7 +195,7 @@ export function normalizePythonRunner(runner) {
  * Normalizes advanced runtime options from semantics.
  * @param {object} [advancedOptions] - Raw advanced options.
  * @param {object} [pyodideOptions] - Raw Pyodide advanced options.
- * @returns {{disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}} Normalized options.
+ * @returns {{disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, enablePythonTutor: boolean, enableDiagnosticLogs: boolean, executionLimit: number}} Normalized options.
  */
 export function normalizePythonAdvancedOptions(advancedOptions = {}, pyodideOptions = {}) {
   const yamlUrls = parseExternalLibraryUrlsYaml(advancedOptions?.externalLibraryUrls);
@@ -203,9 +206,12 @@ export function normalizePythonAdvancedOptions(advancedOptions = {}, pyodideOpti
     enableImageUploads: advancedOptions?.enableImageUploads === true,
     enableSoundUploads: advancedOptions?.enableSoundUploads === true,
     enableSaveLoadButtons: advancedOptions?.enableSaveLoadButtons !== false,
+    enablePythonTutor: advancedOptions?.enablePythonTutor === true,
+    enableDiagnosticLogs: advancedOptions?.enableDiagnosticLogs === true,
     blocklyCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'blocklyCdnUrl'),
     codeMirrorCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'codeMirrorCdnUrl'),
     markdownCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'markdownCdnUrl'),
+    mermaidCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'mermaidCdnUrl'),
     fontAwesomeCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'fontAwesomeCdnUrl'),
     sweetAlertCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'sweetAlertCdnUrl'),
     jsZipCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'jsZipCdnUrl'),
@@ -222,7 +228,7 @@ export function normalizePythonAdvancedOptions(advancedOptions = {}, pyodideOpti
  * Per-editor fields (sourceFiles, allowAddingFiles) are NOT included here;
  * they are resolved per-container via buildPythonCodeContainerOptions.
  * @param {object} [params] - Raw PythonQuestion params.
- * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], advancedOptions: {disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, executionLimit: number}}} Normalized config.
+ * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], advancedOptions: {disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, enablePythonTutor: boolean, enableDiagnosticLogs: boolean, executionLimit: number}}} Normalized config.
  */
 export function normalizePythonQuestionConfig(params = {}) {
   const runner = normalizePythonRunner(params.pythonRunner);
@@ -232,6 +238,7 @@ export function normalizePythonQuestionConfig(params = {}) {
     runner,
     pyodidePackageEntries,
     packages: normalizePythonPackageEntries(pyodidePackageEntries),
+    packageUrls: getPythonPackageUrlMap(pyodidePackageEntries, params.pyodideOptions?.packageUrls),
     advancedOptions: normalizePythonAdvancedOptions(params.advancedOptions, params.pyodideOptions),
   };
 }
@@ -268,6 +275,8 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     enableImageUploads: editorParams?.enableImageUploads === true || config?.advancedOptions?.enableImageUploads === true,
     enableSoundUploads: editorParams?.enableSoundUploads === true || config?.advancedOptions?.enableSoundUploads === true,
     showSaveLoadButtons: config?.advancedOptions?.enableSaveLoadButtons !== false,
+    enablePythonTutor: config?.advancedOptions?.enablePythonTutor === true,
+    enableDiagnosticLogs: config?.advancedOptions?.enableDiagnosticLogs === true,
     projectStorageEnabled: config?.runner === 'pyodide',
     entryFileName: 'main.py',
     allowAddingFiles: config?.runner === 'pyodide' && editorParams?.allowAddingFiles === true,
@@ -300,7 +309,9 @@ export function buildPythonRuntimeOptions(config, runtimeL10n) {
     runner: config?.runner || 'skulpt',
     l10n: runtimeL10n,
     packages: [...(config?.packages || [])],
+    packageUrls: { ...(config?.packageUrls || {}) },
     disableOutputPopups: config?.advancedOptions?.disableOutputPopups === true,
+    enableDiagnosticLogs: config?.advancedOptions?.enableDiagnosticLogs === true,
     blocklyCdnUrl: config?.advancedOptions?.blocklyCdnUrl || '',
     codeMirrorCdnUrl: config?.advancedOptions?.codeMirrorCdnUrl || '',
     fontAwesomeCdnUrl: config?.advancedOptions?.fontAwesomeCdnUrl || '',

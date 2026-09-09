@@ -29,9 +29,12 @@ describe('Python question config', () => {
       enableImageUploads: true,
       enableSoundUploads: true,
       enableSaveLoadButtons: false,
+      enablePythonTutor: true,
+      enableDiagnosticLogs: true,
       blocklyCdnUrl: 'https://cdn.example.com/blockly/',
       codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
       markdownCdnUrl: 'https://cdn.example.com/markdown/',
+      mermaidCdnUrl: '',
       fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
       sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
       jsZipCdnUrl: 'https://cdn.example.com/jszip/',
@@ -47,9 +50,12 @@ describe('Python question config', () => {
       enableImageUploads: true,
       enableSoundUploads: true,
       enableSaveLoadButtons: false,
+      enablePythonTutor: true,
+      enableDiagnosticLogs: true,
       blocklyCdnUrl: 'https://cdn.example.com/blockly/',
       codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
       markdownCdnUrl: 'https://cdn.example.com/markdown/',
+      mermaidCdnUrl: '',
       fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
       sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
       jsZipCdnUrl: 'https://cdn.example.com/jszip/',
@@ -67,6 +73,7 @@ describe('Python question config', () => {
       blockly: https://cdn.example.com/blockly/
       codeMirror: "https://cdn.example.com/codemirror/"
       markdown: 'https://cdn.example.com/markdown/'
+      mermaid: https://cdn.example.com/mermaid/
       fontAwesome: https://cdn.example.com/fontawesome.css
       sweetAlert: https://cdn.example.com/sweetalert/
       jsZip: https://cdn.example.com/jszip/
@@ -80,6 +87,7 @@ describe('Python question config', () => {
       blocklyCdnUrl: 'https://cdn.example.com/blockly/',
       codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
       markdownCdnUrl: 'https://cdn.example.com/markdown/',
+      mermaidCdnUrl: 'https://cdn.example.com/mermaid/',
       fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
       sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
       jsZipCdnUrl: 'https://cdn.example.com/jszip/',
@@ -136,10 +144,13 @@ describe('Python question config', () => {
       pythonRunner: 'pyodide',
       pyodideOptions: {
         packages: [
-          'miniworlds',
+          { package: 'miniworlds', url: 'https://static.example.com/wheels/miniworlds.whl' },
           { package: { value: 'sqlite3' } },
           { value: 'miniworlds' },
         ],
+        packageUrls: {
+          'miniworlds-robot': 'https://static.example.com/wheels/robot.whl',
+        },
         pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
       },
       advancedOptions: {
@@ -147,9 +158,12 @@ describe('Python question config', () => {
         enableImageUploads: true,
         enableSoundUploads: true,
         enableSaveLoadButtons: false,
+        enablePythonTutor: true,
+        enableDiagnosticLogs: true,
         blocklyCdnUrl: 'https://cdn.example.com/blockly/',
         codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
         markdownCdnUrl: 'https://cdn.example.com/markdown/',
+        mermaidCdnUrl: '',
         fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
         sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
         jsZipCdnUrl: 'https://cdn.example.com/jszip/',
@@ -163,20 +177,27 @@ describe('Python question config', () => {
     expect(config).toEqual({
       runner: 'pyodide',
       pyodidePackageEntries: [
-        'miniworlds',
+        { package: 'miniworlds', url: 'https://static.example.com/wheels/miniworlds.whl' },
         { package: { value: 'sqlite3' } },
         { value: 'miniworlds' },
       ],
       packages: ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
+      packageUrls: {
+        miniworlds: 'https://static.example.com/wheels/miniworlds.whl',
+        'miniworlds-robot': 'https://static.example.com/wheels/robot.whl',
+      },
       advancedOptions: {
         showConsole: true,
         disableOutputPopups: true,
         enableImageUploads: true,
         enableSoundUploads: true,
         enableSaveLoadButtons: false,
+        enablePythonTutor: true,
+        enableDiagnosticLogs: true,
         blocklyCdnUrl: 'https://cdn.example.com/blockly/',
         codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
         markdownCdnUrl: 'https://cdn.example.com/markdown/',
+        mermaidCdnUrl: '',
         fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
         sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
         jsZipCdnUrl: 'https://cdn.example.com/jszip/',
@@ -217,6 +238,8 @@ describe('Python question config', () => {
       enableImageUploads: true,
       enableSoundUploads: true,
       showSaveLoadButtons: false,
+      enablePythonTutor: true,
+      enableDiagnosticLogs: true,
       projectStorageEnabled: true,
       entryFileName: 'main.py',
       allowAddingFiles: true,
@@ -254,7 +277,12 @@ describe('Python question config', () => {
       runner: 'pyodide',
       l10n: { pyodideReady: 'Ready' },
       packages: ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
+      packageUrls: {
+        miniworlds: 'https://static.example.com/wheels/miniworlds.whl',
+        'miniworlds-robot': 'https://static.example.com/wheels/robot.whl',
+      },
       disableOutputPopups: true,
+      enableDiagnosticLogs: true,
       blocklyCdnUrl: 'https://cdn.example.com/blockly/',
       codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
       fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
@@ -265,6 +293,17 @@ describe('Python question config', () => {
       pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
       executionLimit: 2750,
       projectStorageEnabled: true,
+    });
+  });
+
+  it('defaults enablePythonTutor to false', () => {
+    expect(normalizePythonAdvancedOptions({}).enablePythonTutor).toBe(false);
+
+    const config = normalizePythonQuestionConfig({ pythonRunner: 'skulpt' });
+    expect(config.advancedOptions.enablePythonTutor).toBe(false);
+    expect(buildPythonCodeContainerOptions({}, config, {})).toMatchObject({
+      enablePythonTutor: false,
+      enableDiagnosticLogs: false,
     });
   });
 
@@ -281,6 +320,28 @@ describe('Python question config', () => {
       hasConsole: false,
       pythonPackages: [],
     });
+  });
+
+  it('prioritizes nested editor source files and keeps legacy Pyodide source files as fallback', () => {
+    expect(getPyodideSourceFileEntriesFromParams({
+      pyodideOptions: {
+        sourceFiles: [{ fileName: 'legacy-pyodide.py' }],
+      },
+      editorSettings: {
+        options: {
+          sourceFiles: [{ fileName: 'nested-editor.py' }],
+        },
+      },
+    })).toEqual([{ fileName: 'legacy-pyodide.py' }]);
+
+    expect(getPyodideSourceFileEntriesFromParams({
+      editorSettings: {
+        options: {
+          sourceFiles: [{ fileName: 'nested-editor.py' }],
+        },
+        sourceFiles: [{ fileName: 'legacy-editor.py' }],
+      },
+    })).toEqual([{ fileName: 'nested-editor.py' }]);
   });
 
   it('decodes HTML entities and normalizes Python source file names', () => {
@@ -314,6 +375,26 @@ describe('Python question config', () => {
         editable: false,
         blocklyWorkspaceState: null,
       },
+    ]);
+  });
+
+  it('deduplicates sanitized Python source and default image names', () => {
+    expect(normalizePythonSourceFiles([
+      { fileName: '../helper file.py', code: 'a = 1' },
+      { fileName: 'helper-file.py', code: 'b = 2' },
+      { fileName: '123.py', code: 'c = 3' },
+    ])).toEqual([
+      { name: 'helper_file.py', code: 'a = 1', visible: true, editable: true, blocklyWorkspaceState: null },
+      { name: 'helper_file_2.py', code: 'b = 2', visible: true, editable: true, blocklyWorkspaceState: null },
+      { name: 'module_3.py', code: 'c = 3', visible: true, editable: true, blocklyWorkspaceState: null },
+    ]);
+
+    expect(normalizePythonDefaultImages([
+      { path: 'uploads/bg.png', fileName: 'background' },
+      { path: 'uploads/bg.png', fileName: 'background.png' },
+    ])).toEqual([
+      { path: 'uploads/bg.png', fileName: 'background.png' },
+      { path: 'uploads/bg.png', fileName: 'background_2.png' },
     ]);
   });
 
