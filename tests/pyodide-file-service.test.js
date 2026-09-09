@@ -88,6 +88,16 @@ describe('PyodideFileService (base class)', () => {
     });
   });
 
+  describe('getSafeRelativeFilePath', () => {
+    it('keeps safe nested paths and removes traversal segments', () => {
+      const service = new PyodideFileService(createRunner(), TEST_OPTIONS);
+
+      expect(service.getSafeRelativeFilePath('folder/data.csv')).toBe('folder/data.csv');
+      expect(service.getSafeRelativeFilePath('../secret.txt')).toBe('secret.txt');
+      expect(service.getSafeRelativeFilePath('bad/<name>.txt')).toBe('bad/_name_.txt');
+    });
+  });
+
   describe('getUploadedFiles', () => {
     it('returns files from the manager when enabled', () => {
       const files = [makeFile('notes.txt')];
@@ -265,6 +275,43 @@ describe('PyodideFileService (base class)', () => {
       );
       expect(pyodide.globals.set).toHaveBeenCalledWith('h5p_files', pyRegistry);
       expect(pyRegistry.destroy).toHaveBeenCalled();
+    });
+
+    it('writes unsafe file names to sanitized paths below the file directory', async () => {
+      const existingPaths = new Set();
+      const fs = {
+        analyzePath: vi.fn((p) => ({ exists: existingPaths.has(p) })),
+        mkdir: vi.fn((p) => existingPaths.add(p)),
+        readdir: vi.fn(() => []),
+        writeFile: vi.fn(),
+        stat: vi.fn(),
+        rmdir: vi.fn(),
+        unlink: vi.fn(),
+        isDir: vi.fn(() => false),
+      };
+      const pyRegistry = { destroy: vi.fn() };
+      const pyodide = {
+        FS: fs,
+        toPy: vi.fn(() => pyRegistry),
+        globals: { set: vi.fn() },
+        runPythonAsync: vi.fn(async () => {}),
+      };
+
+      const service = new PyodideFileService(
+        createRunner([makeFile('../folder/<notes>.txt')], pyodide, 'container_1'),
+        TEST_OPTIONS,
+      );
+
+      await service.installRegistry();
+
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        '/tmp/h5p_project/container_1/files/folder/_notes_.txt',
+        expect.any(Uint8Array),
+      );
+      expect(pyodide.toPy.mock.calls[0][0]['../folder/<notes>.txt']).toMatchObject({
+        path: 'files/folder/_notes_.txt',
+        absolute_path: '/tmp/h5p_project/container_1/files/folder/_notes_.txt',
+      });
     });
 
     it('uses JSON fallback when toPy is unavailable', async () => {

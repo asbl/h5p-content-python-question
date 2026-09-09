@@ -209,6 +209,34 @@ export default class PyodideFileService {
   }
 
   /**
+   * Returns a safe runtime-relative file path below the service directory.
+   * @param {string} [fileName] - Visible file name or relative path.
+   * @returns {string} Sanitized relative file path.
+   */
+  getSafeRelativeFilePath(fileName = '') {
+    const segments = String(fileName || '')
+      .replace(/\\/g, '/')
+      .split('/')
+      .map((segment) => segment.trim())
+      .filter((segment) => segment && segment !== '.' && segment !== '..')
+      .map((segment) => segment.replace(/[^A-Za-z0-9._ -]/g, '_'));
+
+    return segments.length ? segments.join('/') : 'file';
+  }
+
+  /**
+   * Returns the parent directory for an absolute FS path.
+   * @param {string} absolutePath - Absolute FS path.
+   * @returns {string} Parent directory.
+   */
+  getParentDirectory(absolutePath) {
+    const path = String(absolutePath || '');
+    const separatorIndex = path.lastIndexOf('/');
+
+    return separatorIndex > 0 ? path.slice(0, separatorIndex) : '/';
+  }
+
+  /**
    * Moves Pyodide's current working directory to the file root.
    * @param {string} path - Target working directory.
    * @returns {Promise<void>} Resolves after chdir completed.
@@ -255,8 +283,10 @@ del _h5p_os
         };
       }
 
-      const relativePath = this.getRelativePath(file.name);
-      const absolutePath = `${fileDirectory}/${file.name}`;
+      const safeFilePath = this.getSafeRelativeFilePath(file.name);
+      const relativePath = this.getRelativePath(safeFilePath);
+      const absolutePath = `${fileDirectory}/${safeFilePath}`;
+      this.ensureFSPath(fs, this.getParentDirectory(absolutePath));
       fs.writeFile(absolutePath, file.bytes);
 
       return {
