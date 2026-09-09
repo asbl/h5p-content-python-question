@@ -295,7 +295,13 @@ export default class PyodideRunner {
       this.scheduleSDLCanvasRebind();
     }
 
-    await loadMissingPyodidePackages(this.pyodide, this.options.packages);
+    const setupPackageHints = this.runtime.getPreloadPackageHints?.() || [];
+    await loadMissingPyodidePackages(this.pyodide, [
+      ...(this.options.packages || []),
+      ...setupPackageHints,
+    ], {
+      packageUrls: this.options.packageUrls,
+    });
 
     this._isInitialized = true;
   }
@@ -365,7 +371,9 @@ export default class PyodideRunner {
       await loadMissingPyodidePackages(this.pyodide, [
         ...(this.options.packages || []),
         ...getImportedPyodidePackages(analysisCode, { localModuleNames }),
-      ]);
+      ], {
+        packageUrls: this.options.packageUrls,
+      });
 
       for (const service of this.getFileServices()) {
         if (typeof service.installSourceRegistry === 'function') {

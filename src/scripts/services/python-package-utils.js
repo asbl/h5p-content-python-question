@@ -39,11 +39,22 @@ export const PYTHON_MICROPIP_PACKAGES = Object.freeze([
  * @type {Record<string, string[]>}
  */
 export const PYTHON_PACKAGE_DEPENDENCY_MAP = Object.freeze({
-  miniworlds: Object.freeze(['numpy', 'pygame-ce']),
+  miniworlds: Object.freeze(['numpy', 'pygame-ce', 'sqlite3']),
   'miniworlds-data': Object.freeze(['miniworlds']),
   'miniworlds-robot': Object.freeze(['miniworlds']),
   'miniworlds-turtle': Object.freeze(['miniworlds']),
 });
+
+/**
+ * Removes Python string literals and comments before simple import scanning.
+ * @param {string} code - Python source code.
+ * @returns {string} Source code without literal/comment contents.
+ */
+function stripPythonLiteralsAndComments(code = '') {
+  return String(code || '')
+    .replace(/'''[\s\S]*?'''|"""[\s\S]*?"""|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g, '')
+    .replace(/#.*/g, '');
+}
 
 /**
  * Normalizes a package-like entry coming from semantics or runtime options.
@@ -68,6 +79,44 @@ function normalizePythonPackageEntry(entry) {
   }
 
   return null;
+}
+
+/**
+ * Returns a direct wheel/package URL from a package entry if present.
+ * @param {*} entry - Raw package entry.
+ * @returns {string|null} Normalized URL or null.
+ */
+function normalizePythonPackageUrl(entry) {
+  const candidates = [
+    entry?.url,
+    entry?.wheelUrl,
+    entry?.packageUrl,
+    entry?.package?.url,
+    entry?.package?.wheelUrl,
+    entry?.package?.packageUrl,
+  ];
+
+  const url = candidates.find((candidate) => typeof candidate === 'string' && candidate.trim());
+
+  return url ? url.trim() : null;
+}
+
+/**
+ * Normalizes a package-name -> URL map.
+ * @param {object} [packageUrls] - Raw URL map.
+ * @returns {Record<string, string>} Normalized URL map.
+ */
+function normalizePythonPackageUrlMap(packageUrls = {}) {
+  return Object.entries(packageUrls || {}).reduce((urls, [packageName, url]) => {
+    const normalizedPackageName = String(packageName || '').trim();
+    const normalizedUrl = typeof url === 'string' ? url.trim() : '';
+
+    if (normalizedPackageName && normalizedUrl) {
+      urls[normalizedPackageName] = normalizedUrl;
+    }
+
+    return urls;
+  }, {});
 }
 
 /**
@@ -113,8 +162,33 @@ export function normalizePythonPackageEntries(entries = []) {
 }
 
 /**
+ * Extracts direct wheel/package URLs from package entries and optional maps.
+ * @param {Array<*>} [entries] - Raw package entries.
+ * @param {object} [packageUrls] - Additional package-name -> URL map.
+ * @returns {Record<string, string>} Package URL map.
+ */
+export function getPythonPackageUrlMap(entries = [], packageUrls = {}) {
+  const urls = {};
+
+  (Array.isArray(entries) ? entries : []).forEach((entry) => {
+    const packageName = normalizePythonPackageEntry(entry);
+    const url = normalizePythonPackageUrl(entry);
+
+    if (packageName && url) {
+      urls[packageName] = url;
+    }
+  });
+
+  return {
+    ...urls,
+    ...normalizePythonPackageUrlMap(packageUrls),
+  };
+}
+
+/**
  * Detects installable packages from Python import statements.
  * @param {string} [code] - Python source code.
+ * @param {object} [options] - Import scan options.
  * @returns {string[]} Unique imported package names.
  */
 export function getImportedPythonPackages(code = '', options = {}) {
@@ -124,24 +198,33 @@ export function getImportedPythonPackages(code = '', options = {}) {
       ? options.localModuleNames.map((name) => String(name || '').trim()).filter(Boolean)
       : [],
   );
-  const importPattern = /^\s*(?:from\s+([A-Za-z_][\w.]*)\s+import|import\s+([A-Za-z_][\w.]*))/gm;
+  const importPattern = /^\s*(?:from\s+([A-Za-z_][\w.]*)\s+import\b|import\s+([^\n#]+))/gm;
 
-  let match = importPattern.exec(code);
+  const searchableCode = stripPythonLiteralsAndComments(code);
+  let match = importPattern.exec(searchableCode);
   while (match) {
-    const moduleName = (match[1] || match[2] || '').split('.')[0];
+    const moduleNames = match[1]
+      ? [match[1]]
+      : String(match[2] || '')
+        .split(',')
+        .map((entry) => entry.trim().split(/\s+as\s+/i)[0].trim())
+        .filter(Boolean);
 
-    if (localModuleNames.has(moduleName)) {
-      match = importPattern.exec(code);
-      continue;
-    }
+    moduleNames.forEach((rawModuleName) => {
+      const moduleName = rawModuleName.split('.')[0];
 
-    const packageName = PYTHON_IMPORT_PACKAGE_MAP[moduleName];
+      if (localModuleNames.has(moduleName)) {
+        return;
+      }
 
-    if (packageName) {
-      importedPackages.add(packageName);
-    }
+      const packageName = PYTHON_IMPORT_PACKAGE_MAP[moduleName];
 
-    match = importPattern.exec(code);
+      if (packageName) {
+        importedPackages.add(packageName);
+      }
+    });
+
+    match = importPattern.exec(searchableCode);
   }
 
   return Array.from(importedPackages);

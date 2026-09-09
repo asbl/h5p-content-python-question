@@ -7,6 +7,7 @@ import {
   getPyodidePackageEntriesFromParams,
   normalizePythonQuestionConfig,
 } from './services/python-question-config';
+import { PYTHON_MICROPIP_PACKAGES } from './services/python-package-utils';
 import { createPythonL10n } from './services/python-l10n';
 import {
   getSharedPyodide,
@@ -15,6 +16,11 @@ import {
 } from './runtime/services/pyodide-runtime-service';
 import { loadMissingPyodidePackages } from './runtime/services/pyodide-package-service';
 import { logPythonDiagnostic } from './services/python-diagnostics';
+
+const IMMEDIATE_PYODIDE_PRELOAD_PACKAGES = Object.freeze([
+  'pygame-ce',
+  ...PYTHON_MICROPIP_PACKAGES,
+]);
 
 export default class PythonQuestion extends H5P.CodeQuestion {
   /**
@@ -75,7 +81,9 @@ export default class PythonQuestion extends H5P.CodeQuestion {
 
       try {
         const pyodide = await getSharedPyodide(options, preloadRuntime);
-        await loadMissingPyodidePackages(pyodide, packages);
+        await loadMissingPyodidePackages(pyodide, packages, {
+          packageUrls: options.packageUrls,
+        });
         await warmPyodidePackageImports(pyodide, packages);
       }
       catch (error) {
@@ -83,12 +91,40 @@ export default class PythonQuestion extends H5P.CodeQuestion {
       }
     };
 
-    if (typeof window?.requestIdleCallback === 'function') {
-      window.requestIdleCallback(preload, { timeout: 2000 });
+    if (this.shouldStartPyodidePreloadImmediately(packages)) {
+      this._earlyPyodidePreloadPromise = preload();
       return;
     }
 
-    window.setTimeout(preload, 200);
+    if (typeof window?.requestIdleCallback === 'function') {
+      window.requestIdleCallback(() => {
+        this._earlyPyodidePreloadPromise = preload();
+        return this._earlyPyodidePreloadPromise;
+      }, { timeout: 2000 });
+      return;
+    }
+
+    window.setTimeout(() => {
+      this._earlyPyodidePreloadPromise = preload();
+      return this._earlyPyodidePreloadPromise;
+    }, 200);
+  }
+
+  /**
+   * Indicates whether package preloading should start immediately.
+   * Miniworlds and pygame-ce have the largest first-run cost, so H5P pages
+   * should spend learner reading time on those downloads/installs right away.
+   * @param {string[]} packages - Normalized Pyodide package names.
+   * @returns {boolean} True if preload should start immediately.
+   */
+  shouldStartPyodidePreloadImmediately(packages = this.pythonConfig.packages) {
+    if (!Array.isArray(packages)) {
+      return false;
+    }
+
+    return packages.some((packageName) => (
+      IMMEDIATE_PYODIDE_PRELOAD_PACKAGES.includes(String(packageName || '').trim())
+    ));
   }
 
   /**

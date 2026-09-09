@@ -47,7 +47,7 @@ describe('PythonQuestion', () => {
     document.head.innerHTML = '';
   });
 
-  it('normalizes runtime and container options from params', () => {
+  it('normalizes runtime and container options from params', async () => {
     const question = new PythonQuestion({
       l10n: { localValue: 'child' },
       pythonRunner: 'pyodide',
@@ -86,6 +86,8 @@ describe('PythonQuestion', () => {
         enableImageUploads: true,
         enableSoundUploads: true,
         enableSaveLoadButtons: false,
+        enablePythonTutor: true,
+        enableDiagnosticLogs: true,
         blocklyCdnUrl: 'https://static.example.com/blockly/',
         codeMirrorCdnUrl: 'https://static.example.com/codemirror/',
         markdownCdnUrl: 'https://static.example.com/markdown/',
@@ -108,15 +110,30 @@ describe('PythonQuestion', () => {
       expect.objectContaining({
         runner: 'pyodide',
         packages: ['numpy', 'pygame-ce', 'sqlite3'],
+        packageUrls: {},
       }),
       ['numpy', 'pygame-ce', 'sqlite3'],
     );
-    expect(window.requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 2000 });
+    expect(window.requestIdleCallback).not.toHaveBeenCalled();
+    await question._earlyPyodidePreloadPromise;
+    expect(mocks.getSharedPyodide).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runner: 'pyodide',
+        packages: ['numpy', 'pygame-ce', 'sqlite3'],
+      }),
+      expect.objectContaining({
+        l10n: question.runtimeL10n,
+        outputHandler: expect.any(Function),
+        inputHandler: expect.any(Function),
+      }),
+    );
     expect(question.getRuntimeOptions()).toEqual({
       runner: 'pyodide',
       l10n: question.runtimeL10n,
       packages: ['numpy', 'pygame-ce', 'sqlite3'],
+      packageUrls: {},
       disableOutputPopups: true,
+      enableDiagnosticLogs: true,
       blocklyCdnUrl: 'https://static.example.com/blockly/',
       codeMirrorCdnUrl: 'https://static.example.com/codemirror/',
       fontAwesomeCdnUrl: 'https://static.example.com/fontawesome.css',
@@ -136,6 +153,8 @@ describe('PythonQuestion', () => {
       enableImageUploads: true,
       enableSoundUploads: true,
       showSaveLoadButtons: false,
+      enablePythonTutor: true,
+      enableDiagnosticLogs: true,
       projectStorageEnabled: true,
       entryFileName: 'main.py',
       allowAddingFiles: true,
@@ -172,6 +191,7 @@ describe('PythonQuestion', () => {
     expect(question.getAdvancedOption('missingOption')).toBe(false);
     expect(question.shouldEnableSoundUploads()).toBe(true);
     expect(question.shouldEnableSaveLoadButtons()).toBe(false);
+    expect(question.shouldEnablePythonTutor()).toBe(true);
   });
 
   it('supports the object-based pyodide package format and default runner', () => {
@@ -189,6 +209,7 @@ describe('PythonQuestion', () => {
     expect(question.pythonRunner).toBe('skulpt');
     expect(question.getPyodidePackages()).toEqual(['matplotlib', 'pygame-ce']);
     expect(question.shouldEnableImageUploads()).toBe(false);
+    expect(question.shouldEnablePythonTutor()).toBe(false);
     expect(question.getCodeContainerOptions()).toEqual({
       fromParent: true,
       hasConsole: true,
@@ -197,6 +218,8 @@ describe('PythonQuestion', () => {
       enableImageUploads: false,
       enableSoundUploads: false,
       showSaveLoadButtons: true,
+      enablePythonTutor: false,
+      enableDiagnosticLogs: false,
       projectStorageEnabled: false,
       entryFileName: 'main.py',
       allowAddingFiles: false,
@@ -254,7 +277,102 @@ describe('PythonQuestion', () => {
         inputHandler: expect.any(Function),
       }),
     );
-    expect(mocks.loadMissingPyodidePackages).toHaveBeenCalledWith({ type: 'pyodide' }, ['numpy']);
+    expect(mocks.loadMissingPyodidePackages).toHaveBeenCalledWith({ type: 'pyodide' }, ['numpy'], {
+      packageUrls: {},
+    });
     expect(mocks.warmPyodidePackageImports).toHaveBeenCalledWith({ type: 'pyodide' }, ['numpy']);
+  });
+
+  it('starts Miniworlds package preloading immediately', async () => {
+    const question = new PythonQuestion({
+      pythonRunner: 'pyodide',
+      pyodideOptions: {
+        packages: ['miniworlds'],
+      },
+      advancedOptions: {},
+    }, 12);
+
+    expect(window.requestIdleCallback).not.toHaveBeenCalled();
+    await question._earlyPyodidePreloadPromise;
+
+    expect(mocks.getSharedPyodide).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runner: 'pyodide',
+        packages: ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
+      }),
+      expect.objectContaining({ l10n: question.runtimeL10n }),
+    );
+    expect(mocks.loadMissingPyodidePackages).toHaveBeenCalledWith(
+      { type: 'pyodide' },
+      ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
+      { packageUrls: {} },
+    );
+    expect(mocks.warmPyodidePackageImports).toHaveBeenCalledWith(
+      { type: 'pyodide' },
+      ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
+    );
+  });
+
+  it('falls back to setTimeout for early Pyodide preload when requestIdleCallback is unavailable', async () => {
+    let preloadCallback;
+    const setTimeoutSpy = vi.spyOn(window, 'setTimeout').mockImplementation((callback) => {
+      preloadCallback = callback;
+      return 1;
+    });
+
+    window.requestIdleCallback = undefined;
+    const question = new PythonQuestion({
+      pythonRunner: 'pyodide',
+      pyodideOptions: {
+        packages: ['numpy'],
+      },
+      advancedOptions: {},
+    }, 9);
+
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 200);
+
+    await preloadCallback();
+
+    expect(mocks.getSharedPyodide).toHaveBeenCalledWith(
+      expect.objectContaining({ packages: ['numpy'] }),
+      expect.objectContaining({ l10n: question.runtimeL10n }),
+    );
+
+    setTimeoutSpy.mockRestore();
+  });
+
+  it('resolves bundled library assets from the loaded script URL with fallback to H5P file paths', () => {
+    const question = new PythonQuestion({}, 10);
+    const script = document.createElement('script');
+
+    script.src = 'https://cdn.example.com/libraries/H5P.PythonQuestion-6.64/dist/h5p-python-question.js?v=123';
+    document.head.appendChild(script);
+
+    expect(question.getLoadedBundleBasePath()).toBe('https://cdn.example.com/libraries/H5P.PythonQuestion-6.64');
+    expect(question.getLibraryAssetPath('/dist/h5p-python-question.css')).toBe(
+      'https://cdn.example.com/libraries/H5P.PythonQuestion-6.64/dist/h5p-python-question.css',
+    );
+
+    script.remove();
+    expect(question.getLoadedBundleBasePath()).toBe('');
+    expect(question.getLibraryAssetPath('dist/h5p-python-question.css')).toBe(
+      '/libraries/H5P.PythonQuestion-6.64/dist/h5p-python-question.css',
+    );
+  });
+
+  it('suppresses output popups in IDE-only mode regardless of assignment defaults', () => {
+    const question = new PythonQuestion({
+      pythonRunner: 'pyodide',
+      advancedOptions: {
+        disableOutputPopups: false,
+      },
+    }, 11);
+
+    question.contentType = 'ide_only';
+
+    expect(question.getRuntimeOptions()).toEqual(expect.objectContaining({
+      runner: 'pyodide',
+      disableOutputPopups: true,
+    }));
   });
 });
