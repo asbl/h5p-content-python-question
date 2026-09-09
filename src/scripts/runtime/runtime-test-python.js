@@ -3,6 +3,9 @@ import PythonRuntime from './runtime-python';
 import PythonSolutionRuntime from './runtime-solution-python';
 import { getAlgorithmConstraintHarness, RESULT_PREFIX } from '../services/python-algorithm-constraints';
 import { getAlgorithmTracePreamble, TRACE_PREFIX } from '../services/python-algorithm-trace';
+import { logPythonDiagnostic } from '../services/python-diagnostics';
+
+const DEBUG_PREFIX = 'Python test runtime:';
 
 /**
  * Test runtime for executing Python student code against reference solutions.
@@ -72,9 +75,17 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
    */
   async prepareForRun() {
     await super.prepareForRun();
-    if (this.containsCanvasCode(this.getCode())) {
-      const testCaseIndex = this.codeTester?.session?.testCaseIndex
-        ?? this.codeTester?.testCaseIndex;
+    const containsCanvasCode = this.containsCanvasCode(this.getCode());
+    const testCaseIndex = this.codeTester?.session?.testCaseIndex
+      ?? this.codeTester?.testCaseIndex;
+    logPythonDiagnostic(this.options, DEBUG_PREFIX, 'prepareForRun', {
+      testCaseIndex,
+      containsCanvasCode,
+      containsTurtleCode: this.containsTurtleCode?.(),
+      containsSDLCode: this.containsSDLCode?.(),
+      containsMiniworldsCode: this.containsMiniworldsCode?.(),
+    });
+    if (containsCanvasCode) {
       this.getCanvasManager().attachCanvas('testcase', testCaseIndex);
     }
   }
@@ -84,6 +95,10 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
    */
   reset() {
     super.reset();
+    logPythonDiagnostic(this.options, DEBUG_PREFIX, 'reset removing canvas', {
+      testCaseIndex: this.codeTester?.session?.testCaseIndex,
+      hasCanvasManager: !!this._canvasManager,
+    });
     this._canvasManager?.removeCanvas();
   }
 

@@ -48,6 +48,10 @@
           "description": "If enabled, learners can download their code and load it again later using the shared save/load buttons."
         },
         {
+          "label": "Enable diagnostic browser logs",
+          "description": "If enabled, detailed runtime and grading diagnostics are written to the browser console for troubleshooting."
+        },
+        {
           "label": "Execution Limit",
           "description": "Maximum execution time in milliseconds. Use to prevent programs from running indefinitely. [0: No limit]"
         },

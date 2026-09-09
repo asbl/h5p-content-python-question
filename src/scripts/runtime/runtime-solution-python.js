@@ -1,5 +1,8 @@
 import CanvasRuntimeManager from './canvasruntimemanager';
 import PythonRuntime from './runtime-python';
+import { logPythonDiagnostic } from '../services/python-diagnostics';
+
+const DEBUG_PREFIX = 'Python solution runtime:';
 
 export default class PythonSolutionRuntime extends H5P.SolutionRuntimeMixin(PythonRuntime) {
 
@@ -47,9 +50,17 @@ export default class PythonSolutionRuntime extends H5P.SolutionRuntimeMixin(Pyth
    */
   async prepareForRun() {
     await super.prepareForRun();
-    if (this.containsCanvasCode(this.getCode())) {
-      const testCaseIndex = this.codeTester?.session?.testCaseIndex
-        ?? this.codeTester?.testCaseIndex;
+    const containsCanvasCode = this.containsCanvasCode(this.getCode());
+    const testCaseIndex = this.codeTester?.session?.testCaseIndex
+      ?? this.codeTester?.testCaseIndex;
+    logPythonDiagnostic(this.options, DEBUG_PREFIX, 'prepareForRun', {
+      testCaseIndex,
+      containsCanvasCode,
+      containsTurtleCode: this.containsTurtleCode?.(),
+      containsSDLCode: this.containsSDLCode?.(),
+      containsMiniworldsCode: this.containsMiniworldsCode?.(),
+    });
+    if (containsCanvasCode) {
       this.getCanvasManager().attachCanvas('expected', testCaseIndex);
     }
   }

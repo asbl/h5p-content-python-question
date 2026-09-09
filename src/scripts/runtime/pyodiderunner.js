@@ -46,6 +46,7 @@ import {
   sharedPyodideRuntimeState,
 } from './services/pyodide-runtime-service';
 import { ensureP5Script } from './services/p5-runtime-service';
+import { logPythonDiagnostic } from '../services/python-diagnostics';
 
 export default class PyodideRunner {
   /**
@@ -415,7 +416,7 @@ export default class PyodideRunner {
         this.p5Instance.remove();
       }
       catch (error) {
-        console.warn('Could not stop p5 instance');
+        logPythonDiagnostic(this.options, 'Could not stop p5 instance');
       }
       this.p5Instance = null;
     }
@@ -461,7 +462,7 @@ export default class PyodideRunner {
       })
       .then(() => cancelPyodideBackgroundTask(this.pyodide))
       .catch((error) => {
-        console.warn('Could not cancel background SDL task', error);
+        logPythonDiagnostic(this.options, 'Could not cancel background SDL task', error);
       });
 
     this._cancelPromise = cancelPromise;
@@ -486,7 +487,7 @@ export default class PyodideRunner {
       await this._cancelPromise;
     }
     catch (error) {
-      console.warn('Could not finish pending stop cleanup', error);
+      logPythonDiagnostic(this.options, 'Could not finish pending stop cleanup', error);
     }
   }
 
@@ -497,7 +498,7 @@ export default class PyodideRunner {
    */
   async onError(error) {
     this.setCanvasLoading(false);
-    console.warn('Error in PyodideRunner', error);
+    logPythonDiagnostic(this.options, 'Error in PyodideRunner', error);
     this.errorMessage = error;
     const runtimeError = createPythonRuntimeError({
       phase: 'execution',
@@ -800,7 +801,7 @@ export default class PyodideRunner {
       }
     }
     catch (error) {
-      console.warn('Could not clear SDL canvas', error);
+      logPythonDiagnostic(this.options, 'Could not clear SDL canvas', error);
     }
   }
 

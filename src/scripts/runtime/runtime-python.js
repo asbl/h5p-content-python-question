@@ -5,6 +5,7 @@ import {
   getPythonL10nValue,
 } from '../services/python-l10n';
 import { getImportedPythonPackages } from '../services/python-package-utils';
+import { logPythonDiagnostic } from '../services/python-diagnostics';
 import { precachePyodideAssets } from './services/pyodide-runtime-service';
 
 /**
@@ -97,7 +98,7 @@ export default class PythonRuntime extends H5P.Runtime {
       this.getRunner().setup().catch((error) => {
         // The normal run path reports setup failures to the learner. A failed
         // speculative preload must not surface an error before they run code.
-        console.warn('Unable to preload the Pyodide runtime', error);
+        logPythonDiagnostic(this.options, 'Unable to preload the Pyodide runtime', error);
       });
     };
 

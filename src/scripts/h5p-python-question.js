@@ -14,6 +14,7 @@ import {
   warmPyodidePackageImports,
 } from './runtime/services/pyodide-runtime-service';
 import { loadMissingPyodidePackages } from './runtime/services/pyodide-package-service';
+import { logPythonDiagnostic } from './services/python-diagnostics';
 
 export default class PythonQuestion extends H5P.CodeQuestion {
   /**
@@ -78,7 +79,7 @@ export default class PythonQuestion extends H5P.CodeQuestion {
         await warmPyodidePackageImports(pyodide, packages);
       }
       catch (error) {
-        console.warn('Unable to preload the configured Pyodide packages', error);
+        logPythonDiagnostic(options, 'Unable to preload the configured Pyodide packages', error);
       }
     };
 

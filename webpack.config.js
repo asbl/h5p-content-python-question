@@ -14,7 +14,7 @@ module.exports = {
       new TerserPlugin({
         terserOptions: {
           compress:{
-            drop_console: isProd,
+            drop_console: false,
           }
         }
       }),

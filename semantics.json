@@ -26,21 +26,21 @@
         "default":  "please_choose"
     },
     {
-    "name": "pythonRunner",
-    "type": "select",
-    "label": "Python Runner",
-    "description": "Choose the Python interpreter used for code execution",
-    "default": "skulpt",
-    "options": [
-        {
-            "value": "skulpt",
-            "label": "Skulpt (browser-based, fast)"
-        },
-        {
-            "value": "pyodide",
-            "label": "Pyodide (full Python 3 support, loaded via CDN)"
-        }
-    ]
+        "name": "pythonRunner",
+        "type": "select",
+        "label": "Python Runner",
+        "description": "Choose the Python interpreter used for code execution",
+        "default": "skulpt",
+        "options": [
+            {
+                "value": "skulpt",
+                "label": "Skulpt (browser-based, fast)"
+            },
+            {
+                "value": "pyodide",
+                "label": "Pyodide (full Python 3 support, loaded via CDN)"
+            }
+        ]
     },
     {
         "name": "advancedOptions",
@@ -67,6 +67,13 @@
                 "label": "Show save and load buttons",
                 "description": "If enabled, learners can download their code and load it again later using the shared save/load buttons.",
                 "default": true
+            },
+            {
+                "name": "enableDiagnosticLogs",
+                "type": "boolean",
+                "label": "Enable diagnostic browser logs",
+                "description": "If enabled, detailed runtime and grading diagnostics are written to the browser console for troubleshooting.",
+                "default": false
             },
             {
                 "name": "execLimit",
