@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "test:browser": "npm run test:browser:ui && npm run test:browser:mouse-tutorial && npm run test:browser:tutorial-canvas && npm run test:browser:autocomplete && npm run test:browser:function-tests && npm run test:browser:multiple-choice",
     "test:browser:autocomplete": "node tools/browser-regression/python-autocomplete-smoke.js",
@@ -33,6 +34,7 @@
     "@babel/cli": "^7.22.5",
     "@babel/core": "^7.22.5",
     "@babel/preset-env": "^7.22.5",
+    "@vitest/coverage-v8": "^3.2.4",
     "babel-loader": "^9.1.2",
     "css-loader": "^6.8.1",
     "eslint": "^8.42.0",

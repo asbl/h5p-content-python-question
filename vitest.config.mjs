@@ -5,5 +5,13 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./tests/setup.js'],
     include: ['tests/**/*.test.js'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      include: ['src/scripts/**/*.js'],
+      exclude: [
+        'src/entries/**',
+      ],
+    },
   },
 });

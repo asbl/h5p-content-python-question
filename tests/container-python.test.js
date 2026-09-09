@@ -57,6 +57,62 @@ describe('PythonCodeContainer', () => {
     }));
   });
 
+  it('moves the console below the canvas and restores it to the code page', async () => {
+    const PythonCodeContainer = await loadContainerClass();
+    const container = Object.create(PythonCodeContainer.prototype);
+    const codePage = document.createElement('section');
+    const canvasPage = document.createElement('section');
+    const canvasWrapper = document.createElement('div');
+    const consoleWrapper = document.createElement('div');
+    const consoleBody = document.createElement('div');
+
+    canvasWrapper.className = 'canvas-wrapper';
+    consoleWrapper.className = 'console_wrapper';
+    consoleBody.id = 'console-1';
+    consoleWrapper.appendChild(consoleBody);
+    codePage.appendChild(consoleWrapper);
+    canvasPage.appendChild(canvasWrapper);
+    document.body.append(codePage, canvasPage);
+
+    container.options = { consoleBelowCanvas: true, hasConsole: true };
+    container.getConsoleManager = vi.fn(() => ({ consoleUID: 'console-1' }));
+    container.getPageManager = vi.fn(() => ({
+      getPage: (name) => (name === 'canvas' ? canvasPage : codePage),
+    }));
+
+    container.moveConsoleBelowCanvas();
+    expect(canvasWrapper.nextElementSibling).toBe(consoleWrapper);
+
+    container.restoreConsoleToCodePage();
+    expect(codePage.lastElementChild).toBe(consoleWrapper);
+  });
+
+  it('leaves the console in place when pages or console wrappers are missing', async () => {
+    const PythonCodeContainer = await loadContainerClass();
+    const container = Object.create(PythonCodeContainer.prototype);
+    const canvasPage = document.createElement('section');
+    const consoleWrapper = document.createElement('div');
+    const consoleBody = document.createElement('div');
+
+    consoleWrapper.className = 'console_wrapper';
+    consoleBody.id = 'console-2';
+    consoleWrapper.appendChild(consoleBody);
+    document.body.append(consoleWrapper, canvasPage);
+
+    container.options = { consoleBelowCanvas: true, hasConsole: true };
+    container.getConsoleManager = vi.fn(() => ({ consoleUID: 'console-2' }));
+    container.getPageManager = vi.fn(() => ({
+      getPage: (name) => (name === 'canvas' ? canvasPage : null),
+    }));
+
+    container.moveConsoleBelowCanvas();
+    expect(canvasPage.lastElementChild).toBe(consoleWrapper);
+
+    container.getConsoleManager = vi.fn(() => ({ consoleUID: '' }));
+    container.restoreConsoleToCodePage();
+    expect(canvasPage.lastElementChild).toBe(consoleWrapper);
+  });
+
   it('returns UI registrations for canvas and Python Tutor controls', async () => {
     const PythonCodeContainer = await loadContainerClass();
     const container = Object.create(PythonCodeContainer.prototype);
@@ -135,6 +191,40 @@ describe('PythonCodeContainer', () => {
     expect(pageManager.showPage).toHaveBeenCalledWith('pythonTutor');
     expect(buttonManager.setActive).toHaveBeenCalledWith('pythonTutor');
     expect(container._pythonTutorIframe.src).toContain('code=x+%3D+1');
+    expect(container.registerDOM).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates runner focus and canvas button state on canvas page transitions', async () => {
+    const PythonCodeContainer = await loadContainerClass();
+    const container = Object.create(PythonCodeContainer.prototype);
+    const runner = {
+      acquireInputFocus: vi.fn(),
+      releaseInputFocus: vi.fn(),
+      scheduleSDLCanvasRebind: vi.fn(),
+      triggerResizeAfterCanvasUpdate: vi.fn(),
+    };
+    const buttonManager = {
+      hideButton: vi.fn(),
+      showButton: vi.fn(),
+    };
+
+    container.options = { consoleBelowCanvas: false, hasConsole: true };
+    container._runtime = { runner };
+    container.getButtonManager = vi.fn(() => buttonManager);
+    container.getPageManager = vi.fn(() => ({
+      isEmpty: vi.fn(() => false),
+    }));
+    container.registerDOM = vi.fn();
+
+    container.onCanvasPageShown();
+    expect(runner.acquireInputFocus).toHaveBeenCalledTimes(1);
+    expect(runner.scheduleSDLCanvasRebind).toHaveBeenCalledTimes(1);
+    expect(runner.triggerResizeAfterCanvasUpdate).toHaveBeenCalledTimes(1);
+    expect(buttonManager.hideButton).toHaveBeenCalledWith('canvas');
+
+    container.onCanvasPageHidden();
+    expect(runner.releaseInputFocus).toHaveBeenCalledTimes(1);
+    expect(buttonManager.showButton).toHaveBeenCalledWith('canvas');
     expect(container.registerDOM).toHaveBeenCalledTimes(1);
   });
 });

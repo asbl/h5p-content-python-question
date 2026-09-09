@@ -125,6 +125,31 @@ describe('Python autocomplete', () => {
     }));
   });
 
+  it('suggests Miniworlds world members through module aliases', () => {
+    const source = createPythonCompletionSource({ packageNames: ['miniworlds'] });
+    const code = [
+      'import miniworlds as mw',
+      'world = mw.World(400, 300)',
+      'world.ru',
+    ].join('\n');
+    const result = source(createCompletionContext(code));
+
+    expect(result.options[0]).toEqual(expect.objectContaining({
+      label: 'run',
+      type: 'method',
+    }));
+  });
+
+  it('suggests Miniworlds event names globally when Miniworlds is available', () => {
+    const source = createPythonCompletionSource({ packageNames: ['miniworlds'] });
+    const result = source(createCompletionContext('on_mouse_l'));
+
+    expect(result.options[0]).toEqual(expect.objectContaining({
+      label: 'on_mouse_left_down',
+      type: 'function',
+    }));
+  });
+
   it('suggests actor members for self inside registered miniworlds handlers', () => {
     const source = createPythonCompletionSource({ packageNames: ['miniworlds'] });
     const code = [
