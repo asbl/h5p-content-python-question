@@ -53,3 +53,34 @@ canvas.pyodide-sdl-canvas:focus {
     flex: 0 0 auto;
     width: 100%;
 }
+
+/* Python Tutor visualization page */
+.h5p-codequestion .page-python-tutor.active {
+    padding: 0;
+}
+
+.h5p-codequestion .python-tutor-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.h5p-codequestion .python-tutor-hint {
+    margin: 0;
+    font-size: 0.85em;
+    color: #555;
+    line-height: 1.4;
+}
+
+.h5p-codequestion.theme-dark .python-tutor-hint {
+    color: #bbb;
+}
+
+.h5p-codequestion .python-tutor-iframe {
+    flex: 1 1 auto;
+    min-height: 500px;
+    width: 100%;
+    border: 0;
+    background-color: #fff;
+}

@@ -25,6 +25,8 @@
     "skulptUnknownError": "Unknown error",
     "skulptRuntimeError": "Error: {message} on line {line}; column: {column}",
     "skulptFileNotFound": "File not found: {file}",
-    "skulptP5Missing": "p5.js is not loaded."
+    "skulptP5Missing": "p5.js is not loaded.",
+    "pythonTutor": "Visualize",
+    "pythonTutorPrivacyHint": "Visualizing the code step-by-step opens pythontutor.com in an embedded frame. Your current code is sent to pythontutor.com to render the visualization."
   }
 }

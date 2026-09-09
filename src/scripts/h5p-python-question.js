@@ -187,6 +187,14 @@ export default class PythonQuestion extends H5P.CodeQuestion {
   }
 
   /**
+   * Indicates whether the Python Tutor visualization button should be shown.
+   * @returns {boolean} True if the Python Tutor button should be shown.
+   */
+  shouldEnablePythonTutor() {
+    return this.getAdvancedOption('enablePythonTutor');
+  }
+
+  /**
    * Returns normalized container options for a specific editor instance.
    * When contentParams is null (main assignment editor), reads from editorSettings.
    * When contentParams is a content item, reads per-item sourceFiles/allowAddingFiles.

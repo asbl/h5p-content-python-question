@@ -46,6 +46,10 @@
           "description": "Wenn aktiviert, können Lernende ihren Code herunterladen und später mit den gemeinsamen Speichern/Laden-Buttons wieder laden."
         },
         {
+          "label": "Python-Tutor-Visualisierung aktivieren",
+          "description": "Wenn aktiviert, erhalten Lernende einen 'Visualisieren'-Button, der den aktuellen Code Schritt für Schritt auf pythontutor.com öffnet. Der Code wird dazu an pythontutor.com gesendet."
+        },
+        {
           "label": "Diagnose-Logs im Browser aktivieren",
           "description": "Wenn aktiviert, werden detaillierte Laufzeit- und Bewertungsdiagnosen zur Fehlersuche in die Browser-Konsole geschrieben."
         },

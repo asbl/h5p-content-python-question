@@ -48,6 +48,10 @@
           "description": "If enabled, learners can download their code and load it again later using the shared save/load buttons."
         },
         {
+          "label": "Enable Python Tutor visualization",
+          "description": "If enabled, learners get a 'Visualize' button that opens the current code step-by-step on pythontutor.com. The code is sent to pythontutor.com to render the visualization."
+        },
+        {
           "label": "Enable diagnostic browser logs",
           "description": "If enabled, detailed runtime and grading diagnostics are written to the browser console for troubleshooting."
         },

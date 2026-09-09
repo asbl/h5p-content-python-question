@@ -69,6 +69,13 @@
                 "default": true
             },
             {
+                "name": "enablePythonTutor",
+                "type": "boolean",
+                "label": "Enable Python Tutor visualization",
+                "description": "If enabled, learners get a 'Visualize' button that opens the current code step-by-step on pythontutor.com. The code is sent to pythontutor.com to render the visualization.",
+                "default": false
+            },
+            {
                 "name": "enableDiagnosticLogs",
                 "type": "boolean",
                 "label": "Enable diagnostic browser logs",
