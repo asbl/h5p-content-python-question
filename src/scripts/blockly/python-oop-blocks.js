@@ -14,6 +14,14 @@ function safeName(value, fallback = 'value') {
   return normalized || fallback;
 }
 
+function safeParameterList(value) {
+  return String(value || '')
+    .split(',')
+    .map((name) => safeName(name, ''))
+    .filter((name) => name && name !== 'self')
+    .join(', ');
+}
+
 function getClassOptions() {
   const classes = blocklyProjectClassRegistry.get('python');
   const options = classes.length ? classes : ['Helper'];
@@ -52,12 +60,43 @@ export function registerPythonOopBlocks(Blockly) {
       this.appendDummyInput()
         .appendField('Methode')
         .appendField(new Blockly.FieldTextInput('answer'), 'METHOD_NAME')
-        .appendField('(self)');
+        .appendField('(self')
+        .appendField(new Blockly.FieldTextInput(''), 'PARAMS')
+        .appendField(')');
       this.appendStatementInput('BODY').appendField('mache');
       this.setPreviousStatement(true);
       this.setNextStatement(true);
       this.setColour(290);
-      this.setTooltip('Erzeugt eine Methode mit self.');
+      this.setTooltip('Erzeugt eine Methode mit self und optionalen Parametern.');
+    },
+  });
+
+  registerBlock(Blockly, 'python_constructor_definition', {
+    init() {
+      this.appendDummyInput()
+        .appendField('Konstruktor')
+        .appendField('(self')
+        .appendField(new Blockly.FieldTextInput(''), 'PARAMS')
+        .appendField(')');
+      this.appendStatementInput('BODY').appendField('mache');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(290);
+      this.setTooltip('Erzeugt den Konstruktor __init__.');
+    },
+  });
+
+  registerBlock(Blockly, 'python_set_attribute', {
+    init() {
+      this.appendValueInput('VALUE')
+        .appendField('Attribut')
+        .appendField('self.')
+        .appendField(new Blockly.FieldTextInput('name'), 'ATTRIBUTE_NAME')
+        .appendField('=');
+      this.setPreviousStatement(true);
+      this.setNextStatement(true);
+      this.setColour(210);
+      this.setTooltip('Setzt ein Objektattribut.');
     },
   });
 
@@ -140,8 +179,23 @@ export function registerPythonOopBlocks(Blockly) {
 
   pythonGenerator.forBlock.python_method_definition = (block, generator) => {
     const methodName = safeName(block.getFieldValue('METHOD_NAME'), 'method');
+    const params = safeParameterList(block.getFieldValue('PARAMS'));
     const body = generator.statementToCode(block, 'BODY') || '    pass\n';
-    return `def ${methodName}(self):\n${body}`;
+    const signature = params ? `self, ${params}` : 'self';
+    return `def ${methodName}(${signature}):\n${body}`;
+  };
+
+  pythonGenerator.forBlock.python_constructor_definition = (block, generator) => {
+    const params = safeParameterList(block.getFieldValue('PARAMS'));
+    const body = generator.statementToCode(block, 'BODY') || '    pass\n';
+    const signature = params ? `self, ${params}` : 'self';
+    return `def __init__(${signature}):\n${body}`;
+  };
+
+  pythonGenerator.forBlock.python_set_attribute = (block, generator) => {
+    const attributeName = safeName(block.getFieldValue('ATTRIBUTE_NAME'), 'attribute');
+    const value = generator.valueToCode(block, 'VALUE', pythonGenerator.ORDER_NONE) || 'None';
+    return `self.${attributeName} = ${value}\n`;
   };
 
   pythonGenerator.forBlock.python_return = (block, generator) => {

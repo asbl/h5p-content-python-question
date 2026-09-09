@@ -17,13 +17,41 @@ describe('Python Blockly language pack', () => {
       activeFileName: 'helper.py',
       files: [
         { name: 'main.py', isEntry: true },
-        { name: 'helper.py', isEntry: false },
+        {
+          name: 'helper.py',
+          isEntry: false,
+          code: 'class RobotHelper:\n    pass\n',
+        },
       ],
     });
 
     expect(categories[0].name).toBe('Klassen');
     expect(JSON.stringify(categories[0])).toContain('python_class_definition');
-    expect(JSON.stringify(categories[0])).toContain('helper');
+    expect(JSON.stringify(categories[0])).toContain('python_constructor_definition');
+    expect(JSON.stringify(categories[0])).toContain('python_set_attribute');
+    expect(JSON.stringify(categories[0])).toContain('RobotHelper');
+  });
+
+  it('detects Python class definitions before falling back to file names', () => {
+    const categories = PYTHON_BLOCKLY_LANGUAGE_PACK.buildDynamicCategories({
+      entryFileName: 'main.py',
+      activeFileName: 'models.py',
+      files: [
+        { name: 'main.py', isEntry: true, code: 'from models import Customer\n' },
+        {
+          name: 'models.py',
+          isEntry: false,
+          code: 'class Customer(Person):\n    pass\n\nclass Invoice:\n    pass\n',
+        },
+        { name: 'legacy_helper.py', isEntry: false, code: '' },
+      ],
+    });
+    const categoryJson = JSON.stringify(categories[0]);
+
+    expect(categoryJson).toContain('"CLASS_NAME":"Customer"');
+    expect(categoryJson).toContain('"CLASS_NAME":"Invoice"');
+    expect(categoryJson).toContain('"CLASS_NAME":"legacy_helper"');
+    expect(categoryJson).not.toContain('"CLASS_NAME":"models"');
   });
 
   it('delegates code generation to the shared Blockly Python generator', () => {
@@ -138,6 +166,64 @@ describe('Python Blockly language pack', () => {
       'miniworlds_play_sound',
       'miniworlds_world_run',
     ]);
+  });
+
+  it('imports Miniworlds tiled worlds, actor removal and world events as structured blocks', () => {
+    const state = PYTHON_BLOCKLY_LANGUAGE_PACK.createWorkspaceStateFromCode(
+      'from miniworlds import TiledWorld, Actor\n'
+      + 'world = TiledWorld(12, 8)\n'
+      + 'player = Actor((2, 3))\n'
+      + 'player.remove()\n'
+      + '@world.register\n'
+      + 'def act(self):\n'
+      + '    player.move_right()\n'
+      + 'world.run()\n',
+    );
+    const blocks = [];
+    let block = state.blocks.blocks[0];
+    while (block) {
+      blocks.push(block);
+      block = block.next?.block;
+    }
+
+    expect(blocks.map(({ type }) => type)).toEqual([
+      'miniworlds_import_core',
+      'miniworlds_create_tiled_world',
+      'miniworlds_create_actor',
+      'miniworlds_actor_remove',
+      'miniworlds_world_event',
+      'miniworlds_world_run',
+    ]);
+    expect(blocks[1].inputs.COLUMNS.shadow.fields.NUM).toBe(12);
+    expect(blocks[1].inputs.ROWS.shadow.fields.NUM).toBe(8);
+    expect(blocks[4].fields.EVENT_NAME).toBe('act');
+    expect(blocks[4].inputs.BODY.block.type).toBe('python_raw_code');
+    expect(blocks[4].inputs.BODY.block.fields.CODE).toBe('player.move_right()');
+  });
+
+  it('keeps Miniworlds camera attachments as raw code while preserving surrounding blocks', () => {
+    const state = PYTHON_BLOCKLY_LANGUAGE_PACK.createWorkspaceStateFromCode(
+      'import miniworlds\n'
+      + 'world = miniworlds.World(500, 300)\n'
+      + 'toolbar = miniworlds.Toolbar()\n'
+      + 'world.camera.add_right(toolbar, size=160)\n'
+      + 'world.run()\n',
+    );
+    const blocks = [];
+    let block = state.blocks.blocks[0];
+    while (block) {
+      blocks.push(block);
+      block = block.next?.block;
+    }
+
+    expect(blocks.map(({ type }) => type)).toEqual([
+      'miniworlds_import_core',
+      'miniworlds_create_world',
+      'python_raw_code',
+      'python_raw_code',
+      'miniworlds_world_run',
+    ]);
+    expect(blocks[3].fields.CODE).toBe('world.camera.add_right(toolbar, size=160)');
   });
 
   it('keeps signed and decimal Miniworlds coordinates as editable number blocks', () => {

@@ -141,6 +141,7 @@ const PYTHON_CATEGORY_FIELDS = {
 
 const PYTHON_RAW_CODE_BLOCK_TYPE = 'python_raw_code';
 const NUMBER_PATTERN = '[-+]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)';
+const PYTHON_CLASS_NAME_PATTERN = /^\s*class\s+([A-Za-z_]\w*)\s*(?:\([^)]*\))?\s*:/gm;
 
 function createNumberShadow(value) {
   return {
@@ -172,6 +173,48 @@ function createRgbColorBlock(value) {
 
 function createMiniworldsImportBlock() {
   return { type: 'miniworlds_import_core' };
+}
+
+function extractPythonClassNamesFromCode(code = '') {
+  const classNames = [];
+  let match;
+
+  PYTHON_CLASS_NAME_PATTERN.lastIndex = 0;
+  while ((match = PYTHON_CLASS_NAME_PATTERN.exec(String(code || ''))) !== null) {
+    classNames.push(match[1]);
+  }
+
+  return classNames;
+}
+
+function getPythonProjectClassNames(context = {}) {
+  const fileNameExtractor = new ProjectClassSymbolExtractor(context, {
+    extension: '.py',
+    entryFileName: context.entryFileName || 'main.py',
+  });
+  const classNames = (Array.isArray(context.files) ? context.files : [])
+    .filter((file) => file?.name && file.name !== (context.entryFileName || 'main.py'))
+    .flatMap((file) => {
+      const syntaxClassNames = extractPythonClassNamesFromCode(file?.code || '');
+      return syntaxClassNames.length > 0
+        ? syntaxClassNames
+        : [fileNameExtractor.getNameWithoutExtension(file.name)];
+    })
+    .map((name) => String(name || '').trim())
+    .filter(Boolean);
+
+  return [...new Set(classNames)];
+}
+
+function getDefaultClassName(context = {}, classNames = []) {
+  const activeFile = (Array.isArray(context.files) ? context.files : [])
+    .find((file) => file?.name === context.activeFileName);
+  const activeFileClassNames = extractPythonClassNamesFromCode(activeFile?.code || '');
+
+  return activeFileClassNames[0]
+    || String(context.activeFileName || 'helper.py').replace(/\.py$/i, '')
+    || classNames[0]
+    || 'Helper';
 }
 
 function createMiniworldsWorldBlock(match) {
@@ -534,11 +577,9 @@ function registerPythonRawCodeBlock(Blockly) {
 }
 
 function buildPythonProjectCategory(context = {}) {
-  const classNames = new ProjectClassSymbolExtractor(context, {
-    extension: '.py',
-    entryFileName: context.entryFileName || 'main.py',
-  }).getClassNames();
+  const classNames = getPythonProjectClassNames(context);
   blocklyProjectClassRegistry.set('python', classNames);
+  const defaultClassName = getDefaultClassName(context, classNames);
 
   return {
     kind: 'category',
@@ -549,7 +590,29 @@ function buildPythonProjectCategory(context = {}) {
         kind: 'block',
         type: 'python_class_definition',
         fields: {
-          CLASS_NAME: String(context.activeFileName || 'helper.py').replace(/\.py$/i, '') || 'Helper',
+          CLASS_NAME: defaultClassName,
+        },
+      },
+      {
+        kind: 'block',
+        type: 'python_constructor_definition',
+        fields: {
+          PARAMS: 'name',
+        },
+      },
+      {
+        kind: 'block',
+        type: 'python_set_attribute',
+        fields: {
+          ATTRIBUTE_NAME: 'name',
+        },
+        inputs: {
+          VALUE: {
+            shadow: {
+              type: 'text',
+              fields: { TEXT: '' },
+            },
+          },
         },
       },
       {
