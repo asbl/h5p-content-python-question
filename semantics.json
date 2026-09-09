@@ -826,6 +826,7 @@
                     "field": "contentType",
                     "equals": [
                         "ide_only",
+                        "text_only",
                         "text_and_ide"
                     ]
                 }
@@ -856,8 +857,68 @@
                     {
                         "value": "functionTests",
                         "label": "Function Test Cases"
+                    },
+                    {
+                        "value": "multipleChoice",
+                        "label": "Multiple Choice"
                     }
-                    
+                ]
+            },
+            {
+                "name": "multipleChoice",
+                "type": "group",
+                "label": "Multiple Choice",
+                "description": "Use Markdown for answer options. Code fences and Mermaid/UML diagrams are supported when the Markdown renderer is available.",
+                "widget": "showWhen",
+                "showWhen": {
+                    "rules": [
+                        {
+                            "field": "gradingMethod",
+                            "equals": "multipleChoice"
+                        }
+                    ]
+                },
+                "fields": [
+                    {
+                        "name": "allowMultiple",
+                        "type": "boolean",
+                        "label": "Allow multiple correct answers",
+                        "description": "If enabled, learners can select several answer options.",
+                        "default": false
+                    },
+                    {
+                        "name": "choices",
+                        "type": "list",
+                        "label": "Answer options",
+                        "entity": "answer option",
+                        "min": 2,
+                        "field": {
+                            "name": "choice",
+                            "type": "group",
+                            "label": "Answer option",
+                            "fields": [
+                                {
+                                    "name": "text",
+                                    "type": "text",
+                                    "label": "Answer text",
+                                    "description": "Write the answer option as Markdown. You can use code fences or Mermaid diagrams.",
+                                    "widget": "codeWidget",
+                                    "options": [
+                                        {
+                                            "language": "markdown",
+                                            "showAlways": true
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "correct",
+                                    "type": "boolean",
+                                    "label": "Correct answer",
+                                    "default": false
+                                }
+                            ]
+                        }
+                    }
                 ]
             },
             {
@@ -1075,7 +1136,20 @@
                 "type": "text",
                 "label": "Solution Code",
                 "entity": "testcase",
-                "widget": "codeWidget"
+                "widget": "showWhen",
+                "showWhen": {
+                    "rules": [
+                        {
+                            "field": "gradingMethod",
+                            "equals": [
+                                "ioTestCases",
+                                "targetImage",
+                                "functionTests"
+                            ]
+                        }
+                    ],
+                    "widget": "codeWidget"
+                }
             }
         ]
     }

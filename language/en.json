@@ -203,6 +203,35 @@
             },
             {
               "label": "Function Test Cases"
+            },
+            {
+              "label": "Multiple Choice"
+            }
+          ]
+        },
+        {
+          "label": "Multiple Choice",
+          "description": "Use Markdown for answer options. Code fences and Mermaid/UML diagrams are supported when the Markdown renderer is available.",
+          "fields": [
+            {
+              "label": "Allow multiple correct answers",
+              "description": "If enabled, learners can select several answer options."
+            },
+            {
+              "label": "Answer options",
+              "entity": "answer option",
+              "field": {
+                "label": "Answer option",
+                "fields": [
+                  {
+                    "label": "Answer text",
+                    "description": "Write the answer option as Markdown. You can use code fences or Mermaid diagrams."
+                  },
+                  {
+                    "label": "Correct answer"
+                  }
+                ]
+              }
             }
           ]
         },

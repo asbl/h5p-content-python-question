@@ -31,8 +31,11 @@ export default class PythonQuestion extends H5P.CodeQuestion {
     this.runtimeL10n = createPythonL10n();
     this.l10n = createPythonL10n({}, sharedL10n);
 
-    // Recreate tester so it also uses the updated localization chain.
-    this.codeTester = this.getCodeTesterFactory().create();
+    // Recreate code tester so it also uses the updated localization chain.
+    // Multiple choice uses CodeQuestion's built-in evaluator instead.
+    this.codeTester = this.gradingMethod && !this.isMultipleChoiceQuestion()
+      ? this.getCodeTesterFactory().create()
+      : this.codeTester;
 
     this.pythonRunner = this.pythonConfig.runner;
     this.scheduleEarlyPyodidePreload();

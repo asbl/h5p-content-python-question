@@ -371,7 +371,34 @@
             { "label": "Bitte wählen" },
             { "label": "Eingabe/Ausgabe Testfälle" },
             { "label": "Zielbild" },
-            { "label": "Funktionstestfälle" }
+            { "label": "Funktionstestfälle" },
+            { "label": "Multiple Choice" }
+          ]
+        },
+        {
+          "label": "Multiple Choice",
+          "description": "Nutze Markdown für Antwortoptionen. Code-Blöcke und Mermaid/UML-Diagramme werden unterstützt, wenn der Markdown-Renderer verfügbar ist.",
+          "fields": [
+            {
+              "label": "Mehrere richtige Antworten erlauben",
+              "description": "Wenn aktiviert, können Lernende mehrere Antwortoptionen auswählen."
+            },
+            {
+              "label": "Antwortoptionen",
+              "entity": "Antwortoption",
+              "field": {
+                "label": "Antwortoption",
+                "fields": [
+                  {
+                    "label": "Antworttext",
+                    "description": "Schreibe die Antwortoption als Markdown. Du kannst Code-Blöcke oder Mermaid-Diagramme verwenden."
+                  },
+                  {
+                    "label": "Richtige Antwort"
+                  }
+                ]
+              }
+            }
           ]
         },
         {
