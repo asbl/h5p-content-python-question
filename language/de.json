@@ -429,7 +429,18 @@
             { "label": "Bedingung verlangen" }, { "label": "Return-Anweisung verlangen" }, { "label": "Zuweisungen auf Modulebene verbieten" },
             { "label": "Verbotene Funktionsaufrufe", "description": "Durch Kommas getrennte Funktionsnamen oder Methoden, zum Beispiel sorted, sort, sum." },
             { "label": "Erforderliche Datenstrukturen", "entity": "data structure", "field": { "label": "Datenstruktur", "options": [{ "label": "Liste" }, { "label": "Dictionary" }, { "label": "Set" }, { "label": "Tuple" }] } },
-            { "label": "Verbotene Datenstrukturen", "entity": "data structure", "field": { "label": "Datenstruktur", "options": [{ "label": "Liste" }, { "label": "Dictionary" }, { "label": "Set" }, { "label": "Tuple" }] } }
+            { "label": "Verbotene Datenstrukturen", "entity": "data structure", "field": { "label": "Datenstruktur", "options": [{ "label": "Liste" }, { "label": "Dictionary" }, { "label": "Set" }, { "label": "Tuple" }] } },
+            { "label": "Erforderliche Klassennamen", "description": "Durch Kommas getrennte Klassennamen, zum Beispiel Person, Rechteck." },
+            { "label": "Verbotene Klassennamen", "description": "Durch Kommas getrennte Klassennamen, die nicht definiert werden dürfen." },
+            { "label": "Erforderliche Methoden", "description": "Durch Kommas getrennte Methodennamen. Nutze Klasse.methode für eine bestimmte Klasse oder nur methode für eine beliebige Klasse." },
+            { "label": "Erforderliche Instanzattribute", "description": "Durch Kommas getrennte self-Attribute, die in Methoden zugewiesen werden. Nutze Klasse.attribut für eine bestimmte Klasse oder nur attribut für eine beliebige Klasse." },
+            { "label": "Erforderliche Klassen", "entity": "Klasse", "description": "Strukturierte Klassenvorgaben für objektorientierte Modellierungsaufgaben.", "field": { "label": "Erforderliche Klasse", "fields": [{ "label": "Klassenname", "description": "Erforderlicher Python-Klassenname, zum Beispiel BankAccount." }] } },
+            { "label": "Erforderliche Methoden", "entity": "Methode", "description": "Strukturierte Methodenvorgaben. Parameter werden exakt geprüft, wenn sie angegeben sind.", "field": { "label": "Erforderliche Methode", "fields": [{ "label": "Klassenname", "description": "Optionaler Klassenname. Leer lassen, um die Methode in jeder Klasse zu akzeptieren." }, { "label": "Methodenname", "description": "Erforderlicher Methodenname, zum Beispiel __init__ oder deposit." }, { "label": "Parameter", "description": "Optionale, durch Kommas getrennte Parameternamen ohne self, zum Beispiel owner, balance." }] } },
+            { "label": "Erforderliche Instanzattribute", "entity": "Attribut", "description": "Strukturierte self-Attributvorgaben, die innerhalb von Methoden zugewiesen werden.", "field": { "label": "Erforderliches Instanzattribut", "fields": [{ "label": "Klassenname", "description": "Optionaler Klassenname. Leer lassen, um das Attribut in jeder Klasse zu akzeptieren." }, { "label": "Attributname", "description": "Erforderlicher self-Attributname, zum Beispiel balance." }] } },
+            { "label": "Konstruktor (__init__) verlangen" },
+            { "label": "Objekterzeugung verlangen" },
+            { "label": "Vererbung verlangen" },
+            { "label": "Vererbung verbieten" }
           ]
         },
         {

@@ -961,8 +961,67 @@
                     { "name": "requireReturn", "type": "boolean", "label": "Require return statement", "default": false },
                     { "name": "forbidTopLevelAssignments", "type": "boolean", "label": "Forbid top-level assignments", "default": false },
                     { "name": "forbiddenCalls", "type": "text", "label": "Forbidden function calls", "description": "Comma-separated function names or methods, for example sorted, sort, sum.", "optional": true },
-                    { "name": "requiredDataStructures", "type": "list", "label": "Required data structures", "entity": "data structure", "optional": true, "field": { "name": "structure", "type": "select", "label": "Data structure", "options": [{ "value": "list", "label": "List" }, { "value": "dict", "label": "Dictionary" }, { "value": "set", "label": "Set" }, { "value": "tuple", "label": "Tuple" }] } },
-                    { "name": "forbiddenDataStructures", "type": "list", "label": "Forbidden data structures", "entity": "data structure", "optional": true, "field": { "name": "structure", "type": "select", "label": "Data structure", "options": [{ "value": "list", "label": "List" }, { "value": "dict", "label": "Dictionary" }, { "value": "set", "label": "Set" }, { "value": "tuple", "label": "Tuple" }] } }
+                    { "name": "requiredDataStructures", "type": "list", "label": "Required data structures", "entity": "data structure", "optional": true, "field": { "name": "structure", "type": "select", "label": "Data structure", "default": "list", "options": [{ "value": "list", "label": "List" }, { "value": "dict", "label": "Dictionary" }, { "value": "set", "label": "Set" }, { "value": "tuple", "label": "Tuple" }] } },
+                    { "name": "forbiddenDataStructures", "type": "list", "label": "Forbidden data structures", "entity": "data structure", "optional": true, "field": { "name": "structure", "type": "select", "label": "Data structure", "default": "list", "options": [{ "value": "list", "label": "List" }, { "value": "dict", "label": "Dictionary" }, { "value": "set", "label": "Set" }, { "value": "tuple", "label": "Tuple" }] } },
+                    { "name": "requiredClassNames", "type": "text", "label": "Required class names", "description": "Comma-separated class names, for example Person, Rectangle.", "optional": true },
+                    { "name": "forbiddenClassNames", "type": "text", "label": "Forbidden class names", "description": "Comma-separated class names that must not be defined.", "optional": true },
+                    { "name": "requiredMethodNames", "type": "text", "label": "Required methods", "description": "Comma-separated method names. Use Class.method for a specific class or just method for any class.", "optional": true },
+                    { "name": "requiredInstanceAttributes", "type": "text", "label": "Required instance attributes", "description": "Comma-separated self attributes assigned in methods. Use Class.attribute for a specific class or just attribute for any class.", "optional": true },
+                    {
+                        "name": "requiredClasses",
+                        "type": "list",
+                        "label": "Required classes",
+                        "entity": "class",
+                        "optional": true,
+                        "description": "Structured class requirements for object-oriented modeling tasks.",
+                        "field": {
+                            "name": "requiredClass",
+                            "type": "group",
+                            "label": "Required class",
+                            "fields": [
+                                { "name": "className", "type": "text", "label": "Class name", "description": "Required Python class name, for example BankAccount." }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "requiredMethods",
+                        "type": "list",
+                        "label": "Required methods",
+                        "entity": "method",
+                        "optional": true,
+                        "description": "Structured method requirements. Parameters are checked exactly when provided.",
+                        "field": {
+                            "name": "requiredMethod",
+                            "type": "group",
+                            "label": "Required method",
+                            "fields": [
+                                { "name": "className", "type": "text", "label": "Class name", "description": "Optional class name. Leave empty to accept the method in any class.", "optional": true },
+                                { "name": "methodName", "type": "text", "label": "Method name", "description": "Required method name, for example __init__ or deposit." },
+                                { "name": "parameters", "type": "text", "label": "Parameters", "description": "Optional comma-separated parameter names without self, for example owner, balance.", "optional": true }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "requiredAttributes",
+                        "type": "list",
+                        "label": "Required instance attributes",
+                        "entity": "attribute",
+                        "optional": true,
+                        "description": "Structured self-attribute requirements assigned inside methods.",
+                        "field": {
+                            "name": "requiredAttribute",
+                            "type": "group",
+                            "label": "Required instance attribute",
+                            "fields": [
+                                { "name": "className", "type": "text", "label": "Class name", "description": "Optional class name. Leave empty to accept the attribute in any class.", "optional": true },
+                                { "name": "attributeName", "type": "text", "label": "Attribute name", "description": "Required self attribute name, for example balance." }
+                            ]
+                        }
+                    },
+                    { "name": "requireConstructor", "type": "boolean", "label": "Require constructor (__init__)", "default": false },
+                    { "name": "requireObjectInstantiation", "type": "boolean", "label": "Require object instantiation", "default": false },
+                    { "name": "requireInheritance", "type": "boolean", "label": "Require inheritance", "default": false },
+                    { "name": "forbidInheritance", "type": "boolean", "label": "Forbid inheritance", "default": false }
                 ]
             },
             {

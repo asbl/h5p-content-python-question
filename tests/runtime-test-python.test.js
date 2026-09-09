@@ -119,7 +119,8 @@ describe('PythonTestRuntime', () => {
     const code = runtime.getCode();
 
     expect(code.indexOf('import ast, json')).toBeLessThan(code.indexOf('solution'));
-    expect(code).toContain("requiredLoop\":\"while");
+    expect(code).toContain('json.loads');
+    expect(code).toContain('requiredLoop\\":\\"while');
     expect(runtime.codeTester.setAlgorithmConstraintResult).toHaveBeenCalledWith(null);
   });
 

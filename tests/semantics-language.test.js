@@ -79,3 +79,20 @@ describe('language/de.json', () => {
     expect(actualSkeleton).toEqual(expectedSkeleton);
   });
 });
+
+describe('semantics.json', () => {
+  it('provides defaults for data-structure constraint list entries', () => {
+    const gradingSettings = semantics.find((field) => field.name === 'gradingSettings');
+    const constraints = gradingSettings.fields.find((field) => field.name === 'algorithmConstraints');
+    const dataStructureLists = constraints.fields.filter((field) => (
+      ['requiredDataStructures', 'forbiddenDataStructures'].includes(field.name)
+    ));
+
+    expect(dataStructureLists).toHaveLength(2);
+    dataStructureLists.forEach((field) => {
+      expect(field.field.type).toBe('select');
+      expect(field.field.default).toBe('list');
+      expect(field.field.options.map((option) => option.value)).toContain(field.field.default);
+    });
+  });
+});
