@@ -158,4 +158,42 @@ describe('PythonTestRuntime', () => {
 
     expect(canvasManagers[0].attachCanvas).toHaveBeenCalledWith('testcase', 6);
   });
+
+  describe('outputHandler', () => {
+    const buildTestRuntime = () => {
+      const runtime = new PythonTestRuntime(
+        vi.fn(),
+        'solution',
+        {
+          addOutput: vi.fn(),
+          session: { testCaseIndex: 0 },
+          l10n: { testCase: 'Test case' },
+        },
+        {},
+      );
+      runtime.setup({});
+      return runtime;
+    };
+
+    it('records genuine program output for comparison', () => {
+      const runtime = buildTestRuntime();
+
+      runtime.outputHandler('180');
+
+      expect(runtime.codeTester.addOutput).toHaveBeenCalledWith('180');
+    });
+
+    it('does not record Pyodide/package loading status messages as test output', () => {
+      const runtime = buildTestRuntime();
+
+      runtime.outputHandler('Pyodide wird geladen...', false);
+      runtime.outputHandler('Loading numpy, pygame-ce, sqlite3', false);
+
+      expect(runtime.codeTester.addOutput).not.toHaveBeenCalled();
+      expect(runtime._consoleManager.write).toHaveBeenCalledWith(
+        'Loading numpy, pygame-ce, sqlite3',
+        'Test case 1',
+      );
+    });
+  });
 });

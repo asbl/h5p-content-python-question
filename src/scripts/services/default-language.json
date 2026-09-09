@@ -8,6 +8,8 @@
     "pythonInputPrompt": "Input:",
     "pyodideLoading": "Loading Pyodide...",
     "pyodideReady": "Pyodide ready.",
+    "pythonQuestionVersion": "PythonQuestion version: {version}",
+    "miniworldsVersion": "Miniworlds version: {version}",
     "pyodideCanvasLoading": "Preparing canvas runtime...",
     "pyodideMissingWindow": "No window object available to load Pyodide.",
     "pyodideMissingApi": "Pyodide script loaded but loadPyodide() was not found.",

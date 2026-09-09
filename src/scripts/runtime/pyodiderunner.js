@@ -1,6 +1,8 @@
 import {
   getPythonL10nValue,
+  tPython,
 } from '../services/python-l10n';
+import { PYODIDE_LIBRARY_VERSION } from './services/pyodide-cache-freshness';
 import { addPythonErrorHint } from '../services/python-error-hints';
 import { normalizePythonExecutionLimit } from '../services/python-execution-limit';
 import {
@@ -258,6 +260,10 @@ export default class PyodideRunner {
 
       if (isFirstLoaderRequest) {
         this.runtime.outputHandler(getPythonL10nValue(this.l10n, 'pyodideReady'), false);
+        this.runtime.outputHandler(
+          tPython(this.l10n, 'pythonQuestionVersion', { version: PYODIDE_LIBRARY_VERSION }),
+          false,
+        );
       }
     }
 
