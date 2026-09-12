@@ -2,7 +2,7 @@
   "title": "Python Question",
   "description": "Displays a Python Editor with Skulpt",
   "majorVersion": 6,
-  "minorVersion": 121,
+  "minorVersion": 122,
   "patchVersion": 0,
   "fullscreen": 1,
   "runnable": 1,
@@ -30,12 +30,12 @@
     {
       "machineName": "H5P.CodeQuestion",
       "majorVersion": 6,
-      "minorVersion": 113
+      "minorVersion": 114
     },
     {
       "machineName": "H5P.LibCodeTools",
       "majorVersion": 6,
-      "minorVersion": 94
+      "minorVersion": 95
     }
   ],
   "editorDependencies": [
