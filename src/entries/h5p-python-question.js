@@ -2,10 +2,10 @@ import '../styles/h5p-python-question.css';
 
 import PythonQuestion from '../scripts/h5p-python-question';
 import { registerPythonBlocklyLanguagePack } from '../scripts/blockly/python-blockly-language-pack';
-import MatplotlibPackageManager from '../../../H5P.LibCodeTools-6.0/src/scripts/editor/blockly/managers/packages/matplotlib-package-manager';
-import MiniworldsPackageManager from '../../../H5P.LibCodeTools-6.0/src/scripts/editor/blockly/managers/packages/miniworlds-package-manager';
-import NumpyPackageManager from '../../../H5P.LibCodeTools-6.0/src/scripts/editor/blockly/managers/packages/numpy-package-manager';
-import ScipyPackageManager from '../../../H5P.LibCodeTools-6.0/src/scripts/editor/blockly/managers/packages/scipy-package-manager';
+import MatplotlibPackageManager from '../scripts/blockly/packages/matplotlib-package-manager';
+import MiniworldsPackageManager from '../scripts/blockly/packages/miniworlds-package-manager';
+import NumpyPackageManager from '../scripts/blockly/packages/numpy-package-manager';
+import ScipyPackageManager from '../scripts/blockly/packages/scipy-package-manager';
 
 import PythonRuntime from '../scripts/runtime/runtime-python';
 

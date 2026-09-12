@@ -1,4 +1,6 @@
-import { afterEach, vi } from 'vitest';
+import { afterEach, beforeEach, vi } from 'vitest';
+import * as Blockly from 'blockly';
+import { pythonGenerator } from 'blockly/python';
 
 const missingTranslation = (key, library = '') => `[Missing translation ${library}:${key}]`;
 
@@ -36,10 +38,18 @@ globalThis.H5P = {
   CodeTesterFactory: class {},
 };
 
+beforeEach(() => {
+  vi.stubGlobal('Blockly', {
+    ...Blockly,
+    Python: pythonGenerator,
+  });
+});
+
 afterEach(() => {
   globalThis.H5P.t.mockReset();
   globalThis.H5P.t.mockImplementation((key, _params, library) => missingTranslation(key, library));
   globalThis.H5P.createUUID.mockClear();
   document.head.innerHTML = '';
   document.body.innerHTML = '';
+  vi.unstubAllGlobals();
 });
