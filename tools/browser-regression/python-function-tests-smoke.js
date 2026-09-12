@@ -25,7 +25,7 @@ async function main() {
     const page = await browser.newPage();
     const frame = await getFrame(page);
     const question = frame.locator('.h5p-codequestion').first();
-    const checkButton = question.locator('.h5p-question-check-answer');
+    const checkButton = frame.locator('.h5p-question-buttons .h5p-question-check-answer, .h5p-question-check-answer');
 
     const firstCall = normalize(await question.locator('.function-tester .input').first().textContent());
     if (firstCall !== 'binary_search([1, 3, 5, 7, 9], 7)') {

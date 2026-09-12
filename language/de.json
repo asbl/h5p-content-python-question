@@ -392,6 +392,10 @@
               "description": "Wenn aktiviert, können Lernende mehrere Antwortoptionen auswählen."
             },
             {
+              "label": "Reihenfolge der Antworten zufällig anordnen",
+              "description": "Wenn aktiviert, wird die Reihenfolge der Antwortoptionen für jede Lernperson zufällig gemischt."
+            },
+            {
               "label": "Antwortoptionen",
               "entity": "Antwortoption",
               "field": {

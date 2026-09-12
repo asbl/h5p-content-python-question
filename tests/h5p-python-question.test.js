@@ -47,6 +47,17 @@ describe('PythonQuestion', () => {
     document.head.innerHTML = '';
   });
 
+  it('does not require inherited isMultipleChoiceQuestion during construction', () => {
+    const question = new PythonQuestion({
+      gradingSettings: {
+        gradingMethod: 'multipleChoice',
+      },
+    }, 42);
+
+    expect(question.isCodeQuestionMultipleChoice()).toBe(true);
+    expect(question.codeTester).toBeUndefined();
+  });
+
   it('normalizes runtime and container options from params', async () => {
     const question = new PythonQuestion({
       l10n: { localValue: 'child' },

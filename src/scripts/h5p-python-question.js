@@ -40,12 +40,26 @@ export default class PythonQuestion extends H5P.CodeQuestion {
 
     // Recreate code tester so it also uses the updated localization chain.
     // Multiple choice uses CodeQuestion's built-in evaluator instead.
-    this.codeTester = this.gradingMethod && !this.isMultipleChoiceQuestion()
+    this.codeTester = this.gradingMethod && !this.isCodeQuestionMultipleChoice()
       ? this.getCodeTesterFactory().create()
       : this.codeTester;
 
     this.pythonRunner = this.pythonConfig.runner;
     this.scheduleEarlyPyodidePreload();
+  }
+
+  /**
+   * Checks whether the inherited CodeQuestion is configured for multiple choice.
+   * Some H5P hosts may still serve an older cached CodeQuestion dependency that
+   * does not expose isMultipleChoiceQuestion yet.
+   * @returns {boolean} True if multiple choice grading is configured.
+   */
+  isCodeQuestionMultipleChoice() {
+    if (typeof this.isMultipleChoiceQuestion === 'function') {
+      return this.isMultipleChoiceQuestion();
+    }
+
+    return this.gradingMethod === 'multipleChoice';
   }
 
   /**

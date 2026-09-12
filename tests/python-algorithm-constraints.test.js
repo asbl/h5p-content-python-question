@@ -21,6 +21,22 @@ function runConstraintHarness(source, constraints = {}, functionName = 'answer')
   return JSON.parse(resultLine.slice(marker.length));
 }
 
+function runConstraintHarnessWithoutFunctionName(source, constraints = {}) {
+  const { token, code } = getAlgorithmConstraintHarness(source, constraints, undefined);
+  const marker = `${RESULT_PREFIX}${token}:`;
+  const output = execFileSync('python3', ['-c', code], { encoding: 'utf8' });
+  const resultLine = output
+    .trim()
+    .split('\n')
+    .find((line) => line.startsWith(marker));
+
+  if (!resultLine) {
+    throw new Error(`Missing constraint result marker: ${marker}`);
+  }
+
+  return JSON.parse(resultLine.slice(marker.length));
+}
+
 describe('algorithm constraint harness', () => {
   it('passes recursive solutions with a base case and required return', () => {
     const result = runConstraintHarness([
@@ -123,6 +139,39 @@ describe('algorithm constraint harness', () => {
       requiredClassNames: 'Person',
       requiredMethodNames: 'Person.__init__, greet',
       requiredInstanceAttributes: 'Person.name',
+      requireConstructor: true,
+      requireObjectInstantiation: true,
+    });
+
+    expect(result).toEqual({ passed: true, violations: [] });
+  });
+
+  it('checks top-level OOP constraints without requiring a configured function name', () => {
+    const result = runConstraintHarnessWithoutFunctionName([
+      'class Person:',
+      '    def __init__(self, name):',
+      '        self.name = name',
+      '',
+      'class Team:',
+      '    def __init__(self, name):',
+      '        self.name = name',
+      '        self.mitglieder = []',
+      '    def aufnehmen(self, person):',
+      '        self.mitglieder.append(person)',
+      '    def anzahl(self):',
+      '        return len(self.mitglieder)',
+      '',
+      'team = Team(input())',
+      'anzahl = int(input())',
+      'for i in range(anzahl):',
+      '    person = Person(input())',
+      '    team.aufnehmen(person)',
+      'print(team.name)',
+      'print(team.anzahl())',
+    ].join('\n'), {
+      requiredClassNames: 'Person, Team',
+      requiredMethodNames: 'Person.__init__, Team.__init__, Team.aufnehmen, Team.anzahl',
+      requiredInstanceAttributes: 'Person.name, Team.name, Team.mitglieder',
       requireConstructor: true,
       requireObjectInstantiation: true,
     });

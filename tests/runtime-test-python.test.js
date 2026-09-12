@@ -124,6 +124,25 @@ describe('PythonTestRuntime', () => {
     expect(runtime.codeTester.setAlgorithmConstraintResult).toHaveBeenCalledWith(null);
   });
 
+  it('does not prepend a constraint preflight when constraints are inactive', () => {
+    const runtime = new PythonTestRuntime(vi.fn(), 'print("ok")', {
+      functionName: '',
+      algorithmConstraints: {
+        requiredClassNames: 'Person',
+        requireObjectInstantiation: true,
+      },
+      hasAlgorithmConstraints: vi.fn(() => false),
+      setAlgorithmConstraintResult: vi.fn(),
+    }, { runner: 'pyodide' });
+    runtime.runnerType = 'pyodide';
+
+    const code = runtime.getCode();
+
+    expect(code).toBe('print("ok")');
+    expect(code).not.toContain('__H5P_ALGORITHM_CONSTRAINTS__');
+    expect(runtime.codeTester.setAlgorithmConstraintResult).not.toHaveBeenCalled();
+  });
+
   it('attaches testcase canvas using session test-case index', async () => {
     const runtime = new PythonTestRuntime(
       vi.fn(),
@@ -184,6 +203,16 @@ describe('PythonTestRuntime', () => {
       expect(runtime.codeTester.addOutput).toHaveBeenCalledWith('180');
     });
 
+    it('records multiline Pyodide stdout chunks as separate comparison lines', () => {
+      const runtime = buildTestRuntime();
+
+      runtime.outputHandler('Robotik\n2\n');
+
+      expect(runtime.codeTester.addOutput).toHaveBeenNthCalledWith(1, 'Robotik');
+      expect(runtime.codeTester.addOutput).toHaveBeenNthCalledWith(2, '2');
+      expect(runtime.codeTester.addOutput).toHaveBeenCalledTimes(2);
+    });
+
     it('does not record Pyodide/package loading status messages as test output', () => {
       const runtime = buildTestRuntime();
 
@@ -194,6 +223,43 @@ describe('PythonTestRuntime', () => {
       expect(runtime._consoleManager.write).toHaveBeenCalledWith(
         'Loading numpy, pygame-ce, sqlite3',
         'Test case 1',
+      );
+    });
+
+    it('records function-test result markers without echoing them as learner output', () => {
+      const runtime = buildTestRuntime();
+      const marker = '__H5P_FUNCTION_TEST_RESULT__:token:passed:3';
+
+      runtime.outputHandler(marker);
+
+      expect(runtime.codeTester.addOutput).toHaveBeenCalledWith(marker);
+      expect(runtime._consoleManager.write).not.toHaveBeenCalled();
+    });
+
+    it('processes mixed runtime markers from one Pyodide output chunk line by line', () => {
+      const runtime = buildTestRuntime();
+      runtime.algorithmConstraintToken = 'constraints';
+      runtime.algorithmTraceToken = 'trace';
+      runtime.codeTester.setAlgorithmConstraintResult = vi.fn();
+      runtime.codeTester.addAlgorithmTraceEvent = vi.fn();
+
+      runtime.outputHandler([
+        '__H5P_ALGORITHM_CONSTRAINTS__:constraints:{"passed":true,"violations":[]}',
+        '__H5P_ALGORITHM_TRACE__:trace:{"type":"watch","step":1,"snapshot":[1,2]}',
+        '__H5P_FUNCTION_TEST_RESULT__:token:passed:3',
+      ].join('\n'));
+
+      expect(runtime.codeTester.setAlgorithmConstraintResult).toHaveBeenCalledWith({
+        passed: true,
+        violations: [],
+      });
+      expect(runtime.codeTester.addAlgorithmTraceEvent).toHaveBeenCalledWith({
+        type: 'watch',
+        step: 1,
+        snapshot: [1, 2],
+      });
+      expect(runtime.codeTester.addOutput).toHaveBeenCalledWith(
+        '__H5P_FUNCTION_TEST_RESULT__:token:passed:3',
       );
     });
   });

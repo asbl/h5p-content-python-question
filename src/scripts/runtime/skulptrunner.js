@@ -405,7 +405,13 @@ export default class SkulptRunner {
   setupTurtleDiv(canvasDiv) {
     const skulpt = this.getSkulpt();
 
-    (skulpt.TurtleGraphics ||= {}).target = canvasDiv.id;
+    const turtleGraphics = (skulpt.TurtleGraphics ||= {});
+    turtleGraphics.target = canvasDiv.id;
+    // Draw turtle commands synchronously instead of animating them frame by
+    // frame. Animated drawing races with the image comparator's canvas
+    // snapshot (see comparator-image.js), causing flaky false negatives when
+    // the pixel diff is captured before the animation finished.
+    turtleGraphics.animate = false;
   }
 
   setupP5(canvasDiv) {

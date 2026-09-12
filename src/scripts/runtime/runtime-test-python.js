@@ -7,6 +7,16 @@ import { logPythonDiagnostic } from '../services/python-diagnostics';
 
 const DEBUG_PREFIX = 'Python test runtime:';
 
+function splitCapturedOutput(text) {
+  const trimmedText = String(text ?? '').trim();
+
+  if (!trimmedText.includes('\n')) {
+    return [trimmedText];
+  }
+
+  return trimmedText.split(/\r?\n/).map((line) => line.trim());
+}
+
 /**
  * Test runtime for executing Python student code against reference solutions.
  *
@@ -119,6 +129,21 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
       return;
     }
 
+    if (
+      trimmedText.includes('\n')
+      && (
+        trimmedText.includes(RESULT_PREFIX)
+        || trimmedText.includes(TRACE_PREFIX)
+        || trimmedText.includes('__H5P_FUNCTION_TEST_RESULT__:')
+      )
+    ) {
+      trimmedText.split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .forEach((line) => this.outputHandler(line, true));
+      return;
+    }
+
     const marker = `${RESULT_PREFIX}${this.algorithmConstraintToken}:`;
     if (this.algorithmConstraintToken && trimmedText.startsWith(marker)) {
       try {
@@ -148,7 +173,15 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
       }
       return;
     }
-    this.codeTester.addOutput(trimmedText);
+
+    if (trimmedText.startsWith('__H5P_FUNCTION_TEST_RESULT__:')) {
+      this.codeTester.addOutput(trimmedText);
+      return;
+    }
+
+    splitCapturedOutput(text).forEach((line) => {
+      this.codeTester.addOutput(line);
+    });
 
     const testCaseIndex = this.codeTester.session.testCaseIndex;
     const testCaseLabel = this.codeTester.l10n.testCase;

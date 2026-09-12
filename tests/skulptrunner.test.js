@@ -272,4 +272,16 @@ describe('SkulptRunner', () => {
     runner.setupTurtleDiv(third);
     expect(globalThis.Sk.TurtleGraphics.target).toBe('turtle-third');
   });
+
+  it('disables turtle animation so drawing completes synchronously', () => {
+    const runtime = createRuntime();
+    const runner = new SkulptRunner(runtime, {});
+    runner.Sk = globalThis.Sk;
+
+    const canvasDiv = document.createElement('div');
+    canvasDiv.id = 'turtle-sync-canvas';
+    runner.setupTurtleDiv(canvasDiv);
+
+    expect(globalThis.Sk.TurtleGraphics.animate).toBe(false);
+  });
 });

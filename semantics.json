@@ -873,6 +873,10 @@
                         "label": "Function Test Cases"
                     },
                     {
+                        "value": "bySolution",
+                        "label": "By Solution"
+                    },
+                    {
                         "value": "multipleChoice",
                         "label": "Multiple Choice"
                     },
@@ -947,6 +951,13 @@
                         "type": "boolean",
                         "label": "Allow multiple correct answers",
                         "description": "If enabled, learners can select several answer options.",
+                        "default": false
+                    },
+                    {
+                        "name": "shuffleAnswers",
+                        "type": "boolean",
+                        "label": "Randomize answer order",
+                        "description": "If enabled, the order of the answer options is shuffled for each learner.",
                         "default": false
                     },
                     {
@@ -1266,7 +1277,8 @@
                             "equals": [
                                 "ioTestCases",
                                 "targetImage",
-                                "functionTests"
+                                "functionTests",
+                                "bySolution"
                             ]
                         }
                     ],

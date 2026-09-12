@@ -1,5 +1,6 @@
 /* global loadPyodide */
 
+import { applyCspNonce } from '../../../../../H5P.LibCodeTools-6.0/src/scripts/services/csp';
 import {
   getPythonL10nValue,
   tPython,
@@ -628,6 +629,7 @@ export function ensurePyodideScript(url) {
     script.src = url;
     script.async = true;
     script.dataset.h5pPyodide = 'true';
+    applyCspNonce(script);
     script.onload = () => {
       if (window.loadPyodide) {
         resolve();
@@ -756,7 +758,7 @@ if not globals().get('_h5p_runtime_compat_installed', False):
   _h5p_original_import = _h5p_builtins.__import__
   _h5p_previous_trace = None
 
-  def _h5p_execution_limit_trace(frame, event, arg):
+  def _h5p_execution_limit_trace(frame, event, arg, _h5p_time=_h5p_time):
     if _h5p_execution_limit_ms > 0 and event in ('call', 'line'):
       elapsed_ms = (_h5p_time.monotonic() - _h5p_execution_limit_started) * 1000
       if elapsed_ms > _h5p_execution_limit_ms:
@@ -764,28 +766,32 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     return _h5p_execution_limit_trace
 
   def _h5p_set_execution_limit(limit_ms, message):
+    import sys as _h5p_sys_local
+
     global _h5p_execution_limit_ms
     global _h5p_execution_limit_started
     global _h5p_execution_limit_message
     global _h5p_previous_trace
 
-    _h5p_previous_trace = _h5p_sys.gettrace()
+    _h5p_previous_trace = _h5p_sys_local.gettrace()
     _h5p_execution_limit_ms = max(int(limit_ms or 0), 0)
     _h5p_execution_limit_message = str(message)
 
     if _h5p_execution_limit_ms > 0:
       _h5p_execution_limit_started = _h5p_time.monotonic()
-      _h5p_sys.settrace(_h5p_execution_limit_trace)
+      _h5p_sys_local.settrace(_h5p_execution_limit_trace)
     else:
       _h5p_execution_limit_started = 0.0
-      _h5p_sys.settrace(_h5p_previous_trace)
+      _h5p_sys_local.settrace(_h5p_previous_trace)
 
   def _h5p_clear_execution_limit():
+    import sys as _h5p_sys_local
+
     global _h5p_execution_limit_ms
     global _h5p_execution_limit_started
     global _h5p_previous_trace
 
-    _h5p_sys.settrace(_h5p_previous_trace)
+    _h5p_sys_local.settrace(_h5p_previous_trace)
     _h5p_previous_trace = None
     _h5p_execution_limit_ms = 0
     _h5p_execution_limit_started = 0.0

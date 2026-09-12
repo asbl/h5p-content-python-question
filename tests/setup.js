@@ -7,6 +7,7 @@ class BaseCodeQuestion {
     this.params = params;
     this.contentId = contentId;
     this.extras = extras;
+    this.gradingMethod = params.gradingSettings?.gradingMethod;
     this.l10n = { parentValue: 'parent' };
     this.libraryInfo = {
       versionedNameNoSpaces: 'H5P.PythonQuestion-6.64',
