@@ -380,7 +380,29 @@
             { "label": "Eingabe/Ausgabe Testfälle" },
             { "label": "Zielbild" },
             { "label": "Funktionstestfälle" },
-            { "label": "Multiple Choice" }
+            { "label": "Musterlösung" },
+            { "label": "Multiple Choice" },
+            { "label": "Elemente sortieren" }
+          ]
+        },
+        {
+          "label": "Elemente sortieren",
+          "description": "Lernende ziehen die Elemente per Drag & Drop (oder verschieben sie mit den Auf-/Ab-Schaltflächen) in die hier festgelegte Reihenfolge.",
+          "fields": [
+            {
+              "label": "Elemente in der richtigen Reihenfolge",
+              "description": "Füge die Elemente in der Reihenfolge hinzu, die als richtig gilt. Lernende sehen sie in zufälliger Reihenfolge.",
+              "entity": "Element",
+              "field": {
+                "label": "Element",
+                "fields": [
+                  {
+                    "label": "Text",
+                    "description": "Schreibe das Element als Markdown. Du kannst Code-Blöcke oder Mermaid-Diagramme verwenden."
+                  }
+                ]
+              }
+            }
           ]
         },
         {
