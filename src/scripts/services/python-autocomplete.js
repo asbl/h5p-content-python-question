@@ -172,6 +172,16 @@ const TURTLE_TYPE_BY_FACTORY = Object.freeze({
   Turtle: 'turtle-object',
 });
 
+/**
+ * Builds one CodeMirror-style completion option.
+ * @param {string} label - Completion label shown to the learner.
+ * @param {object} [settings] - Optional completion settings.
+ * @param {string} [settings.apply] - Text inserted on accept, defaults to the label.
+ * @param {string} [settings.type] - Completion kind, e.g. 'variable' or 'function'.
+ * @param {string} [settings.detail] - Short detail text shown next to the label.
+ * @param {number} [settings.boost] - Ranking boost.
+ * @returns {object} Completion option.
+ */
 function createCompletionOption(label, settings = {}) {
   return {
     label,
@@ -182,12 +192,22 @@ function createCompletionOption(label, settings = {}) {
   };
 }
 
+/**
+ * Maps configured package names to their Python import names, deduplicated.
+ * @param {string[]} [packageNames] - Configured Pyodide/Skulpt package names.
+ * @returns {string[]} Unique Python import names.
+ */
 function normalizePackageImportNames(packageNames = []) {
   return Array.from(new Set((Array.isArray(packageNames) ? packageNames : [])
     .map((packageName) => PACKAGE_IMPORT_NAMES[String(packageName || '').trim()] || String(packageName || '').trim())
     .filter((packageName) => packageName !== '')));
 }
 
+/**
+ * Derives importable module names from the learner's other workspace Python files.
+ * @param {Array<{name: string}>} [files] - Workspace files.
+ * @returns {string[]} Unique importable module names.
+ */
 function getWorkspaceModuleNames(files = []) {
   return Array.from(new Set((Array.isArray(files) ? files : [])
     .map((file) => String(file?.name || ''))
@@ -196,11 +216,23 @@ function getWorkspaceModuleNames(files = []) {
     .filter((moduleName) => moduleName !== '')));
 }
 
+/**
+ * Returns the source line up to the cursor position.
+ * @param {string} [code] - Full source code.
+ * @param {number} [pos] - Cursor position.
+ * @returns {string} Line text up to the cursor.
+ */
 function getLineBeforePosition(code = '', pos = code.length) {
   const before = code.slice(0, pos);
   return before.split(/\r?\n/).pop() || '';
 }
 
+/**
+ * Determines what kind of completion (attribute, import, or global name) the cursor is in.
+ * @param {string} [code] - Full source code.
+ * @param {number} [pos] - Cursor position.
+ * @returns {object} Detected completion context.
+ */
 export function detectPythonCompletionContext(code = '', pos = code.length) {
   const line = getLineBeforePosition(code, pos);
   const attributeMatch = line.match(/([A-Za-z_][A-Za-z0-9_.]*)\.([A-Za-z0-9_]*)$/);
@@ -247,6 +279,12 @@ export function detectPythonCompletionContext(code = '', pos = code.length) {
   };
 }
 
+/**
+ * Scans source code for import statements and simple factory-call assignments so completions
+ * can be scoped to what's actually imported or bound.
+ * @param {string} [code] - Full source code.
+ * @returns {{importedModules: Map<string, string>, importedSymbols: Map<string, string>, variableTypes: Map<string, string>}} Inferred bindings.
+ */
 export function inferPythonBindings(code = '') {
   const importedModules = new Map();
   const importedSymbols = new Map();
@@ -316,6 +354,14 @@ export function inferPythonBindings(code = '') {
   };
 }
 
+/**
+ * Resolves the miniworlds/turtle object type a factory call produces, if known.
+ * @param {string} callableName - Called function or constructor name.
+ * @param {string} objectName - Module/object the call was made on, if any (e.g. 'miniworlds' in 'miniworlds.World()').
+ * @param {Map<string, string>} importedModules - Known imported module aliases.
+ * @param {Map<string, string>} importedSymbols - Known imported symbol aliases.
+ * @returns {string|null} Inferred type, or null if unknown.
+ */
 function resolveFactoryType(callableName, objectName, importedModules, importedSymbols) {
   if (objectName) {
     const resolvedModule = importedModules.get(objectName) || objectName;
@@ -340,6 +386,14 @@ function resolveFactoryType(callableName, objectName, importedModules, importedS
   return null;
 }
 
+/**
+ * Determines the miniworlds/turtle type bound to "self" inside an @Class.register-decorated
+ * event handler function, by walking backward to find the decorated variable.
+ * @param {string} [code] - Full source code.
+ * @param {number} [pos] - Cursor position.
+ * @param {object} [bindings] - Precomputed bindings from inferPythonBindings.
+ * @returns {string|null} Inferred type of "self", or null if unknown.
+ */
 function detectSelfBindingType(code = '', pos = code.length, bindings = inferPythonBindings(code)) {
   const lines = code.slice(0, pos).split(/\r?\n/);
   let seenFunctionDefinition = false;
@@ -369,6 +423,14 @@ function detectSelfBindingType(code = '', pos = code.length, bindings = inferPyt
   return null;
 }
 
+/**
+ * Resolves the inferred type of a dotted expression (e.g. "world.mouse") for attribute completion.
+ * @param {string} [expression] - Expression before the trailing dot.
+ * @param {string} [code] - Full source code.
+ * @param {number} [pos] - Cursor position.
+ * @param {object} [bindings] - Precomputed bindings from inferPythonBindings.
+ * @returns {string|null} Inferred type, or null if unknown.
+ */
 function resolveExpressionType(expression = '', code = '', pos = code.length, bindings = inferPythonBindings(code)) {
   const normalizedExpression = String(expression || '').trim();
   if (normalizedExpression === '') {
@@ -410,6 +472,11 @@ function resolveExpressionType(expression = '', code = '', pos = code.length, bi
   return null;
 }
 
+/**
+ * Returns the known attribute/symbol completion options for a module.
+ * @param {string} [moduleName] - Module name, e.g. 'miniworlds', 'p5', or 'turtle'.
+ * @returns {Array<object>} Completion options for the module, or an empty array if unknown.
+ */
 function getModuleSymbolOptions(moduleName = '') {
   if (moduleName === 'miniworlds') {
     return MINIWORLDS_SYMBOLS;
@@ -426,6 +493,15 @@ function getModuleSymbolOptions(moduleName = '') {
   return [];
 }
 
+/**
+ * Builds the full set of global-scope completion options (variables, imports, modules,
+ * keywords, builtins, and package-specific events).
+ * @param {object} params - Build parameters.
+ * @param {string[]} [params.packageNames] - Configured Pyodide/Skulpt package names.
+ * @param {Array<{name: string}>} [params.workspaceFiles] - Learner's other workspace files.
+ * @param {object} params.bindings - Bindings from inferPythonBindings.
+ * @returns {Array<object>} Deduplicated completion options.
+ */
 function buildGlobalOptions({ packageNames = [], workspaceFiles = [], bindings }) {
   const importedModuleNames = Array.from(bindings.importedModules.keys())
     .map((moduleName) => createCompletionOption(moduleName, { type: 'module', detail: 'imported module', boost: 100 }));
@@ -461,6 +537,11 @@ function buildGlobalOptions({ packageNames = [], workspaceFiles = [], bindings }
   ]);
 }
 
+/**
+ * Removes completion options that share the same label, type, and detail.
+ * @param {Array<object>} [options] - Completion options.
+ * @returns {Array<object>} Deduplicated completion options.
+ */
 function dedupeCompletionOptions(options = []) {
   const seen = new Set();
 
@@ -474,6 +555,12 @@ function dedupeCompletionOptions(options = []) {
   });
 }
 
+/**
+ * Scores a completion option against the typed prefix, favoring exact and prefix matches.
+ * @param {object} option - Completion option.
+ * @param {string} [prefix] - Text typed so far.
+ * @returns {number} Match score, or -1 if the option doesn't match the prefix.
+ */
 function scoreCompletionOption(option, prefix = '') {
   const normalizedPrefix = String(prefix || '').toLowerCase();
   const normalizedLabel = String(option?.label || '').toLowerCase();
@@ -498,6 +585,12 @@ function scoreCompletionOption(option, prefix = '') {
   return -1;
 }
 
+/**
+ * Scores, filters, and sorts completion options against the typed prefix.
+ * @param {Array<object>} [options] - Completion options.
+ * @param {string} [prefix] - Text typed so far.
+ * @returns {Array<object>} Matching options, best match first.
+ */
 function filterCompletionOptions(options = [], prefix = '') {
   return [...options]
     .map((option) => ({ option, score: scoreCompletionOption(option, prefix) }))
@@ -512,6 +605,13 @@ function filterCompletionOptions(options = [], prefix = '') {
     .map(({ option }) => option);
 }
 
+/**
+ * Creates a CodeMirror completion source function for the Python editor.
+ * @param {object} [settings] - Completion source settings.
+ * @param {string[]} [settings.packageNames] - Configured Pyodide/Skulpt package names.
+ * @param {Array<{name: string}>|Function} [settings.workspaceFiles] - Workspace files, or a getter for them.
+ * @returns {function} CodeMirror completion source.
+ */
 export function createPythonCompletionSource(settings = {}) {
   return (context) => {
     const code = context.state?.doc?.toString?.() || '';

@@ -143,6 +143,11 @@ const PYTHON_RAW_CODE_BLOCK_TYPE = 'python_raw_code';
 const NUMBER_PATTERN = '[-+]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)';
 const PYTHON_CLASS_NAME_PATTERN = /^\s*class\s+([A-Za-z_]\w*)\s*(?:\([^)]*\))?\s*:/gm;
 
+/**
+ * Builds a Blockly shadow block for a numeric literal input.
+ * @param {number|string} value - Numeric value.
+ * @returns {object} Blockly shadow block state.
+ */
 function createNumberShadow(value) {
   return {
     shadow: {
@@ -152,6 +157,11 @@ function createNumberShadow(value) {
   };
 }
 
+/**
+ * Parses an "(r, g, b)" Python tuple literal into a miniworlds RGB color block.
+ * @param {string} value - Source text of the tuple literal.
+ * @returns {object|null} Blockly block state, or null if the value isn't a matching tuple.
+ */
 function createRgbColorBlock(value) {
   const match = String(value || '').trim().match(/^\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)$/);
 
@@ -171,10 +181,19 @@ function createRgbColorBlock(value) {
   };
 }
 
+/**
+ * Builds the block representing the miniworlds core import statement.
+ * @returns {object} Blockly block state.
+ */
 function createMiniworldsImportBlock() {
   return { type: 'miniworlds_import_core' };
 }
 
+/**
+ * Extracts top-level Python class names from source code via a regex scan.
+ * @param {string} [code] - Python source code.
+ * @returns {string[]} Class names found in source order.
+ */
 function extractPythonClassNamesFromCode(code = '') {
   const classNames = [];
   let match;
@@ -187,6 +206,12 @@ function extractPythonClassNamesFromCode(code = '') {
   return classNames;
 }
 
+/**
+ * Collects the class names available across the learner's Python project files, for use as
+ * OOP block dropdown options.
+ * @param {object} [context] - Project context with the current files.
+ * @returns {string[]} Unique class names.
+ */
 function getPythonProjectClassNames(context = {}) {
   const fileNameExtractor = new ProjectClassSymbolExtractor(context, {
     extension: '.py',
@@ -206,6 +231,12 @@ function getPythonProjectClassNames(context = {}) {
   return [...new Set(classNames)];
 }
 
+/**
+ * Picks the default class name a newly placed OOP block should target.
+ * @param {object} [context] - Project context with the current files.
+ * @param {string[]} [classNames] - Known project class names.
+ * @returns {string} Default class name.
+ */
 function getDefaultClassName(context = {}, classNames = []) {
   const activeFile = (Array.isArray(context.files) ? context.files : [])
     .find((file) => file?.name === context.activeFileName);
@@ -217,6 +248,11 @@ function getDefaultClassName(context = {}, classNames = []) {
     || 'Helper';
 }
 
+/**
+ * Builds the "create world" block from a matched `var = World(width, height)` statement.
+ * @param {string[]} match - Match with [_, varName, width, height].
+ * @returns {object} Blockly block state.
+ */
 function createMiniworldsWorldBlock(match) {
   return {
     type: 'miniworlds_create_world',
@@ -228,6 +264,11 @@ function createMiniworldsWorldBlock(match) {
   };
 }
 
+/**
+ * Builds the "create actor" block from a matched `var = Actor(x, y)` statement.
+ * @param {string[]} match - Match with [_, varName, x, y].
+ * @returns {object} Blockly block state.
+ */
 function createMiniworldsActorBlock(match) {
   return {
     type: 'miniworlds_create_actor',
@@ -239,6 +280,13 @@ function createMiniworldsActorBlock(match) {
   };
 }
 
+/**
+ * Builds a miniworlds shape-creation block (Circle/Rectangle/Text) from a matched statement.
+ * @param {string} type - Blockly block type for the shape.
+ * @param {string[]} match - Match with [_, varName, ...values].
+ * @param {Array<[string, number]>} fields - Input name/value pairs to fill as number shadows.
+ * @returns {object} Blockly block state.
+ */
 function createMiniworldsShapeBlock(type, match, fields) {
   return {
     type,
@@ -247,6 +295,12 @@ function createMiniworldsShapeBlock(type, match, fields) {
   };
 }
 
+/**
+ * Builds a "set world/actor attribute" block from a matched RGB-color assignment.
+ * @param {'world'|'actor'} targetType - Whether the target is the world or an actor.
+ * @param {string[]} match - Match with [_, varName, attributeName, rgbTupleText].
+ * @returns {object|null} Blockly block state, or null if the color value can't be parsed.
+ */
 function createMiniworldsAttributeBlock(targetType, match) {
   const valueInput = createRgbColorBlock(match[3]);
 
@@ -269,6 +323,11 @@ function createMiniworldsAttributeBlock(targetType, match) {
   };
 }
 
+/**
+ * Builds the "run world" block from a matched `world.run()` statement.
+ * @param {string[]} match - Match with [_, varName].
+ * @returns {object} Blockly block state.
+ */
 function createMiniworldsRunBlock(match) {
   return {
     type: 'miniworlds_world_run',
@@ -276,6 +335,11 @@ function createMiniworldsRunBlock(match) {
   };
 }
 
+/**
+ * Builds an actor-move block from a matched `actor.move_<direction>()` statement.
+ * @param {string[]} match - Match with [_, varName, direction].
+ * @returns {object} Blockly block state.
+ */
 function createMiniworldsActorMoveBlock(match) {
   return {
     type: 'miniworlds_actor_move',
@@ -283,6 +347,11 @@ function createMiniworldsActorMoveBlock(match) {
   };
 }
 
+/**
+ * Wraps unrecognized Python source as an editable raw-code fallback block.
+ * @param {string} code - Raw Python source for this statement.
+ * @returns {object} Blockly block state.
+ */
 function createPythonRawCodeBlock(code) {
   return {
     type: PYTHON_RAW_CODE_BLOCK_TYPE,
@@ -290,6 +359,11 @@ function createPythonRawCodeBlock(code) {
   };
 }
 
+/**
+ * Builds a text-literal shadow block, stripping surrounding quote characters.
+ * @param {string} value - Source text of the string literal, quotes included.
+ * @returns {object} Blockly shadow block state.
+ */
 function createTextInput(value) {
   return {
     shadow: {
@@ -299,6 +373,14 @@ function createTextInput(value) {
   };
 }
 
+/**
+ * Builds a miniworlds event-handler block (key press, lifecycle, or custom) from a matched
+ * `def <functionName>(self): <body>` registered on `target`.
+ * @param {string} target - Registered world/actor variable name.
+ * @param {string} functionName - Handler function name (e.g. 'act', 'on_key_down_left').
+ * @param {string} body - Single-statement function body source.
+ * @returns {object} Blockly block state.
+ */
 function createMiniworldsEventBlock(target, functionName, body) {
   const moveMatch = body.trim().match(/^([A-Za-z_]\w*)\.(move_(?:up|down|left|right))\(\)$/);
   const bodyBlock = moveMatch && moveMatch[1] === target
@@ -336,6 +418,11 @@ function createMiniworldsEventBlock(target, functionName, body) {
   return createPythonRawCodeBlock(`@${target}.register\ndef ${functionName}(self):\n${body}`);
 }
 
+/**
+ * Chains a list of Blockly statement blocks together via their "next" connections.
+ * @param {Array<object>} blocks - Statement blocks in order.
+ * @returns {object|null} The first block, with the rest linked as its statement chain.
+ */
 function linkStatementBlocks(blocks) {
   if (blocks.length === 0) {
     return null;
@@ -353,6 +440,8 @@ function linkStatementBlocks(blocks) {
  * This deliberately small indentation-aware parser is used in the browser,
  * where Python's AST module is not available. Unknown statements become local
  * raw-code blocks, preserving the rest of the program as editable blocks.
+ * @param {string} [code] - Python source code.
+ * @returns {object} Blockly workspace state.
  */
 function createMiniworldsWorkspaceStateFromCode(code = '') {
   const lines = String(code || '')
@@ -527,6 +616,11 @@ function createMiniworldsWorkspaceStateFromCode(code = '') {
   };
 }
 
+/**
+ * Wraps the full Python source as a single raw-code workspace block.
+ * @param {string} [code] - Python source code.
+ * @returns {object|null} Blockly workspace state, or null for empty code.
+ */
 function createPythonRawCodeWorkspaceState(code = '') {
   const normalizedCode = String(code || '').trimEnd();
 
@@ -551,11 +645,22 @@ function createPythonRawCodeWorkspaceState(code = '') {
   };
 }
 
+/**
+ * Converts Python source into Blockly workspace state, preferring the miniworlds-aware parser
+ * and falling back to a single raw-code block.
+ * @param {string} [code] - Python source code.
+ * @returns {object|null} Blockly workspace state, or null for empty code.
+ */
 function createPythonWorkspaceStateFromCode(code = '') {
   return createMiniworldsWorkspaceStateFromCode(code)
     || createPythonRawCodeWorkspaceState(code);
 }
 
+/**
+ * Registers the raw-code fallback block once.
+ * @param {object} Blockly - Blockly instance.
+ * @returns {void}
+ */
 function registerPythonRawCodeBlock(Blockly) {
   if (!Blockly?.Blocks || Blockly.Blocks[PYTHON_RAW_CODE_BLOCK_TYPE]) {
     return;
@@ -576,6 +681,11 @@ function registerPythonRawCodeBlock(Blockly) {
   };
 }
 
+/**
+ * Builds the "Klassen" toolbox category, scoped to the learner's current project classes.
+ * @param {object} [context] - Project context with the current files.
+ * @returns {object} Blockly toolbox category definition.
+ */
 function buildPythonProjectCategory(context = {}) {
   const classNames = getPythonProjectClassNames(context);
   blocklyProjectClassRegistry.set('python', classNames);
@@ -694,6 +804,10 @@ export const PYTHON_BLOCKLY_LANGUAGE_PACK = {
   supported: true,
 };
 
+/**
+ * Registers the Python/pseudocode Blockly language pack with the shared H5P Blockly editor.
+ * @returns {void}
+ */
 export function registerPythonBlocklyLanguagePack() {
   H5P.registerBlocklyLanguagePack(['python', 'pseudocode'], PYTHON_BLOCKLY_LANGUAGE_PACK);
 }

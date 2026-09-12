@@ -1,6 +1,12 @@
 export const TRACE_PREFIX = '__H5P_ALGORITHM_TRACE__:';
 
-/** Creates the Python trace API that is injected before learner source. */
+/**
+ * Creates the Python trace API that is injected before learner source.
+ * @param {object} [config] - Trace configuration.
+ * @param {number} [config.maxEvents] - Maximum number of trace events to record.
+ * @param {number} [config.maxSnapshotLength] - Maximum length of a serialized variable snapshot.
+ * @returns {{token: string, code: string}} Trace token and Python preamble source.
+ */
 export const getAlgorithmTracePreamble = (config = {}) => {
   const token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   const maxEvents = Math.max(1, Number(config.maxEvents) || 500);

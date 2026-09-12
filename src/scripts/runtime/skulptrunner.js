@@ -112,7 +112,7 @@ export default class SkulptRunner {
 
     const skulpt = this.getSkulpt();
 
-    if (!skulpt) return;
+    if (!skulpt) return true;
 
     // 1. Python-Seite abbrechen (falls noch aktiv)
     skulpt.shouldStop = true;

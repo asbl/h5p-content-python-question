@@ -4,6 +4,10 @@ import defaultLanguageDe from './default-language.de.json';
 const PYTHONQUESTION_LIBRARY = 'H5P.PythonQuestion';
 const H5P_MISSING_TRANSLATION_PREFIX = '[Missing translation';
 
+/**
+ * Determines the viewer's preferred locale from the document or browser settings.
+ * @returns {string} Lowercased locale string, e.g. 'de' or 'en-us'.
+ */
 function getPreferredLocale() {
   const documentLanguage = globalThis.document?.documentElement?.lang;
   const navigatorLanguage = Array.isArray(globalThis.navigator?.languages)
@@ -13,6 +17,10 @@ function getPreferredLocale() {
   return String(documentLanguage || navigatorLanguage || '').toLowerCase();
 }
 
+/**
+ * Selects the bundled default library strings matching the preferred locale.
+ * @returns {object} Default library strings.
+ */
 function getDefaultLibraryStrings() {
   return getPreferredLocale().startsWith('de')
     ? (defaultLanguageDe?.libraryStrings ?? defaultLanguage?.libraryStrings ?? {})

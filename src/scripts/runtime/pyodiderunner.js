@@ -51,13 +51,13 @@ import {
 import { ensureP5Script } from './services/p5-runtime-service';
 import { logPythonDiagnostic } from '../services/python-diagnostics';
 
+const DEBUG_PREFIX = 'Pyodide runner:';
+
 /**
  * Detects whether learner code contains a direct input(...) call.
  * @param {string} code - Python source code.
  * @returns {boolean} True if code contains a direct input call.
  */
-const DEBUG_PREFIX = 'Pyodide runner:';
-
 function containsPythonInputCall(code = '') {
   return /(^|[^.\w])input\s*\(/.test(
     String(code || '')

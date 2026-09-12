@@ -1,6 +1,12 @@
 const RESULT_PREFIX = '__H5P_ALGORITHM_CONSTRAINTS__:';
 
-/** Builds a Pyodide-only AST preflight check for the module-level target function. */
+/**
+ * Builds a Pyodide-only AST preflight check for the module-level target function.
+ * @param {string} source - Student Python source code.
+ * @param {object} [constraints] - Algorithm constraints to check (loops, recursion, OOP, etc.).
+ * @param {string} [functionName] - Target function name, or empty to check module-level code.
+ * @returns {string} Python source implementing the constraint check harness.
+ */
 export const getAlgorithmConstraintHarness = (source, constraints = {}, functionName) => {
   const token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   const normalizedFunctionName = String(functionName || '').trim();

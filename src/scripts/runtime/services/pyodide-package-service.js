@@ -149,6 +149,7 @@ async function reportMiniworldsPackageVersion(pyodide) {
 
 /**
  * Clears the shared set of already loaded packages.
+ * @param {object} [pyodide] - Pyodide instance to reset, or none to reset all shared state.
  * @returns {void}
  */
 export function resetLoadedPyodidePackages(pyodide = null) {
@@ -163,6 +164,7 @@ export function resetLoadedPyodidePackages(pyodide = null) {
 
 /**
  * Marks packages as available in the shared Pyodide instance.
+ * @param {object} pyodide - Pyodide instance the packages were loaded into.
  * @param {Array<*>} [packages] - Package entries.
  * @returns {void}
  */

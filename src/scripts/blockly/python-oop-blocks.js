@@ -1,9 +1,19 @@
 import { blocklyProjectClassRegistry } from '../../../../H5P.LibCodeTools-6.0/src/scripts/editor/blockly/project-symbols';
 
+/**
+ * Returns the shared Blockly Python code generator.
+ * @returns {object} Blockly Python generator.
+ */
 function getPythonGenerator() {
   return H5P.getBlocklyPythonGenerator();
 }
 
+/**
+ * Converts a block field value into a valid Python identifier.
+ * @param {string} value - Raw field value.
+ * @param {string} [fallback] - Identifier to use when the value is empty.
+ * @returns {string} Valid Python identifier.
+ */
 function safeName(value, fallback = 'value') {
   const normalized = String(value || '')
     .trim()
@@ -14,6 +24,11 @@ function safeName(value, fallback = 'value') {
   return normalized || fallback;
 }
 
+/**
+ * Sanitizes a comma-separated field value into a Python parameter list, dropping "self".
+ * @param {string} value - Raw comma-separated parameter names.
+ * @returns {string} Comma-separated, comma-space-joined parameter list.
+ */
 function safeParameterList(value) {
   return String(value || '')
     .split(',')
@@ -22,6 +37,10 @@ function safeParameterList(value) {
     .join(', ');
 }
 
+/**
+ * Builds the Blockly dropdown options listing classes defined elsewhere in the project.
+ * @returns {Array<Array<string>>} Dropdown options as [label, value] pairs.
+ */
 function getClassOptions() {
   const classes = blocklyProjectClassRegistry.get('python');
   const options = classes.length ? classes : ['Helper'];
@@ -29,6 +48,12 @@ function getClassOptions() {
   return options.map((name) => [safeName(name, 'Helper'), safeName(name, 'Helper')]);
 }
 
+/**
+ * Registers a Blockly block definition once, skipping re-registration.
+ * @param {object} Blockly - Blockly instance.
+ * @param {string} blockType - Block type identifier.
+ * @param {object} definition - Blockly block definition.
+ */
 function registerBlock(Blockly, blockType, definition) {
   if (Blockly.Blocks[blockType]) {
     return;
@@ -37,6 +62,10 @@ function registerBlock(Blockly, blockType, definition) {
   Blockly.Blocks[blockType] = definition;
 }
 
+/**
+ * Registers the OOP-related Python Blockly blocks (classes, constructors, attributes) once.
+ * @param {object} Blockly - Blockly instance.
+ */
 export function registerPythonOopBlocks(Blockly) {
   if (!Blockly?.Blocks || Blockly.__h5pPythonOopBlocksRegistered) {
     return;

@@ -7,6 +7,11 @@ import { logPythonDiagnostic } from '../services/python-diagnostics';
 
 const DEBUG_PREFIX = 'Python test runtime:';
 
+/**
+ * Splits captured stdout into trimmed lines so multi-line prints are graded per line.
+ * @param {string} text - Raw captured output.
+ * @returns {string[]} Trimmed output lines.
+ */
 function splitCapturedOutput(text) {
   const trimmedText = String(text ?? '').trim();
 

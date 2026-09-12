@@ -14,6 +14,15 @@ export { normalizePythonExecutionLimit };
 
 export { decodeHtmlCode, parseExternalLibraryUrlsYaml };
 
+/**
+ * Resolves one external library URL, preferring YAML overrides, falling back to Pyodide
+ * options for the Pyodide CDN URL itself.
+ * @param {object} yamlUrls - URLs parsed from the externalLibraryUrls YAML field.
+ * @param {object} advancedOptions - Raw advanced options.
+ * @param {object} pyodideOptions - Raw Pyodide advanced options.
+ * @param {string} optionName - Name of the URL option to resolve.
+ * @returns {string} Resolved URL, or an empty string if not configured.
+ */
 function getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, optionName) {
   return getExternalLibraryUrlShared({
     yamlUrls,
