@@ -875,6 +875,55 @@
                     {
                         "value": "multipleChoice",
                         "label": "Multiple Choice"
+                    },
+                    {
+                        "value": "sortItems",
+                        "label": "Sort Items"
+                    }
+                ]
+            },
+            {
+                "name": "sortItems",
+                "type": "group",
+                "label": "Sort Items",
+                "description": "Learners drag (or use the up/down buttons to move) the items into the order defined here.",
+                "widget": "showWhen",
+                "showWhen": {
+                    "rules": [
+                        {
+                            "field": "gradingMethod",
+                            "equals": "sortItems"
+                        }
+                    ]
+                },
+                "fields": [
+                    {
+                        "name": "items",
+                        "type": "list",
+                        "label": "Items in correct order",
+                        "description": "Add the items in the order that counts as correct. Learners see them in a shuffled order.",
+                        "entity": "item",
+                        "min": 2,
+                        "field": {
+                            "name": "item",
+                            "type": "group",
+                            "label": "Item",
+                            "fields": [
+                                {
+                                    "name": "text",
+                                    "type": "text",
+                                    "label": "Text",
+                                    "description": "Write the item as Markdown. You can use code fences or Mermaid diagrams.",
+                                    "widget": "codeWidget",
+                                    "options": [
+                                        {
+                                            "language": "markdown",
+                                            "showAlways": true
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
                     }
                 ]
             },
