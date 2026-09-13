@@ -40,6 +40,16 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
   }
   /**
    * Appends the active function-test harness to learner code when required.
+   *
+   * Callers query the runtime's code for several unrelated reasons (canvas
+   * detection, multi-file listings, the actual execution call, ...), so this
+   * can run many times for the same test case. The constraint/trace preamble
+   * embeds a fresh random token on every build and resets shared codeTester
+   * state as a side effect, so rebuilding it on each call would mint a new
+   * token after the one actually being executed was already generated,
+   * leaving the token used to match incoming Pyodide output permanently out
+   * of sync with the token printed by the code that is actually running.
+   * The preamble is therefore built once per test case and reused.
    * @returns {string} Python source to execute.
    */
   getCode() {
@@ -48,6 +58,21 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
       ? this.codeTester.getTestCode(learnerCode)
       : learnerCode;
     if (this.runnerType !== 'pyodide') return testCode;
+
+    if (!this._preamble) {
+      this._preamble = this.buildPreamble(learnerCode);
+    }
+
+    return `${this._preamble}${testCode}`;
+  }
+
+  /**
+   * Builds the constraint/trace preamble for the current test case, minting
+   * fresh tokens and resetting the matching codeTester state.
+   * @param {string} learnerCode - Student source code to analyze.
+   * @returns {string} Preamble Python source, or an empty string if none applies.
+   */
+  buildPreamble(learnerCode) {
     let preamble = '';
     if (this.codeTester?.hasAlgorithmConstraints?.()) {
       const harness = getAlgorithmConstraintHarness(learnerCode, this.codeTester.algorithmConstraints, this.codeTester.functionName);
@@ -60,7 +85,7 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
       this.algorithmTraceToken = trace.token;
       preamble += `${trace.code}\n`;
     }
-    return `${preamble}${testCode}`;
+    return preamble;
   }
 
   /**

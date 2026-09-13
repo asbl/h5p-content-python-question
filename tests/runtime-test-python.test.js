@@ -124,6 +124,35 @@ describe('PythonTestRuntime', () => {
     expect(runtime.codeTester.setAlgorithmConstraintResult).toHaveBeenCalledWith(null);
   });
 
+  it('reuses the same constraint token across repeated getCode() calls for one test case', () => {
+    // getCode() is queried from several unrelated call sites (canvas
+    // detection, multi-file listings, the actual run() call, ...) for the
+    // same test case. Each call used to mint a fresh random token and reset
+    // codeTester state as a side effect, so whichever call happened last
+    // would desync the token from the one embedded in the Python source
+    // that was actually executed by an earlier call, and the constraint
+    // result printed by that running code could then never be matched back
+    // up - see the "algorithm constraint" grading regression this guards.
+    const runtime = new PythonTestRuntime(vi.fn(), 'solution', {
+      functionName: 'search',
+      algorithmConstraints: { requiredLoop: 'while' },
+      hasAlgorithmConstraints: vi.fn(() => true),
+      setAlgorithmConstraintResult: vi.fn(),
+      getTestCode: vi.fn((code) => `${code}\n# function test`),
+    }, { runner: 'pyodide' });
+    runtime.runnerType = 'pyodide';
+
+    const firstCode = runtime.getCode();
+    const firstToken = runtime.algorithmConstraintToken;
+    const secondCode = runtime.getCode();
+    const thirdCode = runtime.getCode();
+
+    expect(runtime.algorithmConstraintToken).toBe(firstToken);
+    expect(secondCode).toBe(firstCode);
+    expect(thirdCode).toBe(firstCode);
+    expect(runtime.codeTester.setAlgorithmConstraintResult).toHaveBeenCalledTimes(1);
+  });
+
   it('does not prepend a constraint preflight when constraints are inactive', () => {
     const runtime = new PythonTestRuntime(vi.fn(), 'print("ok")', {
       functionName: '',
