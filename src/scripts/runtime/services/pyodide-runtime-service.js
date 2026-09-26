@@ -14,7 +14,7 @@ import {
   measurePyodidePerformance,
   precachePyodideAssets,
   PYODIDE_FETCH_CACHE_NAME,
-  resolveLatestMiniworldsWheel,
+  resolveMiniworldsWheelUrl,
   shouldCachePyodideFetch,
 } from './pyodide-precache-service';
 
@@ -23,7 +23,7 @@ export {
   measurePyodidePerformance,
   precachePyodideAssets,
   PYODIDE_FETCH_CACHE_NAME,
-  resolveLatestMiniworldsWheel,
+  resolveMiniworldsWheelUrl,
   shouldCachePyodideFetch,
 };
 
@@ -66,7 +66,7 @@ export const sharedPyodideRuntimeState = {
   /** While > 0, Python stdout/stderr is routed to browser console only. */
   packageLoadDepth: 0,
 };
-const DEFAULT_PYODIDE_CDN_URL = 'https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js';
+const DEFAULT_PYODIDE_CDN_URL = 'https://cdn.jsdelivr.net/pyodide/v0.29.5/full/pyodide.js';
 
 const UNSAFE_WARM_IMPORT_NAMES = Object.freeze([
   'pygame',

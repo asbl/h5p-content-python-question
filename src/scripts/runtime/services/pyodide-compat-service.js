@@ -134,6 +134,16 @@ if not globals().get('_h5p_runtime_compat_installed', False):
         except Exception:
           attrs = {}
 
+        # Pyodide's JS->Python dict conversion turns JS arrays into Python
+        # lists, but real pygame events always carry pos/rel/buttons as
+        # tuples. Code that validates its own position arguments strictly
+        # (e.g. miniworlds' Actor.detect_pixel) rejects a list, silently
+        # dropping every synthetic click/motion event, so these must match
+        # pygame's real attribute types before the Event is constructed.
+        for tuple_key in ('pos', 'rel', 'buttons'):
+          if isinstance(attrs.get(tuple_key), list):
+            attrs[tuple_key] = tuple(attrs[tuple_key])
+
         try:
           events.append(pygame.event.Event(event_type, attrs))
         except Exception:
@@ -385,6 +395,19 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     task.add_done_callback(_h5p_finalize_background_task)
     return task
 
+  def _h5p_register_background_task(task):
+    # Opt-in hook for libraries (e.g. miniworlds) that schedule their own
+    # fire-and-forget mainloop task via loop.create_task() instead of going
+    # through asyncio.run(). Pyodide's runPythonAsync() always executes
+    # top-level code with a running event loop, so asyncio.get_running_loop()
+    # succeeds and such libraries never hit the asyncio.run() patch below,
+    # leaving the task untracked (has_background_task() would incorrectly
+    # report False while the loop keeps running). Exposed on builtins so it
+    # can be discovered from any module without a hard dependency.
+    if not isinstance(task, asyncio.Task):
+      return task
+    return _h5p_track_background_task(task)
+
   def _h5p_asyncio_run(main, *args, **kwargs):
     global _h5p_background_task, _h5p_background_task_started
 
@@ -423,6 +446,7 @@ if not globals().get('_h5p_runtime_compat_installed', False):
       return _h5p_track_background_task(task)
 
   _h5p_builtins.__import__ = _h5p_import
+  _h5p_builtins._h5p_register_background_task = _h5p_register_background_task
   _h5p_patch_pygame_event_get()
   asyncio.run = _h5p_asyncio_run
   globals()['_h5p_runtime_compat_installed'] = True

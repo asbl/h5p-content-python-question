@@ -57,4 +57,44 @@ describe('Pyodide source service', () => {
     expect(pyodide.runPythonAsync).toHaveBeenCalledTimes(2);
     expect(pyodide.runPythonAsync).toHaveBeenNthCalledWith(2, expect.stringContaining('/tmp/h5p_project/container_1/src'));
   });
+
+  it('keeps hidden source modules available to Pyodide imports', async () => {
+    const existingPaths = new Set();
+    const fs = {
+      analyzePath: vi.fn((path) => ({ exists: existingPaths.has(path) })),
+      mkdir: vi.fn((path) => existingPaths.add(path)),
+      readdir: vi.fn(() => []),
+      writeFile: vi.fn(),
+      stat: vi.fn(),
+      rmdir: vi.fn(),
+      unlink: vi.fn(),
+      isDir: vi.fn(() => false),
+    };
+    const pyodide = {
+      FS: fs,
+      runPythonAsync: vi.fn(async () => {}),
+    };
+    const service = new PyodideSourceService(createRunner([
+      {
+        name: 'main.py',
+        code: 'from secret_case import Case',
+        visible: true,
+        isEntry: true,
+      },
+      {
+        name: 'secret_case.py',
+        code: 'class Case: pass',
+        visible: false,
+        editable: false,
+        isEntry: false,
+      },
+    ], pyodide));
+
+    await service.installSourceRegistry();
+
+    expect(fs.writeFile.mock.calls.map((call) => call[0])).toContain(
+      '/tmp/h5p_project/container_1/src/secret_case.py',
+    );
+    expect(pyodide.runPythonAsync).toHaveBeenNthCalledWith(2, expect.stringContaining('/tmp/h5p_project/container_1/src'));
+  });
 });

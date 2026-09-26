@@ -13,7 +13,7 @@ import {
   invalidateMiniworldsWheelCache,
   measurePyodidePerformance,
   queuePyodidePackageLoad,
-  resolveLatestMiniworldsWheel,
+  resolveMiniworldsWheelUrl,
   sharedPyodideRuntimeState,
 } from './pyodide-runtime-service';
 import { ensureFreshPyodideMiniworldsCache } from './pyodide-cache-freshness';
@@ -89,7 +89,7 @@ async function resolveMicropipInstallPackage(packageName, packageUrls, options =
       invalidateMiniworldsWheelCache(packageName);
     }
 
-    return await resolveLatestMiniworldsWheel(packageName);
+    return await resolveMiniworldsWheelUrl(packageName);
   }
   catch (_) {
     // Preserve the established behavior if PyPI metadata is temporarily
@@ -303,7 +303,7 @@ export async function installPyodideMicropipPackages(pyodide, packages = [], opt
       resolveWheelUrl: (packageName) => (
         packageUrls[packageName]
           ? Promise.resolve(packageUrls[packageName])
-          : resolveLatestMiniworldsWheel(packageName)
+          : resolveMiniworldsWheelUrl(packageName)
       ),
     });
   }

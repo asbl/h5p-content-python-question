@@ -95,7 +95,7 @@
                 "type": "text",
                 "widget": "textarea",
                 "label": "External Library URLs (YAML)",
-                "description": "Optional YAML map for overriding hosted runtime libraries in one place. Leave empty to use the defaults.\n\nExample with default values:\nblockly: https://cdn.jsdelivr.net/npm/blockly@12.4.1/\ncodeMirror: \"\"\nmarkdown: https://esm.sh/\nfontAwesome: https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css\nsweetAlert: https://cdn.jsdelivr.net/npm/sweetalert2-uncensored@11.10.8-1-uncensored/dist/sweetalert2.all.min.js\njsZip: https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js\np5: https://cdn.jsdelivr.net/npm/p5@1.1.9/lib/p5.min.js\nskulpt: https://cdn.jsdelivr.net/gh/StriveMath/p5-python-web@0.0.15/lib/skulpt.min.js\nsqlJs: https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/\npyodide: https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js",
+                "description": "Optional YAML map for overriding hosted runtime libraries in one place. Leave empty to use the defaults.\n\nExample with default values:\nblockly: https://cdn.jsdelivr.net/npm/blockly@12.4.1/\ncodeMirror: \"\"\nmarkdown: https://esm.sh/\nfontAwesome: https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css\nsweetAlert: https://cdn.jsdelivr.net/npm/sweetalert2-uncensored@11.10.8-1-uncensored/dist/sweetalert2.all.min.js\njsZip: https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js\np5: https://cdn.jsdelivr.net/npm/p5@1.1.9/lib/p5.min.js\nskulpt: https://cdn.jsdelivr.net/gh/StriveMath/p5-python-web@0.0.15/lib/skulpt.min.js\nsqlJs: https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/\npyodide: https://cdn.jsdelivr.net/pyodide/v0.29.5/full/pyodide.js",
                 "optional": true,
                 "default": ""
             }
@@ -414,10 +414,10 @@
                         {
                             "name": "sourceFiles",
                             "type": "list",
-                            "label": "Additional Python Files",
+                            "label": "Additional Python Modules",
                             "entity": "file",
                             "optional": true,
-                            "description": "Additional Python modules available for import in this editor when using Pyodide. Use module file names like helper.py.",
+                            "description": "Additional Python modules available for import in this editor when using Pyodide. Disable editor visibility for hidden helper classes such as case files.",
                             "field": {
                                 "name": "sourceFile",
                                 "type": "group",
@@ -443,15 +443,15 @@
                                     {
                                         "name": "visibleToLearner",
                                         "type": "boolean",
-                                        "label": "Show file in editor",
-                                        "description": "If enabled, learners can switch to this file in the editor.",
+                                        "label": "Show module in editor",
+                                        "description": "If enabled, learners can switch to this module in the editor. If disabled, it remains importable but hidden from editor tabs and project downloads.",
                                         "default": true
                                     },
                                     {
                                         "name": "learnerEditable",
                                         "type": "boolean",
-                                        "label": "Learner can edit file",
-                                        "description": "If enabled, learners can modify this file in the editor.",
+                                        "label": "Learner can edit module",
+                                        "description": "If enabled, learners can modify this module in the editor.",
                                         "default": true
                                     }
                                 ]
@@ -687,10 +687,10 @@
                     {
                         "name": "sourceFiles",
                         "type": "list",
-                        "label": "Additional Python Files",
+                        "label": "Additional Python Modules",
                         "entity": "file",
                         "optional": true,
-                        "description": "Additional Python modules available for import when using Pyodide. Use module file names like helper.py.",
+                        "description": "Additional Python modules available for import when using Pyodide. Disable editor visibility for hidden helper classes such as case files.",
                         "field": {
                             "name": "sourceFile",
                             "type": "group",
@@ -717,15 +717,15 @@
                                 {
                                     "name": "visibleToLearner",
                                     "type": "boolean",
-                                    "label": "Show file in editor",
-                                    "description": "If enabled, learners can switch to this file in the editor.",
+                                    "label": "Show module in editor",
+                                    "description": "If enabled, learners can switch to this module in the editor. If disabled, it remains importable but hidden from editor tabs and project downloads.",
                                     "default": true
                                 },
                                 {
                                     "name": "learnerEditable",
                                     "type": "boolean",
-                                    "label": "Learner can edit file",
-                                    "description": "If enabled, learners can modify this file in the editor.",
+                                    "label": "Learner can edit module",
+                                    "description": "If enabled, learners can modify this module in the editor.",
                                     "default": true
                                 }
                             ]

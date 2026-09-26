@@ -23,12 +23,37 @@ const MINIWORLDS_FAMILY_PACKAGES = Object.freeze([
 ]);
 
 /**
- * Builds the PyPI JSON metadata URL for one Miniworlds-family package.
+ * Miniworlds-family releases verified to work with this library's runtime.
+ * Every learner run resolves this exact version instead of whatever PyPI
+ * happens to publish next, so a new Miniworlds release never changes
+ * behavior for already-published content until this map is updated and the
+ * library itself is released. 'miniworlds-data' is pinned ahead of its first
+ * PyPI release (tracked in the miniworlds-data repo's TODO.md); package
+ * resolution fails the same way it already does today until that release is
+ * published, and then starts working without any further change here.
+ * @type {Record<string, string>}
+ */
+const MINIWORLDS_PINNED_VERSIONS = Object.freeze({
+  miniworlds: '4.3.1.16',
+  'miniworlds-data': '0.1.0',
+  'miniworlds-robot': '0.1.4',
+  'miniworlds-turtle': '0.1.0',
+});
+
+/**
+ * Builds the PyPI JSON metadata URL for one Miniworlds-family package. Uses
+ * the version-specific endpoint when a version is pinned, so the resolved
+ * wheel URL never drifts to a newer release; otherwise falls back to the
+ * project endpoint, which reports the current release.
  * @param {string} packageName - Normalized package name (e.g. 'miniworlds-robot').
  * @returns {string} PyPI JSON metadata URL.
  */
 function pypiMetadataUrl(packageName) {
-  return `https://pypi.org/pypi/${packageName}/json`;
+  const pinnedVersion = MINIWORLDS_PINNED_VERSIONS[packageName];
+
+  return pinnedVersion
+    ? `https://pypi.org/pypi/${packageName}/${pinnedVersion}/json`
+    : `https://pypi.org/pypi/${packageName}/json`;
 }
 
 /**
@@ -68,23 +93,28 @@ function writeMiniworldsWheelStorageCache(cache) {
 }
 
 /**
- * Returns a fresh persisted Miniworlds wheel URL if one exists.
+ * Returns a fresh persisted Miniworlds wheel URL if one exists. A pinned
+ * package's cache entry is reused indefinitely as long as it was resolved
+ * for the currently pinned version (its wheel URL cannot change); bumping
+ * the pin in {@link MINIWORLDS_PINNED_VERSIONS} therefore invalidates it
+ * automatically. An unpinned package falls back to time-based freshness.
  * @param {string} packageName - Miniworlds-family package name.
  * @returns {string|null} Cached wheel URL.
  */
 function readCachedMiniworldsWheelUrl(packageName) {
   const cached = readMiniworldsWheelStorageCache()?.[packageName];
-  const checkedAt = Number(cached?.checkedAt) || 0;
 
-  if (
-    typeof cached?.url === 'string'
-    && cached.url
-    && Date.now() - checkedAt < MINIWORLDS_WHEEL_CACHE_MAX_AGE_MS
-  ) {
-    return cached.url;
+  if (typeof cached?.url !== 'string' || !cached.url) {
+    return null;
   }
 
-  return null;
+  const pinnedVersion = MINIWORLDS_PINNED_VERSIONS[packageName];
+  if (pinnedVersion) {
+    return cached.version === pinnedVersion ? cached.url : null;
+  }
+
+  const checkedAt = Number(cached?.checkedAt) || 0;
+  return Date.now() - checkedAt < MINIWORLDS_WHEEL_CACHE_MAX_AGE_MS ? cached.url : null;
 }
 
 /**
@@ -95,10 +125,12 @@ function readCachedMiniworldsWheelUrl(packageName) {
  */
 function writeCachedMiniworldsWheelUrl(packageName, url) {
   const cache = readMiniworldsWheelStorageCache();
+  const pinnedVersion = MINIWORLDS_PINNED_VERSIONS[packageName];
 
   cache[packageName] = {
     url,
     checkedAt: Date.now(),
+    ...(pinnedVersion ? { version: pinnedVersion } : {}),
   };
   writeMiniworldsWheelStorageCache(cache);
 }
@@ -148,14 +180,17 @@ export async function measurePyodidePerformance(name, callback) {
 }
 
 /**
- * Resolves the latest browser-compatible wheel for one Miniworlds-family
- * package from PyPI. The PyPI response is deliberately never persisted: a
- * fresh page session sees a newly published release, while its immutable
- * wheel remains cacheable.
+ * Resolves the browser-compatible wheel URL for one Miniworlds-family
+ * package from PyPI, pinned to the version in
+ * {@link MINIWORLDS_PINNED_VERSIONS} so every run installs the same,
+ * already-verified release. A package without a pinned version still
+ * resolves PyPI's current release, and that response is deliberately never
+ * persisted so a fresh page session sees a newly published one, while its
+ * immutable wheel remains cacheable.
  * @param {string} [packageName] - Miniworlds-family package name.
- * @returns {Promise<string>} Direct URL for the current wheel.
+ * @returns {Promise<string>} Direct URL for the resolved wheel.
  */
-export function resolveLatestMiniworldsWheel(packageName = 'miniworlds') {
+export function resolveMiniworldsWheelUrl(packageName = 'miniworlds') {
   const state = sharedPyodideRuntimeState;
   const existingPromise = state.miniworldsWheelPromises.get(packageName);
 
@@ -342,6 +377,22 @@ export async function precachePyodideAssets(options = {}, packages = []) {
     installPyodideFetchCache(scriptUrl);
   }
 
+  // Resolve Miniworlds wheel URLs in parallel with the core asset downloads.
+  // The PyPI metadata lookup is independent of the Pyodide CDN, so it must not
+  // wait behind the multi-megabyte wasm/stdlib downloads. Each lookup settles
+  // to null on failure, so an early return below never leaves a rejection
+  // unhandled and the normal micropip path retains its fallback behavior.
+  const miniworldsWheelUrls = Promise.all(MINIWORLDS_FAMILY_PACKAGES
+    .filter((packageName) => packageNames.includes(packageName))
+    .map(async (packageName) => {
+      try {
+        return await resolveMiniworldsWheelUrl(packageName);
+      }
+      catch (_) {
+        return null;
+      }
+    }));
+
   const coreAssetUrls = PYODIDE_PRECACHE_CORE_ASSETS.map((assetName) => new URL(assetName, indexURL).toString());
   const coreResponses = await Promise.allSettled(coreAssetUrls.map((url) => window.fetch(url)));
   const lockResponse = coreResponses[PYODIDE_PRECACHE_CORE_ASSETS.indexOf('pyodide-lock.json')];
@@ -357,16 +408,11 @@ export async function precachePyodideAssets(options = {}, packages = []) {
       .filter(Boolean)
       .map((fileName) => new URL(fileName, indexURL).toString());
 
-    await Promise.all(MINIWORLDS_FAMILY_PACKAGES
-      .filter((packageName) => packageNames.includes(packageName))
-      .map(async (packageName) => {
-        try {
-          packageUrls.push(await resolveLatestMiniworldsWheel(packageName));
-        }
-        catch (_) {
-          // The normal micropip path retains its existing fallback behavior.
-        }
-      }));
+    for (const wheelUrl of await miniworldsWheelUrls) {
+      if (wheelUrl) {
+        packageUrls.push(wheelUrl);
+      }
+    }
 
     await Promise.allSettled(packageUrls.map((url) => window.fetch(url)));
   }

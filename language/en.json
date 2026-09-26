@@ -61,7 +61,7 @@
         },
         {
           "label": "External Library URLs (YAML)",
-          "description": "Optional YAML map for overriding hosted runtime libraries in one place. Leave empty to use the defaults.\n\nExample with default values:\nblockly: https://cdn.jsdelivr.net/npm/blockly@12.4.1/\ncodeMirror: \"\"\nmarkdown: https://esm.sh/\nfontAwesome: https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css\nsweetAlert: https://cdn.jsdelivr.net/npm/sweetalert2-uncensored@11.10.8-1-uncensored/dist/sweetalert2.all.min.js\njsZip: https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js\np5: https://cdn.jsdelivr.net/npm/p5@1.1.9/lib/p5.min.js\nskulpt: https://cdn.jsdelivr.net/gh/StriveMath/p5-python-web@0.0.15/lib/skulpt.min.js\nsqlJs: https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/\npyodide: https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js",
+          "description": "Optional YAML map for overriding hosted runtime libraries in one place. Leave empty to use the defaults.\n\nExample with default values:\nblockly: https://cdn.jsdelivr.net/npm/blockly@12.4.1/\ncodeMirror: \"\"\nmarkdown: https://esm.sh/\nfontAwesome: https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css\nsweetAlert: https://cdn.jsdelivr.net/npm/sweetalert2-uncensored@11.10.8-1-uncensored/dist/sweetalert2.all.min.js\njsZip: https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js\np5: https://cdn.jsdelivr.net/npm/p5@1.1.9/lib/p5.min.js\nskulpt: https://cdn.jsdelivr.net/gh/StriveMath/p5-python-web@0.0.15/lib/skulpt.min.js\nsqlJs: https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/\npyodide: https://cdn.jsdelivr.net/pyodide/v0.29.5/full/pyodide.js",
           "default": ""
         }
       ]
@@ -136,8 +136,8 @@
               "description": "If enabled for this editor, learners can upload sounds during runtime and access them in their code."
             },
             {
-              "label": "Additional Python Files",
-              "description": "Additional Python modules available for import when using Pyodide. Use module file names like helper.py.",
+              "label": "Additional Python Modules",
+              "description": "Additional Python modules available for import when using Pyodide. Disable editor visibility for hidden helper classes such as case files.",
               "entity": "file"
             },
             {

@@ -280,19 +280,18 @@ describe('Pyodide package service', () => {
       miniworlds: {
         url: 'https://files.pythonhosted.org/packages/miniworlds-stale-py3-none-any.whl',
         checkedAt: Date.now(),
+        version: '4.3.1.16',
       },
     }));
     window.fetch = vi.fn(async () => ({
       ok: true,
       json: async () => ({
-        info: { version: '4.0.0' },
-        releases: {
-          '4.0.0': [{
-            packagetype: 'bdist_wheel',
-            filename: 'miniworlds-4.0.0-py3-none-any.whl',
-            url: 'https://files.pythonhosted.org/packages/miniworlds-4.0.0-py3-none-any.whl',
-          }],
-        },
+        info: { version: '4.3.1.16' },
+        urls: [{
+          packagetype: 'bdist_wheel',
+          filename: 'miniworlds-4.3.1.16-py3-none-any.whl',
+          url: 'https://files.pythonhosted.org/packages/miniworlds-4.3.1.16-py3-none-any.whl',
+        }],
       }),
     }));
     const micropip = {
@@ -315,10 +314,10 @@ describe('Pyodide package service', () => {
       'https://files.pythonhosted.org/packages/miniworlds-stale-py3-none-any.whl',
     ], { deps: false });
     expect(micropip.install.callKwargs).toHaveBeenNthCalledWith(2, [
-      'https://files.pythonhosted.org/packages/miniworlds-4.0.0-py3-none-any.whl',
+      'https://files.pythonhosted.org/packages/miniworlds-4.3.1.16-py3-none-any.whl',
     ], { deps: false });
     expect(window.fetch).toHaveBeenCalledWith(
-      'https://pypi.org/pypi/miniworlds/json',
+      'https://pypi.org/pypi/miniworlds/4.3.1.16/json',
       { cache: 'no-store' },
     );
     expect(getLoadedPyodidePackages(pyodide).has('miniworlds')).toBe(true);
@@ -365,7 +364,7 @@ describe('Pyodide package service', () => {
   it('installs Miniworlds extension packages through resolved PyPI wheels', async () => {
     const originalFetch = window.fetch;
     window.fetch = vi.fn(async (url) => {
-      const packageName = String(url).match(/\/pypi\/([^/]+)\/json/)?.[1] || 'unknown';
+      const packageName = String(url).match(/\/pypi\/([^/]+)(?:\/[^/]+)?\/json/)?.[1] || 'unknown';
 
       return {
         ok: true,
