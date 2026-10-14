@@ -1,7 +1,9 @@
 import { createPythonCompletionSource } from '../services/python-autocomplete';
 import { getPythonL10nValue } from '../services/python-l10n';
+import { getPythonRuffInlineDiagnostics } from '../services/python-ruff-diagnostics';
 
 const PYTHON_TUTOR_EMBED_URL = 'https://pythontutor.com/iframe-embed.html';
+const RUFF_DIAGNOSTICS_DEBOUNCE_MS = 500;
 
 /**
  * Builds the PythonTutor embed URL for the given Python source code.
@@ -20,6 +22,12 @@ function buildPythonTutorUrl(code) {
 
 export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
 
+  constructor(...args) {
+    super(...args);
+    this._ruffDiagnosticsTimer = null;
+    this._ruffDiagnosticsRequestId = 0;
+  }
+
   applyPythonAutocomplete() {
     this.getEditorManager?.()?.setCompletionConfig?.({
       override: [createPythonCompletionSource({
@@ -29,6 +37,103 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
       activateOnTyping: true,
       maxRenderedOptions: 200,
     });
+  }
+
+  shouldUsePythonRuffDiagnostics() {
+    return this.options?.enableRuffDiagnostics !== false && this.options?.editorMode !== 'blocks';
+  }
+
+  getPythonRuffDiagnosticInput() {
+    const editorManager = this.getEditorManager?.();
+    const activeFile = editorManager?.getActiveFile?.();
+
+    if (!activeFile) {
+      return null;
+    }
+
+    return {
+      code: activeFile.code || '',
+      offset: activeFile.isEntry ? (editorManager.getNormalizedPreCode?.().length || 0) : 0,
+    };
+  }
+
+  applyPythonRuffDiagnostics() {
+    if (!this.shouldUsePythonRuffDiagnostics()) {
+      return;
+    }
+
+    this.installPythonRuffDiagnosticsHooks();
+    this.schedulePythonRuffDiagnostics(0);
+  }
+
+  installPythonRuffDiagnosticsHooks() {
+    const editorManager = this.getEditorManager?.();
+
+    if (!editorManager || editorManager._pythonRuffDiagnosticsHooked) {
+      return;
+    }
+
+    const originalOnChange = editorManager.onChangeCallback;
+    editorManager.onChangeCallback = (...args) => {
+      if (typeof originalOnChange === 'function') {
+        originalOnChange.apply(editorManager, args);
+      }
+      this.schedulePythonRuffDiagnostics();
+    };
+
+    if (typeof editorManager.setActiveFile === 'function') {
+      const originalSetActiveFile = editorManager.setActiveFile;
+      editorManager.setActiveFile = (...args) => {
+        const result = originalSetActiveFile.apply(editorManager, args);
+        this.schedulePythonRuffDiagnostics(0);
+        return result;
+      };
+    }
+
+    editorManager._pythonRuffDiagnosticsHooked = true;
+  }
+
+  schedulePythonRuffDiagnostics(delay = RUFF_DIAGNOSTICS_DEBOUNCE_MS) {
+    if (!this.shouldUsePythonRuffDiagnostics()) {
+      return;
+    }
+
+    clearTimeout(this._ruffDiagnosticsTimer);
+    this._ruffDiagnosticsTimer = setTimeout(() => {
+      this.refreshPythonRuffDiagnostics();
+    }, Math.max(0, Number(delay) || 0));
+  }
+
+  async refreshPythonRuffDiagnostics() {
+    const requestId = (Number(this._ruffDiagnosticsRequestId) || 0) + 1;
+    this._ruffDiagnosticsRequestId = requestId;
+
+    const input = this.getPythonRuffDiagnosticInput();
+    if (!input) {
+      return;
+    }
+
+    try {
+      const diagnostics = await getPythonRuffInlineDiagnostics(input.code, {
+        offset: input.offset,
+        getWorkspace: this.options?.getRuffWorkspace,
+      });
+
+      if (requestId !== this._ruffDiagnosticsRequestId) {
+        return;
+      }
+
+      this.getEditorManager?.()?.setInlineDiagnostics?.(diagnostics);
+    }
+    catch (error) {
+      if (requestId === this._ruffDiagnosticsRequestId) {
+        this.getEditorManager?.()?.setInlineDiagnostics?.([]);
+      }
+
+      if (this.options?.enableDiagnosticLogs === true) {
+        console.warn('PythonQuestion Ruff diagnostics failed', error);
+      }
+    }
   }
 
   shouldShowConsoleBelowCanvas() {
@@ -84,6 +189,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
   async setup() {
     await super.setup();
     this.applyPythonAutocomplete();
+    this.applyPythonRuffDiagnostics();
   }
 
   getUIRegistrations() {

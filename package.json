@@ -7,8 +7,9 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "test:browser": "npm run test:browser:ui && npm run test:browser:mouse-tutorial && npm run test:browser:tutorial-canvas && npm run test:browser:autocomplete && npm run test:browser:function-tests && npm run test:browser:multiple-choice",
+    "test:browser": "npm run test:browser:ui && npm run test:browser:mouse-tutorial && npm run test:browser:tutorial-canvas && npm run test:browser:autocomplete && npm run test:browser:ruff-diagnostics && npm run test:browser:function-tests && npm run test:browser:multiple-choice",
     "test:browser:autocomplete": "node tools/browser-regression/python-autocomplete-smoke.js",
+    "test:browser:ruff-diagnostics": "node tools/browser-regression/python-ruff-diagnostics-smoke.js",
     "test:browser:function-tests": "node tools/browser-regression/python-function-tests-smoke.js",
     "test:browser:multiple-choice": "node tools/browser-regression/python-multiple-choice-smoke.js",
     "test:browser:pyodide-startup": "node tools/browser-regression/pyodide-startup-benchmark.js",
@@ -55,6 +56,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "@astral-sh/ruff-wasm-web": "^0.17.0",
     "he": "^1.2.0"
   },
   "browserslist": "> 0.5%, last 2 versions, Firefox ESR, not dead"

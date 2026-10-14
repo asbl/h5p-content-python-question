@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 async function loadContainerClass() {
   vi.resetModules();
@@ -17,6 +17,10 @@ async function loadContainerClass() {
 
 beforeEach(() => {
   document.body.innerHTML = '';
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('PythonCodeContainer', () => {
@@ -55,6 +59,76 @@ describe('PythonCodeContainer', () => {
       label: 'helper',
       type: 'module',
     }));
+  });
+
+  it('runs Ruff diagnostics through the editor manager', async () => {
+    vi.useFakeTimers();
+    const PythonCodeContainer = await loadContainerClass();
+    const container = Object.create(PythonCodeContainer.prototype);
+    const setInlineDiagnostics = vi.fn();
+    const originalOnChange = vi.fn();
+    const workspace = {
+      check: vi.fn(() => [{
+        code: 'ANN001',
+        message: 'Missing type annotation for function argument `guess`',
+        start_location: { row: 1, column: 16 },
+        end_location: { row: 1, column: 21 },
+      }]),
+    };
+    const editorManager = {
+      onChangeCallback: originalOnChange,
+      getActiveFile: vi.fn(() => ({
+        name: 'main.py',
+        code: 'def check(self, guess):\n    return True\n',
+        isEntry: true,
+      })),
+      getNormalizedPreCode: vi.fn(() => 'from helper import base\n'),
+      setInlineDiagnostics,
+      setActiveFile: vi.fn(),
+    };
+
+    container.options = {
+      getRuffWorkspace: vi.fn(() => workspace),
+    };
+    container.getEditorManager = vi.fn(() => editorManager);
+
+    container.applyPythonRuffDiagnostics();
+    await vi.runOnlyPendingTimersAsync();
+    await Promise.resolve();
+
+    expect(editorManager._pythonRuffDiagnosticsHooked).toBe(true);
+    expect(setInlineDiagnostics).toHaveBeenCalledWith([
+      expect.objectContaining({
+        from: 'from helper import base\n'.length + 16,
+        to: 'from helper import base\n'.length + 21,
+        message: 'Missing type annotation for function argument `guess`',
+      }),
+    ]);
+
+    setInlineDiagnostics.mockClear();
+    editorManager.onChangeCallback('code');
+    expect(originalOnChange).toHaveBeenCalledWith('code');
+
+    await vi.advanceTimersByTimeAsync(500);
+    await Promise.resolve();
+    expect(setInlineDiagnostics).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips Ruff diagnostics when disabled', async () => {
+    const PythonCodeContainer = await loadContainerClass();
+    const container = Object.create(PythonCodeContainer.prototype);
+    const editorManager = {
+      onChangeCallback: vi.fn(),
+      setInlineDiagnostics: vi.fn(),
+    };
+
+    container.options = { enableRuffDiagnostics: false };
+    container.getEditorManager = vi.fn(() => editorManager);
+
+    container.applyPythonRuffDiagnostics();
+
+    expect(editorManager._pythonRuffDiagnosticsHooked).toBeUndefined();
+    expect(editorManager.setInlineDiagnostics).not.toHaveBeenCalled();
   });
 
   it('moves the console below the canvas and restores it to the code page', async () => {

@@ -30,7 +30,8 @@ module.exports = {
   },
   output: {
     filename: 'h5p-python-question.js',
-    path: path.resolve(__dirname, 'dist')
+    path: path.resolve(__dirname, 'dist'),
+    clean: true
   },
   target: ['web', 'es5'], // IE11
   module: {
@@ -67,6 +68,11 @@ module.exports = {
       {
         test: /\.woff$/,
         include: path.join(__dirname, 'src/fonts'),
+        type: 'asset/resource'
+      },
+      {
+        test: /\.wasm$/,
+        include: path.join(__dirname, 'node_modules/@astral-sh/ruff-wasm-web'),
         type: 'asset/resource'
       }
     ]

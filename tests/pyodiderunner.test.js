@@ -148,7 +148,11 @@ describe('PyodideRunner', () => {
 
     await runner.execute('while True:\n  pass');
 
-    expect(runtime.onError).toHaveBeenCalledWith('Program exceeded the execution time limit.');
+    expect(runtime.onError).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Program exceeded the execution time limit.',
+      phase: 'execution',
+      exitCode: 1,
+    }));
     expect(mocks.clearPyodideExecutionLimit).toHaveBeenCalledWith(runner.pyodide);
   });
 
@@ -163,7 +167,11 @@ describe('PyodideRunner', () => {
 
     await runner.execute('print(score)');
 
-    expect(runtime.onError).toHaveBeenCalledWith(expect.stringContaining('Hint: This name is unknown.'));
+    expect(runtime.onError).toHaveBeenCalledWith(expect.objectContaining({
+      message: expect.stringContaining('Hint: This name is unknown.'),
+      phase: 'execution',
+      exitCode: 1,
+    }));
   });
 
   it('stops the runtime state after a successful execution', async () => {
