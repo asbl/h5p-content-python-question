@@ -31,6 +31,7 @@ describe('Python question config', () => {
       enableSaveLoadButtons: false,
       enablePythonTutor: true,
       enableDiagnosticLogs: true,
+      enableRuffDiagnostics: false,
       enablePyreflyDiagnostics: true,
       blocklyCdnUrl: 'https://cdn.example.com/blockly/',
       codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
@@ -53,6 +54,7 @@ describe('Python question config', () => {
       enableSaveLoadButtons: false,
       enablePythonTutor: true,
       enableDiagnosticLogs: true,
+      enableRuffDiagnostics: false,
       enablePyreflyDiagnostics: true,
       blocklyCdnUrl: 'https://cdn.example.com/blockly/',
       codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
@@ -162,6 +164,7 @@ describe('Python question config', () => {
         enableSaveLoadButtons: false,
         enablePythonTutor: true,
         enableDiagnosticLogs: true,
+        enableRuffDiagnostics: true,
         enablePyreflyDiagnostics: true,
         blocklyCdnUrl: 'https://cdn.example.com/blockly/',
         codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
@@ -197,6 +200,7 @@ describe('Python question config', () => {
         enableSaveLoadButtons: false,
         enablePythonTutor: true,
         enableDiagnosticLogs: true,
+        enableRuffDiagnostics: true,
         enablePyreflyDiagnostics: true,
         blocklyCdnUrl: 'https://cdn.example.com/blockly/',
         codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
@@ -244,6 +248,7 @@ describe('Python question config', () => {
       showSaveLoadButtons: false,
       enablePythonTutor: true,
       enableDiagnosticLogs: true,
+      enableRuffDiagnostics: true,
       enablePyreflyDiagnostics: true,
       projectStorageEnabled: true,
       entryFileName: 'main.py',
@@ -303,16 +308,19 @@ describe('Python question config', () => {
     });
   });
 
-  it('defaults enablePythonTutor and enablePyreflyDiagnostics to false', () => {
+  it('defaults enablePythonTutor and enablePyreflyDiagnostics to false, enableRuffDiagnostics to true', () => {
     expect(normalizePythonAdvancedOptions({}).enablePythonTutor).toBe(false);
+    expect(normalizePythonAdvancedOptions({}).enableRuffDiagnostics).toBe(true);
     expect(normalizePythonAdvancedOptions({}).enablePyreflyDiagnostics).toBe(false);
 
     const config = normalizePythonQuestionConfig({ pythonRunner: 'skulpt' });
     expect(config.advancedOptions.enablePythonTutor).toBe(false);
+    expect(config.advancedOptions.enableRuffDiagnostics).toBe(true);
     expect(config.advancedOptions.enablePyreflyDiagnostics).toBe(false);
     expect(buildPythonCodeContainerOptions({}, config, {})).toMatchObject({
       enablePythonTutor: false,
       enableDiagnosticLogs: false,
+      enableRuffDiagnostics: true,
       enablePyreflyDiagnostics: false,
     });
   });

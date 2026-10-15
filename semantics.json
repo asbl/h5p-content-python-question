@@ -83,6 +83,13 @@
                 "default": false
             },
             {
+                "name": "enableRuffDiagnostics",
+                "type": "boolean",
+                "label": "Enable style hints (Ruff)",
+                "description": "If enabled, learners get inline Python style hints (e.g. missing type annotations) from Ruff while they type.",
+                "default": true
+            },
+            {
                 "name": "enablePyreflyDiagnostics",
                 "type": "boolean",
                 "label": "Enable experimental type checking (Pyrefly)",

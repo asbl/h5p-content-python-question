@@ -56,6 +56,10 @@
           "description": "If enabled, detailed runtime and grading diagnostics are written to the browser console for troubleshooting."
         },
         {
+          "label": "Enable style hints (Ruff)",
+          "description": "If enabled, learners get inline Python style hints (e.g. missing type annotations) from Ruff while they type."
+        },
+        {
           "label": "Enable experimental type checking (Pyrefly)",
           "description": "If enabled, learners get inline type-error hints from Pyrefly in addition to the Ruff style hints. Experimental: adds a sizable one-time download and extra analysis on every pause in typing."
         },
