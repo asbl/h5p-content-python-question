@@ -131,6 +131,151 @@ describe('PythonCodeContainer', () => {
     expect(editorManager.setInlineDiagnostics).not.toHaveBeenCalled();
   });
 
+  it('runs Pyrefly diagnostics through the editor manager', async () => {
+    vi.useFakeTimers();
+    const PythonCodeContainer = await loadContainerClass();
+    const container = Object.create(PythonCodeContainer.prototype);
+    const setInlineDiagnostics = vi.fn();
+    const originalOnChange = vi.fn();
+    const state = {
+      updateSandboxFiles: vi.fn(),
+      setActiveFile: vi.fn(),
+      getErrors: vi.fn(() => [{
+        startLineNumber: 1,
+        startColumn: 11,
+        endLineNumber: 1,
+        endColumn: 16,
+        message_header: 'Bad argument type for parameter `guess`',
+        kind: 'bad-argument-type',
+        severity: 8,
+        filename: 'main.py',
+      }]),
+    };
+    const editorManager = {
+      onChangeCallback: originalOnChange,
+      getActiveFile: vi.fn(() => ({
+        name: 'main.py',
+        code: 'def check(guess: int):\n    return guess\n',
+        isEntry: true,
+      })),
+      getNormalizedPreCode: vi.fn(() => 'from helper import base\n'),
+      getWorkspaceFiles: vi.fn(() => [
+        { name: 'main.py', code: 'stale snapshot' },
+        { name: 'helper.py', code: 'BASE = 1\n' },
+      ]),
+      setInlineDiagnostics,
+      setActiveFile: vi.fn(),
+    };
+
+    container.options = {
+      enablePyreflyDiagnostics: true,
+      getPyreflyState: vi.fn(() => state),
+    };
+    container.getEditorManager = vi.fn(() => editorManager);
+
+    container.applyPythonPyreflyDiagnostics();
+    await vi.runOnlyPendingTimersAsync();
+    await Promise.resolve();
+
+    expect(editorManager._pythonPyreflyDiagnosticsHooked).toBe(true);
+    expect(state.updateSandboxFiles).toHaveBeenCalledWith({
+      'helper.py': 'BASE = 1\n',
+      'main.py': 'def check(guess: int):\n    return guess\n',
+    }, true);
+    expect(setInlineDiagnostics).toHaveBeenCalledWith([
+      expect.objectContaining({
+        from: 'from helper import base\n'.length + 10,
+        to: 'from helper import base\n'.length + 15,
+        severity: 'error',
+        message: 'Bad argument type for parameter `guess`',
+      }),
+    ]);
+
+    setInlineDiagnostics.mockClear();
+    editorManager.onChangeCallback('code');
+    expect(originalOnChange).toHaveBeenCalledWith('code');
+
+    await vi.advanceTimersByTimeAsync(500);
+    await Promise.resolve();
+    expect(setInlineDiagnostics).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips Pyrefly diagnostics when disabled by default', async () => {
+    const PythonCodeContainer = await loadContainerClass();
+    const container = Object.create(PythonCodeContainer.prototype);
+    const editorManager = {
+      onChangeCallback: vi.fn(),
+      setInlineDiagnostics: vi.fn(),
+    };
+
+    container.options = {};
+    container.getEditorManager = vi.fn(() => editorManager);
+
+    container.applyPythonPyreflyDiagnostics();
+
+    expect(editorManager._pythonPyreflyDiagnosticsHooked).toBeUndefined();
+    expect(editorManager.setInlineDiagnostics).not.toHaveBeenCalled();
+  });
+
+  it('merges Ruff and Pyrefly diagnostics instead of overwriting each other', async () => {
+    vi.useFakeTimers();
+    const PythonCodeContainer = await loadContainerClass();
+    const container = Object.create(PythonCodeContainer.prototype);
+    const setInlineDiagnostics = vi.fn();
+    const workspace = {
+      check: vi.fn(() => [{
+        code: 'ANN001',
+        message: 'Missing type annotation for function argument `guess`',
+        start_location: { row: 1, column: 10 },
+        end_location: { row: 1, column: 15 },
+      }]),
+    };
+    const state = {
+      updateSandboxFiles: vi.fn(),
+      setActiveFile: vi.fn(),
+      getErrors: vi.fn(() => [{
+        startLineNumber: 2,
+        startColumn: 5,
+        endLineNumber: 2,
+        endColumn: 10,
+        message_header: 'Bad return type',
+        kind: 'bad-return',
+        severity: 8,
+        filename: 'main.py',
+      }]),
+    };
+    const editorManager = {
+      onChangeCallback: vi.fn(),
+      getActiveFile: vi.fn(() => ({
+        name: 'main.py',
+        code: 'def check(guess):\n    return guess\n',
+        isEntry: true,
+      })),
+      getNormalizedPreCode: vi.fn(() => ''),
+      setInlineDiagnostics,
+      setActiveFile: vi.fn(),
+    };
+
+    container.options = {
+      getRuffWorkspace: vi.fn(() => workspace),
+      enablePyreflyDiagnostics: true,
+      getPyreflyState: vi.fn(() => state),
+    };
+    container.getEditorManager = vi.fn(() => editorManager);
+
+    container.applyPythonRuffDiagnostics();
+    container.applyPythonPyreflyDiagnostics();
+    await vi.runOnlyPendingTimersAsync();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const lastCall = setInlineDiagnostics.mock.calls.at(-1)[0];
+    expect(lastCall).toEqual([
+      expect.objectContaining({ message: 'Missing type annotation for function argument `guess`', source: 'ruff' }),
+      expect.objectContaining({ message: 'Bad return type', source: 'pyrefly' }),
+    ]);
+  });
+
   it('moves the console below the canvas and restores it to the code page', async () => {
     const PythonCodeContainer = await loadContainerClass();
     const container = Object.create(PythonCodeContainer.prototype);

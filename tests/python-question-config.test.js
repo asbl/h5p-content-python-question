@@ -31,6 +31,7 @@ describe('Python question config', () => {
       enableSaveLoadButtons: false,
       enablePythonTutor: true,
       enableDiagnosticLogs: true,
+      enablePyreflyDiagnostics: true,
       blocklyCdnUrl: 'https://cdn.example.com/blockly/',
       codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
       markdownCdnUrl: 'https://cdn.example.com/markdown/',
@@ -52,6 +53,7 @@ describe('Python question config', () => {
       enableSaveLoadButtons: false,
       enablePythonTutor: true,
       enableDiagnosticLogs: true,
+      enablePyreflyDiagnostics: true,
       blocklyCdnUrl: 'https://cdn.example.com/blockly/',
       codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
       markdownCdnUrl: 'https://cdn.example.com/markdown/',
@@ -160,6 +162,7 @@ describe('Python question config', () => {
         enableSaveLoadButtons: false,
         enablePythonTutor: true,
         enableDiagnosticLogs: true,
+        enablePyreflyDiagnostics: true,
         blocklyCdnUrl: 'https://cdn.example.com/blockly/',
         codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
         markdownCdnUrl: 'https://cdn.example.com/markdown/',
@@ -194,6 +197,7 @@ describe('Python question config', () => {
         enableSaveLoadButtons: false,
         enablePythonTutor: true,
         enableDiagnosticLogs: true,
+        enablePyreflyDiagnostics: true,
         blocklyCdnUrl: 'https://cdn.example.com/blockly/',
         codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
         markdownCdnUrl: 'https://cdn.example.com/markdown/',
@@ -240,6 +244,7 @@ describe('Python question config', () => {
       showSaveLoadButtons: false,
       enablePythonTutor: true,
       enableDiagnosticLogs: true,
+      enablePyreflyDiagnostics: true,
       projectStorageEnabled: true,
       entryFileName: 'main.py',
       allowAddingFiles: true,
@@ -261,6 +266,8 @@ describe('Python question config', () => {
       downloadFilename: 'main.py',
       projectDownloadFilename: 'python-project.zip',
       projectBundleType: 'h5p-python-question-project',
+      indentUnit: 4,
+      tabSize: 4,
       editorMode: 'blocks',
       blocklyCategories: { variables: true, logic: false, loops: true, math: false, text: true, lists: false, functions: false },
       blocklyWorkspaceState: { blocks: { languageVersion: 0, blocks: [] } },
@@ -296,14 +303,17 @@ describe('Python question config', () => {
     });
   });
 
-  it('defaults enablePythonTutor to false', () => {
+  it('defaults enablePythonTutor and enablePyreflyDiagnostics to false', () => {
     expect(normalizePythonAdvancedOptions({}).enablePythonTutor).toBe(false);
+    expect(normalizePythonAdvancedOptions({}).enablePyreflyDiagnostics).toBe(false);
 
     const config = normalizePythonQuestionConfig({ pythonRunner: 'skulpt' });
     expect(config.advancedOptions.enablePythonTutor).toBe(false);
+    expect(config.advancedOptions.enablePyreflyDiagnostics).toBe(false);
     expect(buildPythonCodeContainerOptions({}, config, {})).toMatchObject({
       enablePythonTutor: false,
       enableDiagnosticLogs: false,
+      enablePyreflyDiagnostics: false,
     });
   });
 

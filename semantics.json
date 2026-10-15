@@ -83,6 +83,13 @@
                 "default": false
             },
             {
+                "name": "enablePyreflyDiagnostics",
+                "type": "boolean",
+                "label": "Enable experimental type checking (Pyrefly)",
+                "description": "If enabled, learners get inline type-error hints from Pyrefly in addition to the Ruff style hints. Experimental: adds a sizable one-time download and extra analysis on every pause in typing.",
+                "default": false
+            },
+            {
                 "name": "execLimit",
                 "type": "number",
                 "label": "Execution Limit",

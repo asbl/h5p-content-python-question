@@ -7,13 +7,16 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "test:browser": "npm run test:browser:ui && npm run test:browser:mouse-tutorial && npm run test:browser:tutorial-canvas && npm run test:browser:autocomplete && npm run test:browser:ruff-diagnostics && npm run test:browser:function-tests && npm run test:browser:multiple-choice",
+    "test:browser": "npm run test:browser:ui && npm run test:browser:mouse-tutorial && npm run test:browser:tutorial-canvas && npm run test:browser:autocomplete && npm run test:browser:ruff-diagnostics && npm run test:browser:pyrefly-diagnostics && npm run test:browser:pyrefly-multifile && npm run test:browser:function-tests && npm run test:browser:multiple-choice",
     "test:browser:autocomplete": "node tools/browser-regression/python-autocomplete-smoke.js",
     "test:browser:ruff-diagnostics": "node tools/browser-regression/python-ruff-diagnostics-smoke.js",
+    "test:browser:pyrefly-diagnostics": "node tools/browser-regression/python-pyrefly-diagnostics-smoke.js",
+    "test:browser:pyrefly-multifile": "node tools/browser-regression/python-pyrefly-multifile-smoke.js",
     "test:browser:function-tests": "node tools/browser-regression/python-function-tests-smoke.js",
     "test:browser:multiple-choice": "node tools/browser-regression/python-multiple-choice-smoke.js",
     "test:browser:pyodide-startup": "node tools/browser-regression/pyodide-startup-benchmark.js",
     "test:browser:pyodide-startup:budget": "H5P_PYODIDE_STARTUP_BUDGET_MS=2000 node tools/browser-regression/pyodide-startup-benchmark.js",
+    "test:browser:pyrefly-latency": "node tools/browser-regression/python-pyrefly-latency-benchmark.js",
     "test:browser:ui": "node tools/browser-regression/h5p-ui-regression.js",
     "test:browser:mouse-tutorial": "node tools/browser-regression/h5p-mouse-tutorial-regression.js",
     "test:browser:tutorial-canvas": "node tools/browser-regression/h5p-tutorial-canvas-sizing-regression.js",
@@ -57,7 +60,8 @@
   },
   "dependencies": {
     "@astral-sh/ruff-wasm-web": "^0.17.0",
-    "he": "^1.2.0"
+    "he": "^1.2.0",
+    "pyrefly-wasm": "file:vendor/pyrefly-wasm"
   },
   "browserslist": "> 0.5%, last 2 versions, Firefox ESR, not dead"
 }

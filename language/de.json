@@ -54,6 +54,10 @@
           "description": "Wenn aktiviert, werden detaillierte Laufzeit- und Bewertungsdiagnosen zur Fehlersuche in die Browser-Konsole geschrieben."
         },
         {
+          "label": "Experimentelle Typprüfung aktivieren (Pyrefly)",
+          "description": "Wenn aktiviert, erhalten Lernende zusätzlich zu den Ruff-Stilhinweisen Typfehler-Hinweise von Pyrefly direkt im Editor. Experimentell: fügt einen größeren einmaligen Download sowie zusätzliche Analysen bei jeder Schreibpause hinzu."
+        },
+        {
           "label": "Ausführungs-Limit",
           "description": "Maximale Anzahl von Ausführungsschritten für Python. Verhindert Endlosschleifen. [0: kein Limit]"
         },

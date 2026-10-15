@@ -56,6 +56,10 @@
           "description": "If enabled, detailed runtime and grading diagnostics are written to the browser console for troubleshooting."
         },
         {
+          "label": "Enable experimental type checking (Pyrefly)",
+          "description": "If enabled, learners get inline type-error hints from Pyrefly in addition to the Ruff style hints. Experimental: adds a sizable one-time download and extra analysis on every pause in typing."
+        },
+        {
           "label": "Execution Limit",
           "description": "Maximum execution time in milliseconds. Use to prevent programs from running indefinitely. [0: No limit]"
         },

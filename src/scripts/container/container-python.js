@@ -1,9 +1,11 @@
 import { createPythonCompletionSource } from '../services/python-autocomplete';
 import { getPythonL10nValue } from '../services/python-l10n';
 import { getPythonRuffInlineDiagnostics } from '../services/python-ruff-diagnostics';
+import { getPythonPyreflyInlineDiagnostics } from '../services/python-pyrefly-diagnostics';
 
 const PYTHON_TUTOR_EMBED_URL = 'https://pythontutor.com/iframe-embed.html';
 const RUFF_DIAGNOSTICS_DEBOUNCE_MS = 500;
+const PYREFLY_DIAGNOSTICS_DEBOUNCE_MS = 500;
 
 /**
  * Builds the PythonTutor embed URL for the given Python source code.
@@ -26,6 +28,10 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
     super(...args);
     this._ruffDiagnosticsTimer = null;
     this._ruffDiagnosticsRequestId = 0;
+    this._pyreflyDiagnosticsTimer = null;
+    this._pyreflyDiagnosticsRequestId = 0;
+    this._ruffInlineDiagnostics = [];
+    this._pyreflyInlineDiagnostics = [];
   }
 
   applyPythonAutocomplete() {
@@ -43,7 +49,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
     return this.options?.enableRuffDiagnostics !== false && this.options?.editorMode !== 'blocks';
   }
 
-  getPythonRuffDiagnosticInput() {
+  getPythonDiagnosticInput() {
     const editorManager = this.getEditorManager?.();
     const activeFile = editorManager?.getActiveFile?.();
 
@@ -54,6 +60,8 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
     return {
       code: activeFile.code || '',
       offset: activeFile.isEntry ? (editorManager.getNormalizedPreCode?.().length || 0) : 0,
+      activeFileName: activeFile.name,
+      workspaceFiles: editorManager.getWorkspaceFiles?.() || [],
     };
   }
 
@@ -108,7 +116,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
     const requestId = (Number(this._ruffDiagnosticsRequestId) || 0) + 1;
     this._ruffDiagnosticsRequestId = requestId;
 
-    const input = this.getPythonRuffDiagnosticInput();
+    const input = this.getPythonDiagnosticInput();
     if (!input) {
       return;
     }
@@ -123,17 +131,119 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
         return;
       }
 
-      this.getEditorManager?.()?.setInlineDiagnostics?.(diagnostics);
+      this._ruffInlineDiagnostics = diagnostics;
+      this.applyMergedPythonDiagnostics();
     }
     catch (error) {
       if (requestId === this._ruffDiagnosticsRequestId) {
-        this.getEditorManager?.()?.setInlineDiagnostics?.([]);
+        this._ruffInlineDiagnostics = [];
+        this.applyMergedPythonDiagnostics();
       }
 
       if (this.options?.enableDiagnosticLogs === true) {
         console.warn('PythonQuestion Ruff diagnostics failed', error);
       }
     }
+  }
+
+  shouldUsePythonPyreflyDiagnostics() {
+    return this.options?.enablePyreflyDiagnostics === true && this.options?.editorMode !== 'blocks';
+  }
+
+  applyPythonPyreflyDiagnostics() {
+    if (!this.shouldUsePythonPyreflyDiagnostics()) {
+      return;
+    }
+
+    this.installPythonPyreflyDiagnosticsHooks();
+    this.schedulePythonPyreflyDiagnostics(0);
+  }
+
+  installPythonPyreflyDiagnosticsHooks() {
+    const editorManager = this.getEditorManager?.();
+
+    if (!editorManager || editorManager._pythonPyreflyDiagnosticsHooked) {
+      return;
+    }
+
+    const originalOnChange = editorManager.onChangeCallback;
+    editorManager.onChangeCallback = (...args) => {
+      if (typeof originalOnChange === 'function') {
+        originalOnChange.apply(editorManager, args);
+      }
+      this.schedulePythonPyreflyDiagnostics();
+    };
+
+    if (typeof editorManager.setActiveFile === 'function') {
+      const originalSetActiveFile = editorManager.setActiveFile;
+      editorManager.setActiveFile = (...args) => {
+        const result = originalSetActiveFile.apply(editorManager, args);
+        this.schedulePythonPyreflyDiagnostics(0);
+        return result;
+      };
+    }
+
+    editorManager._pythonPyreflyDiagnosticsHooked = true;
+  }
+
+  schedulePythonPyreflyDiagnostics(delay = PYREFLY_DIAGNOSTICS_DEBOUNCE_MS) {
+    if (!this.shouldUsePythonPyreflyDiagnostics()) {
+      return;
+    }
+
+    clearTimeout(this._pyreflyDiagnosticsTimer);
+    this._pyreflyDiagnosticsTimer = setTimeout(() => {
+      this.refreshPythonPyreflyDiagnostics();
+    }, Math.max(0, Number(delay) || 0));
+  }
+
+  async refreshPythonPyreflyDiagnostics() {
+    const requestId = (Number(this._pyreflyDiagnosticsRequestId) || 0) + 1;
+    this._pyreflyDiagnosticsRequestId = requestId;
+
+    const input = this.getPythonDiagnosticInput();
+    if (!input) {
+      return;
+    }
+
+    try {
+      const diagnostics = await getPythonPyreflyInlineDiagnostics(input.code, {
+        offset: input.offset,
+        activeFileName: input.activeFileName,
+        workspaceFiles: input.workspaceFiles,
+        getState: this.options?.getPyreflyState,
+      });
+
+      if (requestId !== this._pyreflyDiagnosticsRequestId) {
+        return;
+      }
+
+      this._pyreflyInlineDiagnostics = diagnostics;
+      this.applyMergedPythonDiagnostics();
+    }
+    catch (error) {
+      if (requestId === this._pyreflyDiagnosticsRequestId) {
+        this._pyreflyInlineDiagnostics = [];
+        this.applyMergedPythonDiagnostics();
+      }
+
+      if (this.options?.enableDiagnosticLogs === true) {
+        console.warn('PythonQuestion Pyrefly diagnostics failed', error);
+      }
+    }
+  }
+
+  /**
+   * Combines the latest Ruff and Pyrefly diagnostics into one CodeMirror update.
+   * Each source applies independently as it resolves, so neither overwrites
+   * the other's results.
+   * @returns {void}
+   */
+  applyMergedPythonDiagnostics() {
+    const merged = [...(this._ruffInlineDiagnostics || []), ...(this._pyreflyInlineDiagnostics || [])]
+      .sort((left, right) => left.from - right.from || left.to - right.to);
+
+    this.getEditorManager?.()?.setInlineDiagnostics?.(merged);
   }
 
   shouldShowConsoleBelowCanvas() {
@@ -190,6 +300,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
     await super.setup();
     this.applyPythonAutocomplete();
     this.applyPythonRuffDiagnostics();
+    this.applyPythonPyreflyDiagnostics();
   }
 
   getUIRegistrations() {

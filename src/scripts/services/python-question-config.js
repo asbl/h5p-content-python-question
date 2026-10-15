@@ -204,7 +204,7 @@ export function normalizePythonRunner(runner) {
  * Normalizes advanced runtime options from semantics.
  * @param {object} [advancedOptions] - Raw advanced options.
  * @param {object} [pyodideOptions] - Raw Pyodide advanced options.
- * @returns {{disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, enablePythonTutor: boolean, enableDiagnosticLogs: boolean, executionLimit: number}} Normalized options.
+ * @returns {{disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, enablePythonTutor: boolean, enableDiagnosticLogs: boolean, enablePyreflyDiagnostics: boolean, executionLimit: number}} Normalized options.
  */
 export function normalizePythonAdvancedOptions(advancedOptions = {}, pyodideOptions = {}) {
   const yamlUrls = parseExternalLibraryUrlsYaml(advancedOptions?.externalLibraryUrls);
@@ -217,6 +217,7 @@ export function normalizePythonAdvancedOptions(advancedOptions = {}, pyodideOpti
     enableSaveLoadButtons: advancedOptions?.enableSaveLoadButtons !== false,
     enablePythonTutor: advancedOptions?.enablePythonTutor === true,
     enableDiagnosticLogs: advancedOptions?.enableDiagnosticLogs === true,
+    enablePyreflyDiagnostics: advancedOptions?.enablePyreflyDiagnostics === true,
     blocklyCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'blocklyCdnUrl'),
     codeMirrorCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'codeMirrorCdnUrl'),
     markdownCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'markdownCdnUrl'),
@@ -286,6 +287,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     showSaveLoadButtons: config?.advancedOptions?.enableSaveLoadButtons !== false,
     enablePythonTutor: config?.advancedOptions?.enablePythonTutor === true,
     enableDiagnosticLogs: config?.advancedOptions?.enableDiagnosticLogs === true,
+    enablePyreflyDiagnostics: config?.advancedOptions?.enablePyreflyDiagnostics === true,
     projectStorageEnabled: config?.runner === 'pyodide',
     entryFileName: 'main.py',
     allowAddingFiles: config?.runner === 'pyodide' && editorParams?.allowAddingFiles === true,
@@ -294,6 +296,8 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     downloadFilename: 'main.py',
     projectDownloadFilename: 'python-project.zip',
     projectBundleType: 'h5p-python-question-project',
+    indentUnit: 4,
+    tabSize: 4,
     editorMode: normalizePythonEditorMode(editorParams?.editorMode),
     blocklyCategories: editorParams?.blocklyCategories || null,
     blocklyWorkspaceState: editorParams?.blocklyWorkspaceState || null,
