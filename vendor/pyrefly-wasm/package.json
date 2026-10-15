@@ -1,0 +1,23 @@
+{
+  "name": "pyrefly-wasm",
+  "type": "module",
+  "collaborators": [
+    "Meta"
+  ],
+  "description": "WebAssembly bindings for Pyrefly, vendored locally (no official npm package exists)",
+  "version": "0.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/facebook/pyrefly"
+  },
+  "files": [
+    "pyrefly_wasm_bg.wasm",
+    "pyrefly_wasm.js"
+  ],
+  "main": "pyrefly_wasm.js",
+  "homepage": "https://pyrefly.org",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
