@@ -1,10 +1,11 @@
 import { PYODIDE_PYTHON_VERSION } from './python-runtime-version';
+import { getOffsetFromLineColumn } from './python-diagnostics';
 
 const DEFAULT_PYREFLY_PYTHON_VERSION = PYODIDE_PYTHON_VERSION;
 const PYREFLY_DEFAULT_FILENAME = 'main.py';
 
 let pyreflyRuntimePromise = null;
-let pyreflyState = null;
+let pyreflyStateCache = new Map();
 
 /**
  * Loads Pyrefly's browser-friendly WASM bundle once.
@@ -22,18 +23,21 @@ async function loadPyreflyRuntime() {
 }
 
 /**
- * Returns a shared Pyrefly state instance.
+ * Returns a Pyrefly state instance for the given Python version, reusing a
+ * previously created one for the same version instead of always returning
+ * whichever state happened to be built first.
  * @param {string} [pythonVersion] Python version Pyrefly should type-check against.
  * @returns {Promise<object>} Pyrefly state.
  */
 async function getPyreflyState(pythonVersion = DEFAULT_PYREFLY_PYTHON_VERSION) {
-  if (pyreflyState) {
-    return pyreflyState;
+  if (pyreflyStateCache.has(pythonVersion)) {
+    return pyreflyStateCache.get(pythonVersion);
   }
 
   const { State } = await loadPyreflyRuntime();
-  pyreflyState = new State(pythonVersion);
-  return pyreflyState;
+  const state = new State(pythonVersion);
+  pyreflyStateCache.set(pythonVersion, state);
+  return state;
 }
 
 /**
@@ -43,21 +47,7 @@ async function getPyreflyState(pythonVersion = DEFAULT_PYREFLY_PYTHON_VERSION) {
  * @returns {number} Offset in code.
  */
 export function getOffsetFromPyreflyLocation(code = '', location = {}) {
-  const source = String(code || '');
-  const targetLine = Math.max(1, Number(location.line) || 1);
-  const targetColumn = Math.max(1, Number(location.column) || 1);
-  let line = 1;
-  let offset = 0;
-
-  while (line < targetLine && offset < source.length) {
-    const char = source[offset];
-    offset += 1;
-    if (char === '\n') {
-      line += 1;
-    }
-  }
-
-  return Math.min(source.length, offset + (targetColumn - 1));
+  return getOffsetFromLineColumn(code, location, { zeroBasedColumn: false });
 }
 
 /**
@@ -182,5 +172,5 @@ export async function getPythonPyreflyInlineDiagnostics(code = '', options = {})
  */
 export function resetPythonPyreflyDiagnosticsForTests() {
   pyreflyRuntimePromise = null;
-  pyreflyState = null;
+  pyreflyStateCache = new Map();
 }

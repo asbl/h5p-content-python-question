@@ -28,7 +28,7 @@ export const getAlgorithmConstraintHarness = (source, constraints = {}, function
     : String(value || '').split(',')
   )
     .map((entry) => String(entry || '').trim())
-    .filter((entry) => entry && entry !== 'self');
+    .filter((entry) => entry && entry !== 'self' && entry !== 'cls');
   const normalizeMethodEntries = (values) => (Array.isArray(values) ? values : [])
     .map((value) => ({
       className: String(value?.className || '').trim(),
@@ -40,6 +40,27 @@ export const getAlgorithmConstraintHarness = (source, constraints = {}, function
     .map((value) => ({
       className: String(value?.className || '').trim(),
       attributeName: String(value?.attributeName ?? value?.name ?? value ?? '').trim(),
+    }))
+    .filter((entry) => entry.attributeName);
+  const normalizeTypedParameterList = (values) => (Array.isArray(values) ? values : [])
+    .map((value) => ({
+      name: String(value?.name || '').trim(),
+      type: String(value?.type || '').trim(),
+    }))
+    .filter((entry) => entry.name);
+  const normalizeTypedMethodEntries = (values) => (Array.isArray(values) ? values : [])
+    .map((value) => ({
+      className: String(value?.className || '').trim(),
+      methodName: String(value?.methodName ?? value?.name ?? value ?? '').trim(),
+      parameters: normalizeTypedParameterList(value?.parameters),
+      returnType: String(value?.returnType || '').trim(),
+    }))
+    .filter((entry) => entry.methodName);
+  const normalizePropertyEntries = (values) => (Array.isArray(values) ? values : [])
+    .map((value) => ({
+      className: String(value?.className || '').trim(),
+      attributeName: String(value?.attributeName ?? value?.name ?? value ?? '').trim(),
+      requireSetter: value?.requireSetter === true,
     }))
     .filter((entry) => entry.attributeName);
   const config = JSON.stringify({
@@ -56,6 +77,11 @@ export const getAlgorithmConstraintHarness = (source, constraints = {}, function
     requiredInstanceAttributes: normalizeList(constraints.requiredInstanceAttributes),
     requiredMethods: normalizeMethodEntries(constraints.requiredMethods),
     requiredAttributes: normalizeAttributeEntries(constraints.requiredAttributes),
+    requiredTypedMethods: normalizeTypedMethodEntries(constraints.requiredTypedMethods),
+    requiredPrivateAttributes: normalizeAttributeEntries(constraints.requiredPrivateAttributes),
+    requiredProperties: normalizePropertyEntries(constraints.requiredProperties),
+    forbiddenCalls: normalizeList(constraints.forbiddenCalls),
+    protectedAttributeNames: normalizeList(constraints.protectedAttributeNames),
   });
   const code = JSON.stringify(String(source || ''));
   return { token, code: `import ast, json
@@ -104,7 +130,7 @@ try:
     if __h5p_constraints.get('requireConditional') and not any(isinstance(n, ast.If) for n in __h5p_nodes): __h5p_violations.append('Conditional required')
     if __h5p_constraints.get('requireReturn') and not any(isinstance(n, ast.Return) for n in __h5p_nodes): __h5p_violations.append('Return statement required')
     if __h5p_constraints.get('forbidTopLevelAssignments') and any(isinstance(n, (ast.Assign, ast.AnnAssign, ast.AugAssign)) for n in __h5p_tree.body): __h5p_violations.append('Top-level assignments are not allowed')
-    __h5p_forbidden = [x.strip() for x in __h5p_constraints.get('forbiddenCalls', '').split(',') if x.strip()]
+    __h5p_forbidden = __h5p_constraints.get('forbiddenCalls') or []
     for __h5p_node in __h5p_nodes:
         if isinstance(__h5p_node, ast.Call):
             __h5p_name = __h5p_node.func.id if isinstance(__h5p_node.func, ast.Name) else (__h5p_node.func.attr if isinstance(__h5p_node.func, ast.Attribute) else '')
@@ -119,17 +145,48 @@ try:
     __h5p_instantiable_class_names = __h5p_class_names | set(__h5p_constraints.get('requiredClassNames', []))
     __h5p_methods = set()
     __h5p_method_specs = []
+    __h5p_typed_method_specs = []
+    __h5p_properties = {}
     __h5p_instance_attrs = set()
     __h5p_instantiated_classes = set()
+    def __h5p_annotation_text(node):
+        try:
+            return ast.unparse(node) if node is not None else ''
+        except Exception:
+            return ''
     for __h5p_class in __h5p_classes:
         for __h5p_member in __h5p_class.body:
             if isinstance(__h5p_member, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 __h5p_methods.add(__h5p_member.name)
                 __h5p_methods.add(__h5p_class.name + '.' + __h5p_member.name)
                 __h5p_args = [a.arg for a in __h5p_member.args.args]
-                if __h5p_args and __h5p_args[0] == 'self':
+                if __h5p_args and __h5p_args[0] in ('self', 'cls'):
                     __h5p_args = __h5p_args[1:]
                 __h5p_method_specs.append({'className': __h5p_class.name, 'methodName': __h5p_member.name, 'parameters': __h5p_args})
+                __h5p_typed_args = [a for a in __h5p_member.args.args if a.arg not in ('self', 'cls')]
+                __h5p_typed_method_specs.append({
+                    'className': __h5p_class.name,
+                    'methodName': __h5p_member.name,
+                    'parameterTypes': {a.arg: __h5p_annotation_text(a.annotation) for a in __h5p_typed_args},
+                    'returnType': __h5p_annotation_text(__h5p_member.returns),
+                })
+                __h5p_decorator_names = []
+                __h5p_setter_target = None
+                for __h5p_decorator in __h5p_member.decorator_list:
+                    if isinstance(__h5p_decorator, ast.Name):
+                        __h5p_decorator_names.append(__h5p_decorator.id)
+                    elif isinstance(__h5p_decorator, ast.Attribute):
+                        __h5p_decorator_names.append(__h5p_decorator.attr)
+                        if __h5p_decorator.attr == 'setter' and isinstance(__h5p_decorator.value, ast.Name):
+                            __h5p_setter_target = __h5p_decorator.value.id
+                __h5p_prop_key = (__h5p_class.name, __h5p_member.name)
+                if 'property' in __h5p_decorator_names:
+                    __h5p_properties.setdefault(__h5p_prop_key, {'getter': False, 'setter': False})
+                    __h5p_properties[__h5p_prop_key]['getter'] = True
+                if __h5p_setter_target is not None:
+                    __h5p_setter_key = (__h5p_class.name, __h5p_setter_target)
+                    __h5p_properties.setdefault(__h5p_setter_key, {'getter': False, 'setter': False})
+                    __h5p_properties[__h5p_setter_key]['setter'] = True
                 for __h5p_node in ast.walk(__h5p_member):
                     __h5p_targets = []
                     if isinstance(__h5p_node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
@@ -180,9 +237,86 @@ try:
     __h5p_has_inheritance = any(len(n.bases) > 0 for n in __h5p_classes)
     if __h5p_constraints.get('requireInheritance') and not __h5p_has_inheritance: __h5p_violations.append('Inheritance required')
     if __h5p_constraints.get('forbidInheritance') and __h5p_has_inheritance: __h5p_violations.append('Inheritance is not allowed')
+    __h5p_all_functions = [n for n in ast.walk(__h5p_tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    if __h5p_constraints.get('requireParameterAnnotations'):
+        for __h5p_fn in __h5p_all_functions:
+            for __h5p_arg in __h5p_fn.args.args:
+                if __h5p_arg.arg in ('self', 'cls'): continue
+                if __h5p_arg.annotation is None: __h5p_violations.append('Missing parameter type hint: ' + __h5p_fn.name + '(' + __h5p_arg.arg + ')')
+    if __h5p_constraints.get('requireReturnAnnotation'):
+        for __h5p_fn in __h5p_all_functions:
+            if __h5p_fn.name == '__init__': continue
+            if __h5p_fn.returns is None: __h5p_violations.append('Missing return type hint: ' + __h5p_fn.name)
+    for __h5p_typed_required in __h5p_constraints.get('requiredTypedMethods', []):
+        __h5p_required_class = __h5p_typed_required.get('className') or ''
+        __h5p_required_name = __h5p_typed_required.get('methodName') or ''
+        __h5p_required_params = __h5p_typed_required.get('parameters') or []
+        __h5p_required_return = __h5p_typed_required.get('returnType') or ''
+        __h5p_label = (__h5p_required_class + '.' if __h5p_required_class else '') + __h5p_required_name
+        __h5p_typed_matches = [
+            m for m in __h5p_typed_method_specs
+            if m['methodName'] == __h5p_required_name and (not __h5p_required_class or m['className'] == __h5p_required_class)
+        ]
+        if not __h5p_typed_matches:
+            __h5p_violations.append('Required method: ' + __h5p_label)
+            continue
+        __h5p_typed_ok = False
+        for __h5p_match in __h5p_typed_matches:
+            __h5p_params_ok = True
+            for __h5p_param in __h5p_required_params:
+                __h5p_param_name = __h5p_param.get('name') or ''
+                __h5p_param_type = __h5p_param.get('type') or ''
+                if __h5p_param_name not in __h5p_match['parameterTypes']:
+                    __h5p_params_ok = False
+                    break
+                if __h5p_param_type and __h5p_match['parameterTypes'][__h5p_param_name] != __h5p_param_type:
+                    __h5p_params_ok = False
+                    break
+            __h5p_return_ok = (not __h5p_required_return) or (__h5p_match['returnType'] == __h5p_required_return)
+            if __h5p_params_ok and __h5p_return_ok:
+                __h5p_typed_ok = True
+                break
+        if not __h5p_typed_ok:
+            __h5p_param_desc = ', '.join((p.get('name') or '') + (': ' + p['type'] if p.get('type') else '') for p in __h5p_required_params)
+            __h5p_return_desc = (' -> ' + __h5p_required_return) if __h5p_required_return else ''
+            __h5p_violations.append('Required typed method: ' + __h5p_label + '(' + __h5p_param_desc + ')' + __h5p_return_desc)
+    for __h5p_private_required in __h5p_constraints.get('requiredPrivateAttributes', []):
+        __h5p_required_class = __h5p_private_required.get('className') or ''
+        __h5p_required_name = __h5p_private_required.get('attributeName') or ''
+        __h5p_label = (__h5p_required_class + '.' if __h5p_required_class else '') + __h5p_required_name
+        def __h5p_attr_present(name):
+            if __h5p_required_class:
+                return (__h5p_required_class + '.' + name) in __h5p_instance_attrs
+            return name in __h5p_instance_attrs
+        __h5p_private_present = __h5p_attr_present('_' + __h5p_required_name) or __h5p_attr_present('__' + __h5p_required_name)
+        __h5p_public_present = __h5p_attr_present(__h5p_required_name)
+        if not __h5p_private_present:
+            __h5p_violations.append('Required private attribute: ' + __h5p_label)
+        elif __h5p_public_present:
+            __h5p_violations.append('Attribute must not also be public: ' + __h5p_label)
+    for __h5p_prop_required in __h5p_constraints.get('requiredProperties', []):
+        __h5p_required_class = __h5p_prop_required.get('className') or ''
+        __h5p_required_name = __h5p_prop_required.get('attributeName') or ''
+        __h5p_require_setter = __h5p_prop_required.get('requireSetter') is True
+        __h5p_label = (__h5p_required_class + '.' if __h5p_required_class else '') + __h5p_required_name
+        __h5p_matching_props = [
+            info for (__h5p_prop_class, __h5p_prop_name), info in __h5p_properties.items()
+            if __h5p_prop_name == __h5p_required_name and (not __h5p_required_class or __h5p_prop_class == __h5p_required_class)
+        ]
+        if not any(info['getter'] for info in __h5p_matching_props):
+            __h5p_violations.append('Required property getter: ' + __h5p_label)
+        elif __h5p_require_setter and not any(info['setter'] for info in __h5p_matching_props):
+            __h5p_violations.append('Required property setter: ' + __h5p_label)
+    __h5p_protected_names = __h5p_constraints.get('protectedAttributeNames') or []
+    if __h5p_protected_names:
+        for __h5p_node in ast.walk(__h5p_tree):
+            if isinstance(__h5p_node, ast.Attribute) and __h5p_node.attr in __h5p_protected_names:
+                __h5p_is_self_access = isinstance(__h5p_node.value, ast.Name) and __h5p_node.value.id == 'self'
+                if not __h5p_is_self_access: __h5p_violations.append('External access to protected attribute: ' + __h5p_node.attr)
     __h5p_result = {'passed': not __h5p_violations, 'violations': __h5p_violations}
 except Exception as __h5p_error:
-    __h5p_result = {'passed': False, 'violations': ['Constraint analysis failed: ' + type(__h5p_error).__name__]}
+    __h5p_message = str(__h5p_error) or type(__h5p_error).__name__
+    __h5p_result = {'passed': False, 'violations': ['Constraint analysis failed: ' + type(__h5p_error).__name__ + ': ' + __h5p_message]}
 print('${RESULT_PREFIX}${token}:' + json.dumps(__h5p_result))
 ` };
 };

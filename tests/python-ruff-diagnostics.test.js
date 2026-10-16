@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DEFAULT_RUFF_SETTINGS,
   getOffsetFromRuffLocation,
   getPythonRuffInlineDiagnostics,
   mapRuffDiagnosticsToInlineDiagnostics,
   shouldShowRuffDiagnostic,
 } from '../src/scripts/services/python-ruff-diagnostics.js';
+import { PYODIDE_PYTHON_VERSION } from '../src/scripts/services/python-runtime-version.js';
 
 describe('Python Ruff diagnostics', () => {
+  it('targets the same Python version Pyodide actually runs', () => {
+    expect(DEFAULT_RUFF_SETTINGS['target-version']).toBe(`py${PYODIDE_PYTHON_VERSION.replace('.', '')}`);
+  });
+
   it('converts Ruff locations to string offsets', () => {
     const code = 'first\nsecond\nthird';
 

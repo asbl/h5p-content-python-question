@@ -1,13 +1,17 @@
-const DEFAULT_RUFF_SETTINGS = Object.freeze({
+import { getOffsetFromLineColumn } from './python-diagnostics';
+import { PYODIDE_PYTHON_VERSION } from './python-runtime-version';
+
+export const DEFAULT_RUFF_SETTINGS = Object.freeze({
   'line-length': 88,
   'indent-width': 4,
+  'target-version': `py${PYODIDE_PYTHON_VERSION.replace('.', '')}`,
   lint: {
     select: ['ANN'],
   },
 });
 
 let ruffRuntimePromise = null;
-let ruffWorkspace = null;
+let ruffWorkspaceCache = new Map();
 
 /**
  * Loads Ruff's browser-friendly WASM bundle once.
@@ -25,19 +29,23 @@ async function loadRuffRuntime() {
 }
 
 /**
- * Returns a shared Ruff workspace instance.
+ * Returns a Ruff workspace instance for the given settings, reusing a
+ * previously created one for the same settings instead of always returning
+ * whichever workspace happened to be built first.
  * @param {object} [settings] Ruff settings.
  * @returns {Promise<object>} Ruff workspace.
  */
 async function getRuffWorkspace(settings = DEFAULT_RUFF_SETTINGS) {
-  if (ruffWorkspace) {
-    return ruffWorkspace;
+  const cacheKey = JSON.stringify(settings);
+  if (ruffWorkspaceCache.has(cacheKey)) {
+    return ruffWorkspaceCache.get(cacheKey);
   }
 
   const { Workspace, PositionEncoding } = await loadRuffRuntime();
   const encoding = PositionEncoding?.UTF16 ?? PositionEncoding?.Utf16 ?? 1;
-  ruffWorkspace = new Workspace(settings, encoding);
-  return ruffWorkspace;
+  const workspace = new Workspace(settings, encoding);
+  ruffWorkspaceCache.set(cacheKey, workspace);
+  return workspace;
 }
 
 /**
@@ -47,21 +55,11 @@ async function getRuffWorkspace(settings = DEFAULT_RUFF_SETTINGS) {
  * @returns {number} Offset in code.
  */
 export function getOffsetFromRuffLocation(code = '', location = {}) {
-  const source = String(code || '');
-  const targetRow = Math.max(1, Number(location.row) || 1);
-  const targetColumn = Math.max(0, Number(location.column) || 0);
-  let row = 1;
-  let offset = 0;
-
-  while (row < targetRow && offset < source.length) {
-    const char = source[offset];
-    offset += 1;
-    if (char === '\n') {
-      row += 1;
-    }
-  }
-
-  return Math.min(source.length, offset + targetColumn);
+  return getOffsetFromLineColumn(
+    code,
+    { line: location.row, column: location.column },
+    { zeroBasedColumn: true }
+  );
 }
 
 /**
@@ -132,5 +130,5 @@ export async function getPythonRuffInlineDiagnostics(code = '', options = {}) {
  */
 export function resetPythonRuffDiagnosticsForTests() {
   ruffRuntimePromise = null;
-  ruffWorkspace = null;
+  ruffWorkspaceCache = new Map();
 }

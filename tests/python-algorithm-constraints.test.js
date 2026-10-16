@@ -93,6 +93,18 @@ describe('algorithm constraint harness', () => {
     expect(result.violations).not.toContain('Forbidden call: eval');
   });
 
+  it('also accepts forbiddenCalls as an array instead of a comma-separated string', () => {
+    const result = runConstraintHarness([
+      'def answer(values):',
+      '    print(values)',
+      '    return values',
+    ].join('\n'), {
+      forbiddenCalls: ['print', 'eval'],
+    });
+
+    expect(result.violations).toContain('Forbidden call: print');
+  });
+
   it('normalizes required and forbidden data-structure configuration entries', () => {
     const result = runConstraintHarness([
       'def answer(values):',
@@ -237,6 +249,26 @@ describe('algorithm constraint harness', () => {
     expect(result).toEqual({ passed: true, violations: [] });
   });
 
+  it('strips cls from classmethod parameters just like self on instance methods', () => {
+    const result = runConstraintHarness([
+      'class BankAccount:',
+      '    @classmethod',
+      '    def from_owner(cls, owner):',
+      '        return cls(owner)',
+      '    def __init__(self, owner):',
+      '        self.owner = owner',
+      '',
+      'def answer():',
+      '    return BankAccount.from_owner("Ada")',
+    ].join('\n'), {
+      requiredMethods: [
+        { className: 'BankAccount', methodName: 'from_owner', parameters: ['owner'] },
+      ],
+    });
+
+    expect(result).toEqual({ passed: true, violations: [] });
+  });
+
   it('reports structured OOP parameter and attribute mismatches', () => {
     const result = runConstraintHarness([
       'class Other:',
@@ -313,9 +345,201 @@ describe('algorithm constraint harness', () => {
       requireReturn: true,
     });
 
-    expect(result).toEqual({
-      passed: false,
-      violations: ['Constraint analysis failed: SyntaxError'],
+    expect(result.passed).toBe(false);
+    expect(result.violations).toHaveLength(1);
+    expect(result.violations[0]).toMatch(/^Constraint analysis failed: SyntaxError: /);
+  });
+
+  it('requires parameter and return type hints on every function and method', () => {
+    const result = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def __init__(self, owner):',
+      '        self.owner = owner',
+      '    def deposit(self, amount):',
+      '        return amount',
+    ].join('\n'), {
+      requireParameterAnnotations: true,
+      requireReturnAnnotation: true,
     });
+
+    expect(result.violations).toEqual(expect.arrayContaining([
+      'Missing parameter type hint: __init__(owner)',
+      'Missing parameter type hint: deposit(amount)',
+      'Missing return type hint: deposit',
+    ]));
+    // __init__ is exempt from the return-annotation requirement.
+    expect(result.violations).not.toContain('Missing return type hint: __init__');
+  });
+
+  it('passes when every parameter and return type is annotated', () => {
+    const result = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def __init__(self, owner: str) -> None:',
+      '        self.owner = owner',
+      '    def deposit(self, amount: float) -> float:',
+      '        return amount',
+    ].join('\n'), {
+      requireParameterAnnotations: true,
+      requireReturnAnnotation: true,
+    });
+
+    expect(result).toEqual({ passed: true, violations: [] });
+  });
+
+  it('checks exact parameter and return types for required typed methods', () => {
+    const passing = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def deposit(self, amount: float) -> float:',
+      '        return amount',
+    ].join('\n'), {
+      requiredTypedMethods: [{
+        className: 'BankAccount',
+        methodName: 'deposit',
+        parameters: [{ name: 'amount', type: 'float' }],
+        returnType: 'float',
+      }],
+    });
+    expect(passing).toEqual({ passed: true, violations: [] });
+
+    const wrongType = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def deposit(self, amount: int) -> float:',
+      '        return amount',
+    ].join('\n'), {
+      requiredTypedMethods: [{
+        className: 'BankAccount',
+        methodName: 'deposit',
+        parameters: [{ name: 'amount', type: 'float' }],
+        returnType: 'float',
+      }],
+    });
+    expect(wrongType.violations).toContain('Required typed method: BankAccount.deposit(amount: float) -> float');
+
+    const missingMethod = runConstraintHarnessWithoutFunctionName('class BankAccount:\n    pass', {
+      requiredTypedMethods: [{ className: 'BankAccount', methodName: 'deposit' }],
+    });
+    expect(missingMethod.violations).toContain('Required method: BankAccount.deposit');
+  });
+
+  it('requires a leading-underscore attribute name and rejects a public duplicate', () => {
+    const passing = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def __init__(self, balance):',
+      '        self._balance = balance',
+    ].join('\n'), {
+      requiredPrivateAttributes: [{ className: 'BankAccount', attributeName: 'balance' }],
+    });
+    expect(passing).toEqual({ passed: true, violations: [] });
+
+    const stillPublic = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def __init__(self, balance):',
+      '        self.balance = balance',
+    ].join('\n'), {
+      requiredPrivateAttributes: [{ className: 'BankAccount', attributeName: 'balance' }],
+    });
+    expect(stillPublic.violations).toContain('Required private attribute: BankAccount.balance');
+
+    const both = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def __init__(self, balance):',
+      '        self._balance = balance',
+      '        self.balance = balance',
+    ].join('\n'), {
+      requiredPrivateAttributes: [{ className: 'BankAccount', attributeName: 'balance' }],
+    });
+    expect(both.violations).toContain('Attribute must not also be public: BankAccount.balance');
+  });
+
+  it('requires an @property getter and optionally a matching setter', () => {
+    const passing = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def __init__(self, balance):',
+      '        self._balance = balance',
+      '    @property',
+      '    def balance(self):',
+      '        return self._balance',
+      '    @balance.setter',
+      '    def balance(self, value):',
+      '        self._balance = value',
+    ].join('\n'), {
+      requiredProperties: [{ className: 'BankAccount', attributeName: 'balance', requireSetter: true }],
+    });
+    expect(passing).toEqual({ passed: true, violations: [] });
+
+    const getterOnly = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def __init__(self, balance):',
+      '        self._balance = balance',
+      '    @property',
+      '    def balance(self):',
+      '        return self._balance',
+    ].join('\n'), {
+      requiredProperties: [{ className: 'BankAccount', attributeName: 'balance', requireSetter: true }],
+    });
+    expect(getterOnly.violations).toContain('Required property setter: BankAccount.balance');
+
+    const noProperty = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def __init__(self, balance):',
+      '        self._balance = balance',
+      '    def get_balance(self):',
+      '        return self._balance',
+    ].join('\n'), {
+      requiredProperties: [{ className: 'BankAccount', attributeName: 'balance' }],
+    });
+    expect(noProperty.violations).toContain('Required property getter: BankAccount.balance');
+  });
+
+  it('flags external direct access to protected attributes but allows self access', () => {
+    const result = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def __init__(self, balance):',
+      '        self._balance = balance',
+      '    def deposit(self, amount):',
+      '        self._balance += amount',
+      '        return self._balance',
+      '',
+      'account = BankAccount(10)',
+      'print(account._balance)',
+    ].join('\n'), {
+      protectedAttributeNames: '_balance',
+    });
+
+    expect(result.violations).toContain('External access to protected attribute: _balance');
+    expect(result.violations.filter((v) => v.includes('_balance')).length).toBe(1);
+  });
+
+  it('does not flag protected attributes when accessed only through self', () => {
+    const result = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def __init__(self, balance):',
+      '        self._balance = balance',
+      '    def deposit(self, amount):',
+      '        self._balance += amount',
+      '        return self._balance',
+      '',
+      'account = BankAccount(10)',
+      'print(account.deposit(5))',
+    ].join('\n'), {
+      protectedAttributeNames: '_balance',
+    });
+
+    expect(result).toEqual({ passed: true, violations: [] });
+  });
+
+  it('also accepts protectedAttributeNames as an array instead of a comma-separated string', () => {
+    const result = runConstraintHarnessWithoutFunctionName([
+      'class BankAccount:',
+      '    def __init__(self, balance):',
+      '        self._balance = balance',
+      '',
+      'account = BankAccount(10)',
+      'print(account._balance)',
+    ].join('\n'), {
+      protectedAttributeNames: ['_balance'],
+    });
+
+    expect(result.violations).toContain('External access to protected attribute: _balance');
   });
 });
