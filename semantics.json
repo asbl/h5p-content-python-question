@@ -1102,7 +1102,80 @@
                     { "name": "requireConstructor", "type": "boolean", "label": "Require constructor (__init__)", "default": false },
                     { "name": "requireObjectInstantiation", "type": "boolean", "label": "Require object instantiation", "default": false },
                     { "name": "requireInheritance", "type": "boolean", "label": "Require inheritance", "default": false },
-                    { "name": "forbidInheritance", "type": "boolean", "label": "Forbid inheritance", "default": false }
+                    { "name": "forbidInheritance", "type": "boolean", "label": "Forbid inheritance", "default": false },
+                    { "name": "requireParameterAnnotations", "type": "boolean", "label": "Require parameter type hints", "description": "Every function and method parameter (except self/cls) must have a type annotation, for example 'def deposit(self, amount: float)'.", "default": false },
+                    { "name": "requireReturnAnnotation", "type": "boolean", "label": "Require return type hints", "description": "Every function and method must declare a return type, for example '-> float'. __init__ is exempt, since it conventionally has none.", "default": false },
+                    {
+                        "name": "requiredTypedMethods",
+                        "type": "list",
+                        "label": "Required typed methods",
+                        "entity": "typed method",
+                        "optional": true,
+                        "description": "Checks exact parameter and/or return types for one method, in addition to its name.",
+                        "field": {
+                            "name": "requiredTypedMethod",
+                            "type": "group",
+                            "label": "Required typed method",
+                            "fields": [
+                                { "name": "className", "type": "text", "label": "Class name", "description": "Optional class name. Leave empty to accept the method in any class.", "optional": true },
+                                { "name": "methodName", "type": "text", "label": "Method name", "description": "Required method name, for example deposit." },
+                                {
+                                    "name": "parameters",
+                                    "type": "list",
+                                    "label": "Parameters",
+                                    "entity": "parameter",
+                                    "optional": true,
+                                    "description": "Checked in order, without self. Leave type empty to only require the parameter's name.",
+                                    "field": {
+                                        "name": "parameter",
+                                        "type": "group",
+                                        "label": "Parameter",
+                                        "fields": [
+                                            { "name": "name", "type": "text", "label": "Parameter name", "description": "For example amount." },
+                                            { "name": "type", "type": "text", "label": "Required type annotation", "description": "Exact annotation text, for example float or List[int]. Leave empty to only check the name.", "optional": true }
+                                        ]
+                                    }
+                                },
+                                { "name": "returnType", "type": "text", "label": "Required return type", "description": "Exact return annotation text, for example float. Leave empty to not check the return type.", "optional": true }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "requiredPrivateAttributes",
+                        "type": "list",
+                        "label": "Required private attributes",
+                        "entity": "private attribute",
+                        "optional": true,
+                        "description": "Checks that the attribute is stored under a leading-underscore name (_name or __name), not as a public attribute of the same name.",
+                        "field": {
+                            "name": "requiredPrivateAttribute",
+                            "type": "group",
+                            "label": "Required private attribute",
+                            "fields": [
+                                { "name": "className", "type": "text", "label": "Class name", "description": "Optional class name. Leave empty to accept the attribute in any class.", "optional": true },
+                                { "name": "attributeName", "type": "text", "label": "Attribute name", "description": "Conceptual attribute name without underscore, for example balance." }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "requiredProperties",
+                        "type": "list",
+                        "label": "Required properties",
+                        "entity": "property",
+                        "optional": true,
+                        "description": "Checks for an @property getter, and optionally a matching @x.setter.",
+                        "field": {
+                            "name": "requiredProperty",
+                            "type": "group",
+                            "label": "Required property",
+                            "fields": [
+                                { "name": "className", "type": "text", "label": "Class name", "description": "Optional class name. Leave empty to accept the property in any class.", "optional": true },
+                                { "name": "attributeName", "type": "text", "label": "Property name", "description": "For example balance." },
+                                { "name": "requireSetter", "type": "boolean", "label": "Also require a setter", "default": false }
+                            ]
+                        }
+                    },
+                    { "name": "protectedAttributeNames", "type": "text", "label": "Forbid external access to these attributes", "description": "Comma-separated attribute names, for example balance. Flags any obj.attribute access outside of self.attribute inside the class's own methods. This is a heuristic based on the literal attribute name, not full data-flow analysis.", "optional": true }
                 ]
             },
             {
