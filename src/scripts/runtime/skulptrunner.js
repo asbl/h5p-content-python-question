@@ -7,7 +7,6 @@ import { normalizePythonExecutionLimit } from '../services/python-execution-limi
 import {
   createPythonRuntimeError,
   createPythonRuntimeResult,
-  formatPythonRuntimeError,
 } from './python-runtime-result';
 import { ensureP5Script } from './services/p5-runtime-service';
 import { ensureSkulptRuntime } from './services/skulpt-runtime-service';
@@ -359,8 +358,12 @@ export default class SkulptRunner {
           line: trace?.lineno ?? '?',
           column: trace?.colno ?? '?',
         })),
+        diagnostics: trace?.lineno ? [`line ${trace.lineno}`] : [],
       });
-      this.runtime.onError(formatPythonRuntimeError(runtimeError));
+      this.runtime.onError({
+        ...runtimeError,
+        line: trace?.lineno ?? null,
+      });
     }
     catch {
       console.warn('Unhandled Skulpt error', error);

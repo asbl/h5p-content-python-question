@@ -8,7 +8,6 @@ import { normalizePythonExecutionLimit } from '../services/python-execution-limi
 import {
   createPythonRuntimeError,
   createPythonRuntimeResult,
-  formatPythonRuntimeError,
 } from './python-runtime-result';
 import {
   getImportedPyodidePackages,
@@ -555,9 +554,11 @@ export default class PyodideRunner {
         ? this.getExecutionLimitMessage()
         : addPythonErrorHint(this.l10n, String(error?.message || error?.toString?.() || error)),
     });
-    this.runtime.onError(
-      formatPythonRuntimeError(runtimeError),
-    );
+    this.runtime.onError({
+      ...runtimeError,
+      line: error?.lineno ?? error?.lineNumber ?? error?.traceback?.at?.(-1)?.lineno ?? null,
+      traceback: error?.traceback,
+    });
   }
 
   /**

@@ -131,7 +131,11 @@ describe('SkulptRunner', () => {
       traceback: [{ lineno: 4, colno: 3 }],
     });
 
-    expect(runtime.onError).toHaveBeenCalledWith(expect.stringContaining('Hint: This name is unknown.'));
+    expect(runtime.onError).toHaveBeenCalledWith(expect.objectContaining({
+      diagnostics: ['line 4'],
+      line: 4,
+      message: expect.stringContaining('Hint: This name is unknown.'),
+    }));
   });
 
   it('loads hosted Skulpt and p5 runtimes before executing p5 code', async () => {
