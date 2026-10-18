@@ -84,3 +84,28 @@ canvas.pyodide-sdl-canvas:focus {
     border: 0;
     background-color: #fff;
 }
+
+/* Diagnostics loading indicator, shown while the Ruff/Pyrefly WASM runtimes load */
+.h5p-codequestion .python-diagnostics-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px;
+    padding: 6px 10px;
+    font-size: 0.85em;
+    color: #6b5514;
+    background-color: #fdf6e3;
+    border: 1px solid #e4d194;
+    border-radius: 4px;
+    line-height: 1.4;
+}
+
+.h5p-codequestion .python-diagnostics-status.is-hidden {
+    display: none;
+}
+
+.h5p-codequestion.theme-dark .python-diagnostics-status {
+    color: #e6d08c;
+    background-color: #3a3220;
+    border-color: #5c4f28;
+}

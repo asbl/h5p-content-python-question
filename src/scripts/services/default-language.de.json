@@ -27,6 +27,7 @@
     "skulptFileNotFound": "Datei nicht gefunden: {file}",
     "skulptP5Missing": "p5.js ist nicht geladen.",
     "pythonTutor": "Visualisieren",
-    "pythonTutorPrivacyHint": "Die schrittweise Visualisierung öffnet pythontutor.com in einem eingebetteten Frame. Dein aktueller Code wird dazu an pythontutor.com gesendet, um die Visualisierung zu erzeugen."
+    "pythonTutorPrivacyHint": "Die schrittweise Visualisierung öffnet pythontutor.com in einem eingebetteten Frame. Dein aktueller Code wird dazu an pythontutor.com gesendet, um die Visualisierung zu erzeugen.",
+    "pythonDiagnosticsLoading": "Die IDE lädt noch die Typprüfungswerkzeuge. Stil- und Typhinweise erscheinen in Kürze im Editor."
   }
 }

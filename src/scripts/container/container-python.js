@@ -32,6 +32,8 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
     this._pyreflyDiagnosticsRequestId = 0;
     this._ruffInlineDiagnostics = [];
     this._pyreflyInlineDiagnostics = [];
+    this._pythonDiagnosticsPendingTools = new Set();
+    this._pythonDiagnosticsStatusDOM = null;
   }
 
   applyPythonAutocomplete() {
@@ -70,6 +72,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
       return;
     }
 
+    (this._pythonDiagnosticsPendingTools ??= new Set()).add('ruff');
     this.installPythonRuffDiagnosticsHooks();
     this.schedulePythonRuffDiagnostics(0);
   }
@@ -118,6 +121,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
 
     const input = this.getPythonDiagnosticInput();
     if (!input) {
+      this.markPythonDiagnosticsToolReady('ruff');
       return;
     }
 
@@ -144,6 +148,8 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
         console.warn('PythonQuestion Ruff diagnostics failed', error);
       }
     }
+
+    this.markPythonDiagnosticsToolReady('ruff');
   }
 
   shouldUsePythonPyreflyDiagnostics() {
@@ -155,6 +161,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
       return;
     }
 
+    (this._pythonDiagnosticsPendingTools ??= new Set()).add('pyrefly');
     this.installPythonPyreflyDiagnosticsHooks();
     this.schedulePythonPyreflyDiagnostics(0);
   }
@@ -203,6 +210,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
 
     const input = this.getPythonDiagnosticInput();
     if (!input) {
+      this.markPythonDiagnosticsToolReady('pyrefly');
       return;
     }
 
@@ -231,6 +239,8 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
         console.warn('PythonQuestion Pyrefly diagnostics failed', error);
       }
     }
+
+    this.markPythonDiagnosticsToolReady('pyrefly');
   }
 
   /**
@@ -244,6 +254,80 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
       .sort((left, right) => left.from - right.from || left.to - right.to);
 
     this.getEditorManager?.()?.setInlineDiagnostics?.(merged);
+  }
+
+  /**
+   * Marks a diagnostics tool as loaded after its first analysis run settled,
+   * hiding the loading indicator once no enabled tool is pending anymore.
+   * @param {string} tool Tool identifier, 'ruff' or 'pyrefly'.
+   * @returns {void}
+   */
+  markPythonDiagnosticsToolReady(tool) {
+    this._pythonDiagnosticsPendingTools?.delete?.(tool);
+    this.updatePythonDiagnosticsStatus();
+  }
+
+  /**
+   * Returns the loading indicator shown while Ruff/Pyrefly WASM runtimes load.
+   * @returns {HTMLElement} Status indicator element.
+   */
+  getPythonDiagnosticsStatusDOM() {
+    if (this._pythonDiagnosticsStatusDOM) {
+      return this._pythonDiagnosticsStatusDOM;
+    }
+
+    const status = document.createElement('div');
+    status.className = 'python-diagnostics-status';
+    status.setAttribute('role', 'status');
+
+    const icon = document.createElement('span');
+    icon.className = 'python-diagnostics-status-icon fa-solid fa-triangle-exclamation';
+    icon.setAttribute('aria-hidden', 'true');
+
+    const text = document.createElement('span');
+    text.className = 'python-diagnostics-status-text';
+    text.textContent = getPythonL10nValue(this.l10n, 'pythonDiagnosticsLoading');
+
+    status.append(icon, text);
+    this._pythonDiagnosticsStatusDOM = status;
+    return status;
+  }
+
+  /**
+   * Inserts the diagnostics loading indicator above the editor on the code
+   * page, but only while at least one diagnostics tool is still loading.
+   * @returns {void}
+   */
+  mountPythonDiagnosticsStatus() {
+    if (this._pythonDiagnosticsStatusDOM || !this._pythonDiagnosticsPendingTools?.size) {
+      return;
+    }
+
+    const codePage = this.getPageManager?.()?.getPage?.('code');
+    if (!codePage) {
+      return;
+    }
+
+    const editorWrapper = codePage.querySelector('.container-code');
+    if (editorWrapper) {
+      editorWrapper.insertAdjacentElement('beforebegin', this.getPythonDiagnosticsStatusDOM());
+    }
+    else {
+      codePage.appendChild(this.getPythonDiagnosticsStatusDOM());
+    }
+
+    this.updatePythonDiagnosticsStatus();
+  }
+
+  /**
+   * Shows or hides the diagnostics loading indicator based on pending tools.
+   * @returns {void}
+   */
+  updatePythonDiagnosticsStatus() {
+    this._pythonDiagnosticsStatusDOM?.classList?.toggle(
+      'is-hidden',
+      !this._pythonDiagnosticsPendingTools?.size
+    );
   }
 
   shouldShowConsoleBelowCanvas() {
@@ -301,6 +385,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
     this.applyPythonAutocomplete();
     this.applyPythonRuffDiagnostics();
     this.applyPythonPyreflyDiagnostics();
+    this.mountPythonDiagnosticsStatus();
   }
 
   getUIRegistrations() {

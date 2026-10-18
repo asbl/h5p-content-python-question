@@ -276,6 +276,78 @@ describe('PythonCodeContainer', () => {
     ]);
   });
 
+  it('shows a loading indicator until Ruff and Pyrefly finished their first run', async () => {
+    vi.useFakeTimers();
+    const PythonCodeContainer = await loadContainerClass();
+    const container = Object.create(PythonCodeContainer.prototype);
+    const codePage = document.createElement('section');
+    const editorWrapper = document.createElement('div');
+    editorWrapper.className = 'container container-code';
+    codePage.appendChild(editorWrapper);
+    document.body.appendChild(codePage);
+
+    const workspace = { check: vi.fn(() => []) };
+    const state = {
+      updateSandboxFiles: vi.fn(),
+      setActiveFile: vi.fn(),
+      getErrors: vi.fn(() => []),
+    };
+    const editorManager = {
+      onChangeCallback: vi.fn(),
+      getActiveFile: vi.fn(() => ({
+        name: 'main.py',
+        code: 'print("Hello World")\n',
+        isEntry: true,
+      })),
+      getNormalizedPreCode: vi.fn(() => ''),
+      getWorkspaceFiles: vi.fn(() => []),
+      setInlineDiagnostics: vi.fn(),
+      setActiveFile: vi.fn(),
+    };
+
+    container.options = {
+      getRuffWorkspace: vi.fn(() => workspace),
+      enablePyreflyDiagnostics: true,
+      getPyreflyState: vi.fn(() => state),
+    };
+    container.l10n = { pythonDiagnosticsLoading: 'Loading type checking tools...' };
+    container.getEditorManager = vi.fn(() => editorManager);
+    container.getPageManager = vi.fn(() => ({ getPage: () => codePage }));
+
+    container.applyPythonRuffDiagnostics();
+    container.applyPythonPyreflyDiagnostics();
+    container.mountPythonDiagnosticsStatus();
+
+    const status = codePage.querySelector('.python-diagnostics-status');
+    expect(status).not.toBeNull();
+    expect(status.classList.contains('is-hidden')).toBe(false);
+    expect(editorWrapper.previousElementSibling).toBe(status);
+    expect(status.textContent).toContain('Loading type checking tools');
+
+    await vi.runOnlyPendingTimersAsync();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(status.classList.contains('is-hidden')).toBe(true);
+  });
+
+  it('does not mount the loading indicator when no diagnostics tool is enabled', async () => {
+    const PythonCodeContainer = await loadContainerClass();
+    const container = Object.create(PythonCodeContainer.prototype);
+    const codePage = document.createElement('section');
+    document.body.appendChild(codePage);
+
+    container.options = { enableRuffDiagnostics: false };
+    container.getPageManager = vi.fn(() => ({ getPage: () => codePage }));
+
+    container.applyPythonRuffDiagnostics();
+    container.applyPythonPyreflyDiagnostics();
+    container.mountPythonDiagnosticsStatus();
+
+    expect(codePage.querySelector('.python-diagnostics-status')).toBeNull();
+  });
+
   it('moves the console below the canvas and restores it to the code page', async () => {
     const PythonCodeContainer = await loadContainerClass();
     const container = Object.create(PythonCodeContainer.prototype);
