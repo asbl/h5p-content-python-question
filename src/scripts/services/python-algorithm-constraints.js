@@ -40,6 +40,7 @@ export const getAlgorithmConstraintHarness = (source, constraints = {}, function
     .map((value) => ({
       className: String(value?.className || '').trim(),
       attributeName: String(value?.attributeName ?? value?.name ?? value ?? '').trim(),
+      type: String(value?.type || '').trim(),
     }))
     .filter((entry) => entry.attributeName);
   const normalizeTypedParameterList = (values) => (Array.isArray(values) ? values : [])
@@ -148,6 +149,7 @@ try:
     __h5p_typed_method_specs = []
     __h5p_properties = {}
     __h5p_instance_attrs = set()
+    __h5p_typed_instance_attrs = set()
     __h5p_instantiated_classes = set()
     def __h5p_annotation_text(node):
         try:
@@ -156,6 +158,8 @@ try:
             return ''
     for __h5p_class in __h5p_classes:
         for __h5p_member in __h5p_class.body:
+            if isinstance(__h5p_member, ast.AnnAssign) and isinstance(__h5p_member.target, ast.Name):
+                __h5p_typed_instance_attrs.add((__h5p_class.name, __h5p_member.target.id, __h5p_annotation_text(__h5p_member.annotation)))
             if isinstance(__h5p_member, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 __h5p_methods.add(__h5p_member.name)
                 __h5p_methods.add(__h5p_class.name + '.' + __h5p_member.name)
@@ -188,6 +192,8 @@ try:
                     __h5p_properties.setdefault(__h5p_setter_key, {'getter': False, 'setter': False})
                     __h5p_properties[__h5p_setter_key]['setter'] = True
                 for __h5p_node in ast.walk(__h5p_member):
+                    if isinstance(__h5p_node, ast.AnnAssign) and isinstance(__h5p_node.target, ast.Attribute) and isinstance(__h5p_node.target.value, ast.Name) and __h5p_node.target.value.id == 'self':
+                        __h5p_typed_instance_attrs.add((__h5p_class.name, __h5p_node.target.attr, __h5p_annotation_text(__h5p_node.annotation)))
                     __h5p_targets = []
                     if isinstance(__h5p_node, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
                         if isinstance(__h5p_node, ast.Assign):
@@ -232,6 +238,9 @@ try:
         __h5p_label = (__h5p_required_class + '.' if __h5p_required_class else '') + __h5p_required_name
         if (__h5p_required_class and __h5p_label not in __h5p_instance_attrs) or (not __h5p_required_class and __h5p_required_name not in __h5p_instance_attrs):
             __h5p_violations.append('Required instance attribute: ' + __h5p_label)
+        __h5p_required_type = __h5p_required_attribute.get('type') or ''
+        if __h5p_required_type and not any(attribute == __h5p_required_name and annotation == __h5p_required_type and (not __h5p_required_class or class_name == __h5p_required_class) for class_name, attribute, annotation in __h5p_typed_instance_attrs):
+            __h5p_violations.append('Required typed attribute: ' + __h5p_label + ': ' + __h5p_required_type)
     if __h5p_constraints.get('requireConstructor') and '__init__' not in __h5p_methods: __h5p_violations.append('Constructor required')
     if __h5p_constraints.get('requireObjectInstantiation') and not __h5p_instantiated_classes: __h5p_violations.append('Object instantiation required')
     __h5p_has_inheritance = any(len(n.bases) > 0 for n in __h5p_classes)

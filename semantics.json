@@ -1095,7 +1095,8 @@
                             "label": "Required instance attribute",
                             "fields": [
                                 { "name": "className", "type": "text", "label": "Class name", "description": "Optional class name. Leave empty to accept the attribute in any class.", "optional": true },
-                                { "name": "attributeName", "type": "text", "label": "Attribute name", "description": "Required self attribute name, for example balance." }
+                                { "name": "attributeName", "type": "text", "label": "Attribute name", "description": "Required self attribute name, for example balance." },
+                                { "name": "type", "type": "text", "label": "Required type annotation", "description": "Optional exact annotation, for example bool or list[str]. Accepts self annotations in methods or declarations in the class body.", "optional": true }
                             ]
                         }
                     },

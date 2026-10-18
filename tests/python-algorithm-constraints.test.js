@@ -421,6 +421,38 @@ describe('algorithm constraint harness', () => {
     expect(missingMethod.violations).toContain('Required method: BankAccount.deposit');
   });
 
+  it('checks required attribute annotations in methods or class declarations', () => {
+    const constraints = { requiredAttributes: [{ className: 'Tuerschloss', attributeName: '_offen', type: 'bool' }] };
+    for (const source of [
+      'class Tuerschloss:\n    def __init__(self):\n        self._offen: bool = False',
+      'class Tuerschloss:\n    _offen: bool\n    def __init__(self):\n        self._offen = False',
+    ]) {
+      expect(runConstraintHarnessWithoutFunctionName(source, constraints)).toEqual({ passed: true, violations: [] });
+    }
+  });
+
+  it('rejects missing or incorrect attribute annotations and annotations in another class', () => {
+    const constraints = { requiredAttributes: [{ className: 'Tuerschloss', attributeName: '_offen', type: 'bool' }] };
+    for (const source of [
+      'class Tuerschloss:\n    def __init__(self):\n        self._offen = False',
+      'class Tuerschloss:\n    def __init__(self):\n        self._offen: str = False',
+      'class AndereKlasse:\n    _offen: bool\nclass Tuerschloss:\n    def __init__(self):\n        self._offen = False',
+    ]) {
+      expect(runConstraintHarnessWithoutFunctionName(source, constraints).violations)
+        .toContain('Required typed attribute: Tuerschloss._offen: bool');
+    }
+  });
+
+  it('supports parameterized attribute annotations without requiring a class name', () => {
+    const source = 'class Berechtigungsliste:\n    def __init__(self):\n        self._namen: list[str] = []';
+    expect(runConstraintHarnessWithoutFunctionName(source, {
+      requiredAttributes: [{ attributeName: '_namen', type: 'list[str]' }],
+    })).toEqual({ passed: true, violations: [] });
+    expect(runConstraintHarnessWithoutFunctionName(source.replace('list[str]', 'list[int]'), {
+      requiredAttributes: [{ attributeName: '_namen', type: 'list[str]' }],
+    }).passed).toBe(false);
+  });
+
   it('requires a leading-underscore attribute name and rejects a public duplicate', () => {
     const passing = runConstraintHarnessWithoutFunctionName([
       'class BankAccount:',
