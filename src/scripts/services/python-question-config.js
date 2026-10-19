@@ -230,6 +230,9 @@ export function normalizePythonAdvancedOptions(advancedOptions = {}, pyodideOpti
     skulptCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'skulptCdnUrl'),
     sqlJsUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'sqlJsUrl'),
     pyodideCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'pyodideCdnUrl'),
+    ruffCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'ruffCdnUrl'),
+    pyreflyCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'pyreflyCdnUrl'),
+    pyreflyWasmUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'pyreflyWasmUrl'),
     executionLimit: normalizePythonExecutionLimit(advancedOptions?.execLimit),
   };
 }
@@ -310,6 +313,9 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     fontAwesomeCdnUrl: config?.advancedOptions?.fontAwesomeCdnUrl || '',
     sweetAlertCdnUrl: config?.advancedOptions?.sweetAlertCdnUrl || '',
     jsZipCdnUrl: config?.advancedOptions?.jsZipCdnUrl || '',
+    ruffCdnUrl: config?.advancedOptions?.ruffCdnUrl || '',
+    pyreflyCdnUrl: config?.advancedOptions?.pyreflyCdnUrl || '',
+    pyreflyWasmUrl: config?.advancedOptions?.pyreflyWasmUrl || '',
   };
 }
 

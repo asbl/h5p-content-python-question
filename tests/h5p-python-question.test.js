@@ -110,6 +110,9 @@ describe('PythonQuestion', () => {
         p5CdnUrl: 'https://static.example.com/p5/p5.min.js',
         skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
         sqlJsUrl: 'https://static.example.com/sql.js/sql-wasm.js',
+        ruffCdnUrl: 'https://static.example.com/ruff/ruff_wasm.js',
+        pyreflyCdnUrl: 'https://static.example.com/pyrefly/pyrefly_wasm.js',
+        pyreflyWasmUrl: 'https://static.example.com/pyrefly/pyrefly_wasm_bg.wasm',
         execLimit: 1800,
       },
     }, 42);
@@ -203,6 +206,9 @@ describe('PythonQuestion', () => {
       fontAwesomeCdnUrl: 'https://static.example.com/fontawesome.css',
       sweetAlertCdnUrl: 'https://static.example.com/sweetalert/',
       jsZipCdnUrl: 'https://static.example.com/jszip/',
+      ruffCdnUrl: 'https://static.example.com/ruff/ruff_wasm.js',
+      pyreflyCdnUrl: 'https://static.example.com/pyrefly/pyrefly_wasm.js',
+      pyreflyWasmUrl: 'https://static.example.com/pyrefly/pyrefly_wasm_bg.wasm',
     });
     expect(question.getAdvancedOption('enableSoundUploads')).toBe(true);
     expect(question.getAdvancedOption('missingOption')).toBe(false);
@@ -259,6 +265,9 @@ describe('PythonQuestion', () => {
       fontAwesomeCdnUrl: '',
       sweetAlertCdnUrl: '',
       jsZipCdnUrl: '',
+      ruffCdnUrl: '',
+      pyreflyCdnUrl: '',
+      pyreflyWasmUrl: '',
     });
     expect(question.getRuntimeOptions().executionLimit).toBe(0);
     expect(question.getRuntimeOptions().projectStorageEnabled).toBe(false);

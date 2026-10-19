@@ -69,15 +69,6 @@ module.exports = {
         test: /\.woff$/,
         include: path.join(__dirname, 'src/fonts'),
         type: 'asset/resource'
-      },
-      {
-        test: /\.wasm$/,
-        include: [
-          path.join(__dirname, 'node_modules/@astral-sh/ruff-wasm-web'),
-          path.join(__dirname, 'node_modules/pyrefly-wasm'),
-          path.join(__dirname, 'vendor/pyrefly-wasm')
-        ],
-        type: 'asset/resource'
       }
     ]
   },

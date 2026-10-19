@@ -1,4 +1,8 @@
 import { getOffsetFromLineColumn } from './python-diagnostics';
+import {
+  loadExternalDiagnosticsModule,
+  normalizeRuffRuntimeUrl,
+} from './python-external-diagnostics-runtime';
 import { PYODIDE_PYTHON_VERSION } from './python-runtime-version';
 
 export const DEFAULT_RUFF_SETTINGS = Object.freeze({
@@ -14,15 +18,21 @@ let ruffRuntimePromise = null;
 let ruffWorkspaceCache = new Map();
 
 /**
- * Loads Ruff's browser-friendly WASM bundle once.
+ * Loads Ruff's browser-friendly WASM glue module from its CDN once.
+ * @param {string} [cdnUrl] Configured Ruff runtime URL or directory.
  * @returns {Promise<{Workspace: Function, PositionEncoding: object}>} Ruff runtime exports.
  */
-async function loadRuffRuntime() {
+async function loadRuffRuntime(cdnUrl = '') {
   if (!ruffRuntimePromise) {
-    ruffRuntimePromise = import('@astral-sh/ruff-wasm-web').then(async (runtime) => {
-      await runtime.default();
-      return runtime;
-    });
+    ruffRuntimePromise = loadExternalDiagnosticsModule(normalizeRuffRuntimeUrl(cdnUrl))
+      .then(async (runtime) => {
+        await runtime.default();
+        return runtime;
+      })
+      .catch((error) => {
+        ruffRuntimePromise = null;
+        throw error;
+      });
   }
 
   return ruffRuntimePromise;
@@ -33,15 +43,16 @@ async function loadRuffRuntime() {
  * previously created one for the same settings instead of always returning
  * whichever workspace happened to be built first.
  * @param {object} [settings] Ruff settings.
+ * @param {string} [cdnUrl] Configured Ruff runtime URL or directory.
  * @returns {Promise<object>} Ruff workspace.
  */
-async function getRuffWorkspace(settings = DEFAULT_RUFF_SETTINGS) {
+async function getRuffWorkspace(settings = DEFAULT_RUFF_SETTINGS, cdnUrl = '') {
   const cacheKey = JSON.stringify(settings);
   if (ruffWorkspaceCache.has(cacheKey)) {
     return ruffWorkspaceCache.get(cacheKey);
   }
 
-  const { Workspace, PositionEncoding } = await loadRuffRuntime();
+  const { Workspace, PositionEncoding } = await loadRuffRuntime(cdnUrl);
   const encoding = PositionEncoding?.UTF16 ?? PositionEncoding?.Utf16 ?? 1;
   const workspace = new Workspace(settings, encoding);
   ruffWorkspaceCache.set(cacheKey, workspace);
@@ -112,13 +123,14 @@ export function mapRuffDiagnosticsToInlineDiagnostics(code = '', diagnostics = [
  * @param {object} [options] Analysis options.
  * @param {number} [options.offset] Offset to add to diagnostics.
  * @param {object} [options.settings] Ruff settings.
+ * @param {string} [options.ruffCdnUrl] Configured Ruff runtime URL or directory.
  * @param {function} [options.getWorkspace] Test hook returning a Ruff-compatible workspace.
  * @returns {Promise<Array<object>>} Inline diagnostics.
  */
 export async function getPythonRuffInlineDiagnostics(code = '', options = {}) {
   const workspace = typeof options.getWorkspace === 'function'
     ? await options.getWorkspace()
-    : await getRuffWorkspace(options.settings || DEFAULT_RUFF_SETTINGS);
+    : await getRuffWorkspace(options.settings || DEFAULT_RUFF_SETTINGS, options.ruffCdnUrl);
   const diagnostics = workspace.check(String(code || ''));
 
   return mapRuffDiagnosticsToInlineDiagnostics(code, diagnostics, options.offset || 0);

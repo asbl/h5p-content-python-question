@@ -128,6 +128,7 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
     try {
       const diagnostics = await getPythonRuffInlineDiagnostics(input.code, {
         offset: input.offset,
+        ruffCdnUrl: this.options?.ruffCdnUrl,
         getWorkspace: this.options?.getRuffWorkspace,
       });
 
@@ -219,6 +220,8 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
         offset: input.offset,
         activeFileName: input.activeFileName,
         workspaceFiles: input.workspaceFiles,
+        pyreflyCdnUrl: this.options?.pyreflyCdnUrl,
+        pyreflyWasmUrl: this.options?.pyreflyWasmUrl,
         getState: this.options?.getPyreflyState,
       });
 

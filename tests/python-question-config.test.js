@@ -43,6 +43,9 @@ describe('Python question config', () => {
       p5CdnUrl: 'https://static.example.com/p5/p5.min.js',
       skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
       sqlJsUrl: 'https://cdn.example.com/sql.js/dist/',
+      ruffCdnUrl: 'https://cdn.example.com/ruff/ruff_wasm.js',
+      pyreflyCdnUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm.js',
+      pyreflyWasmUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm_bg.wasm',
       execLimit: 1500.9,
     }, {
       pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
@@ -67,6 +70,9 @@ describe('Python question config', () => {
       skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
       sqlJsUrl: 'https://cdn.example.com/sql.js/dist/',
       pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
+      ruffCdnUrl: 'https://cdn.example.com/ruff/ruff_wasm.js',
+      pyreflyCdnUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm.js',
+      pyreflyWasmUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm_bg.wasm',
       executionLimit: 1500,
     });
   });
@@ -85,6 +91,9 @@ describe('Python question config', () => {
       skulpt: https://static.example.com/skulpt/skulpt.min.js
       sqlJs: https://cdn.example.com/sql.js/dist/
       pyodide: https://static.example.com/pyodide/pyodide.js
+      ruff: https://cdn.example.com/ruff/ruff_wasm.js
+      pyrefly: https://cdn.example.com/pyrefly/pyrefly_wasm.js
+      pyreflyWasm: https://cdn.example.com/pyrefly/pyrefly_wasm_bg.wasm
     `;
 
     expect(parseExternalLibraryUrlsYaml(yaml)).toEqual({
@@ -99,6 +108,9 @@ describe('Python question config', () => {
       skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
       sqlJsUrl: 'https://cdn.example.com/sql.js/dist/',
       pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
+      ruffCdnUrl: 'https://cdn.example.com/ruff/ruff_wasm.js',
+      pyreflyCdnUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm.js',
+      pyreflyWasmUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm_bg.wasm',
     });
 
     expect(normalizePythonAdvancedOptions({
@@ -109,6 +121,9 @@ describe('Python question config', () => {
     })).toMatchObject({
       blocklyCdnUrl: 'https://cdn.example.com/blockly/',
       pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
+      ruffCdnUrl: 'https://cdn.example.com/ruff/ruff_wasm.js',
+      pyreflyCdnUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm.js',
+      pyreflyWasmUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm_bg.wasm',
     });
   });
 
@@ -176,6 +191,9 @@ describe('Python question config', () => {
         p5CdnUrl: 'https://static.example.com/p5/p5.min.js',
         skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
         sqlJsUrl: 'https://cdn.example.com/sql.js/dist/',
+        ruffCdnUrl: 'https://cdn.example.com/ruff/ruff_wasm.js',
+        pyreflyCdnUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm.js',
+        pyreflyWasmUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm_bg.wasm',
         execLimit: 2750,
       },
     });
@@ -213,6 +231,9 @@ describe('Python question config', () => {
         skulptCdnUrl: 'https://static.example.com/skulpt/skulpt.min.js',
         sqlJsUrl: 'https://cdn.example.com/sql.js/dist/',
         pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
+        ruffCdnUrl: 'https://cdn.example.com/ruff/ruff_wasm.js',
+        pyreflyCdnUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm.js',
+        pyreflyWasmUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm_bg.wasm',
         executionLimit: 2750,
       },
     });
@@ -283,6 +304,9 @@ describe('Python question config', () => {
       fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
       sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
       jsZipCdnUrl: 'https://cdn.example.com/jszip/',
+      ruffCdnUrl: 'https://cdn.example.com/ruff/ruff_wasm.js',
+      pyreflyCdnUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm.js',
+      pyreflyWasmUrl: 'https://cdn.example.com/pyrefly/pyrefly_wasm_bg.wasm',
     });
 
     expect(buildPythonRuntimeOptions(config, { pyodideReady: 'Ready' })).toEqual({

@@ -1,5 +1,9 @@
 import { PYODIDE_PYTHON_VERSION } from './python-runtime-version';
 import { getOffsetFromLineColumn } from './python-diagnostics';
+import {
+  loadExternalDiagnosticsModule,
+  normalizePyreflyRuntimeUrls,
+} from './python-external-diagnostics-runtime';
 
 const DEFAULT_PYREFLY_PYTHON_VERSION = PYODIDE_PYTHON_VERSION;
 const PYREFLY_DEFAULT_FILENAME = 'main.py';
@@ -8,14 +12,22 @@ let pyreflyRuntimePromise = null;
 let pyreflyStateCache = new Map();
 
 /**
- * Loads Pyrefly's browser-friendly WASM bundle once.
+ * Loads Pyrefly's browser-friendly WASM glue module from its CDN once and
+ * initializes it with the matching WASM binary URL.
+ * @param {string} [cdnUrl] Configured Pyrefly glue module URL or directory.
+ * @param {string} [wasmUrl] Configured Pyrefly WASM binary URL.
  * @returns {Promise<{State: Function}>} Pyrefly runtime exports.
  */
-async function loadPyreflyRuntime() {
+async function loadPyreflyRuntime(cdnUrl = '', wasmUrl = '') {
   if (!pyreflyRuntimePromise) {
-    pyreflyRuntimePromise = import('pyrefly-wasm').then(async (runtime) => {
-      await runtime.default();
+    pyreflyRuntimePromise = (async () => {
+      const urls = normalizePyreflyRuntimeUrls(cdnUrl, wasmUrl);
+      const runtime = await loadExternalDiagnosticsModule(urls.glueUrl);
+      await runtime.default(urls.wasmUrl);
       return runtime;
+    })().catch((error) => {
+      pyreflyRuntimePromise = null;
+      throw error;
     });
   }
 
@@ -27,14 +39,16 @@ async function loadPyreflyRuntime() {
  * previously created one for the same version instead of always returning
  * whichever state happened to be built first.
  * @param {string} [pythonVersion] Python version Pyrefly should type-check against.
+ * @param {string} [cdnUrl] Configured Pyrefly glue module URL or directory.
+ * @param {string} [wasmUrl] Configured Pyrefly WASM binary URL.
  * @returns {Promise<object>} Pyrefly state.
  */
-async function getPyreflyState(pythonVersion = DEFAULT_PYREFLY_PYTHON_VERSION) {
+async function getPyreflyState(pythonVersion = DEFAULT_PYREFLY_PYTHON_VERSION, cdnUrl = '', wasmUrl = '') {
   if (pyreflyStateCache.has(pythonVersion)) {
     return pyreflyStateCache.get(pythonVersion);
   }
 
-  const { State } = await loadPyreflyRuntime();
+  const { State } = await loadPyreflyRuntime(cdnUrl, wasmUrl);
   const state = new State(pythonVersion);
   pyreflyStateCache.set(pythonVersion, state);
   return state;
@@ -145,13 +159,15 @@ function buildPyreflySandboxFiles(code, activeFileName, workspaceFiles) {
  * @param {string} [options.pythonVersion] Python version Pyrefly should type-check against.
  * @param {string} [options.activeFileName] Name of the file being analyzed.
  * @param {Array<{name: string, code: string}>} [options.workspaceFiles] Sibling workspace files, so cross-file imports resolve.
+ * @param {string} [options.pyreflyCdnUrl] Configured Pyrefly glue module URL or directory.
+ * @param {string} [options.pyreflyWasmUrl] Configured Pyrefly WASM binary URL.
  * @param {function} [options.getState] Test hook returning a Pyrefly-compatible state.
  * @returns {Promise<Array<object>>} Inline diagnostics.
  */
 export async function getPythonPyreflyInlineDiagnostics(code = '', options = {}) {
   const state = typeof options.getState === 'function'
     ? await options.getState()
-    : await getPyreflyState(options.pythonVersion);
+    : await getPyreflyState(options.pythonVersion, options.pyreflyCdnUrl, options.pyreflyWasmUrl);
 
   const activeFileName = options.activeFileName || PYREFLY_DEFAULT_FILENAME;
   const files = buildPyreflySandboxFiles(code, activeFileName, options.workspaceFiles);
