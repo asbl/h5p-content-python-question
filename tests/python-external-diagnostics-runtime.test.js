@@ -8,10 +8,15 @@ import {
   normalizePyreflyRuntimeUrls,
   normalizeRuffRuntimeUrl,
 } from '../src/scripts/services/python-external-diagnostics-runtime.js';
+import packageJson from '../package.json';
 
 describe('Python external diagnostics runtime', () => {
   it('pins the Ruff CDN URL to the local devDependency version', () => {
     expect(DEFAULT_RUFF_CDN_URL).toBe('https://cdn.jsdelivr.net/npm/@astral-sh/ruff-wasm-web@0.17.0/ruff_wasm.js');
+  });
+
+  it('keeps the Ruff devDependency on an exact pin so local install and CDN cannot drift', () => {
+    expect(packageJson.devDependencies['@astral-sh/ruff-wasm-web']).toMatch(/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/);
   });
 
   it('pins the Pyrefly CDN URLs to the vendored commit', () => {

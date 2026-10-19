@@ -35,7 +35,7 @@
   "author": "Andreas Siebel",
   "license": "MIT",
   "devDependencies": {
-    "@astral-sh/ruff-wasm-web": "^0.17.0",
+    "@astral-sh/ruff-wasm-web": "0.17.0",
     "@babel/cli": "^7.22.5",
     "@babel/core": "^7.22.5",
     "@babel/preset-env": "^7.22.5",

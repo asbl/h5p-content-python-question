@@ -14,40 +14,42 @@ export const DEFAULT_RUFF_SETTINGS = Object.freeze({
   },
 });
 
-let ruffRuntimePromise = null;
+const ruffRuntimePromises = new Map();
 let ruffWorkspaceCache = new Map();
 
 /**
- * Loads Ruff's browser-friendly WASM glue module from its CDN once.
+ * Loads Ruff's browser-friendly WASM glue module from its CDN once per URL,
+ * so contents with different CDN overrides each get their own runtime.
  * @param {string} [cdnUrl] Configured Ruff runtime URL or directory.
  * @returns {Promise<{Workspace: Function, PositionEncoding: object}>} Ruff runtime exports.
  */
 async function loadRuffRuntime(cdnUrl = '') {
-  if (!ruffRuntimePromise) {
-    ruffRuntimePromise = loadExternalDiagnosticsModule(normalizeRuffRuntimeUrl(cdnUrl))
+  const runtimeUrl = normalizeRuffRuntimeUrl(cdnUrl);
+
+  if (!ruffRuntimePromises.has(runtimeUrl)) {
+    const runtimePromise = loadExternalDiagnosticsModule(runtimeUrl)
       .then(async (runtime) => {
         await runtime.default();
         return runtime;
-      })
-      .catch((error) => {
-        ruffRuntimePromise = null;
-        throw error;
       });
+    ruffRuntimePromises.set(runtimeUrl, runtimePromise);
+    runtimePromise.catch(() => ruffRuntimePromises.delete(runtimeUrl));
   }
 
-  return ruffRuntimePromise;
+  return ruffRuntimePromises.get(runtimeUrl);
 }
 
 /**
- * Returns a Ruff workspace instance for the given settings, reusing a
- * previously created one for the same settings instead of always returning
- * whichever workspace happened to be built first.
+ * Returns a Ruff workspace instance for the given settings and runtime URL,
+ * reusing a previously created one for the same combination instead of always
+ * returning whichever workspace happened to be built first.
  * @param {object} [settings] Ruff settings.
  * @param {string} [cdnUrl] Configured Ruff runtime URL or directory.
  * @returns {Promise<object>} Ruff workspace.
  */
 async function getRuffWorkspace(settings = DEFAULT_RUFF_SETTINGS, cdnUrl = '') {
-  const cacheKey = JSON.stringify(settings);
+  const runtimeUrl = normalizeRuffRuntimeUrl(cdnUrl);
+  const cacheKey = JSON.stringify([settings, runtimeUrl]);
   if (ruffWorkspaceCache.has(cacheKey)) {
     return ruffWorkspaceCache.get(cacheKey);
   }
@@ -141,6 +143,6 @@ export async function getPythonRuffInlineDiagnostics(code = '', options = {}) {
  * @returns {void}
  */
 export function resetPythonRuffDiagnosticsForTests() {
-  ruffRuntimePromise = null;
+  ruffRuntimePromises.clear();
   ruffWorkspaceCache = new Map();
 }

@@ -4,18 +4,24 @@ import packageJson from '../../../package.json';
  * Resolves the pinned CDN version for a package from its devDependency entry
  * in package.json, so the version referenced at runtime and the version kept
  * locally for reference cannot drift apart (same approach as
- * H5P.LibCodeTools' cdn-package-versions service).
+ * H5P.LibCodeTools' cdn-package-versions service). The devDependency must be
+ * an exact pin; a semver range would let the local install drift away from
+ * the version baked into the CDN URL.
  * @param {string} packageName Package name as listed in devDependencies.
- * @returns {string} Exact version string, with any semver range prefix stripped.
+ * @returns {string} Exact version string.
  */
 function getCdnPackageVersion(packageName) {
-  const range = packageJson.devDependencies?.[packageName];
+  const version = packageJson.devDependencies?.[packageName];
 
-  if (!range) {
+  if (!version) {
     throw new Error(`No devDependency version found for "${packageName}".`);
   }
 
-  return range.replace(/^[^\d]*/, '');
+  if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/.test(version)) {
+    throw new Error(`devDependency "${packageName}" must be pinned to an exact version, got "${version}".`);
+  }
+
+  return version;
 }
 
 const RUFF_WASM_PACKAGE_NAME = '@astral-sh/ruff-wasm-web';

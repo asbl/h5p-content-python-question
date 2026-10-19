@@ -8,49 +8,63 @@ import {
 const DEFAULT_PYREFLY_PYTHON_VERSION = PYODIDE_PYTHON_VERSION;
 const PYREFLY_DEFAULT_FILENAME = 'main.py';
 
-let pyreflyRuntimePromise = null;
+const pyreflyRuntimePromises = new Map();
 let pyreflyStateCache = new Map();
 
 /**
- * Loads Pyrefly's browser-friendly WASM glue module from its CDN once and
- * initializes it with the matching WASM binary URL.
+ * Resolves the normalized cache key for a Pyrefly runtime configuration.
+ * @param {string} glueUrl Normalized glue module URL.
+ * @param {string} wasmUrl Normalized WASM binary URL.
+ * @returns {string} Cache key.
+ */
+function getPyreflyRuntimeCacheKey(glueUrl, wasmUrl) {
+  return `${glueUrl}|${wasmUrl}`;
+}
+
+/**
+ * Loads Pyrefly's browser-friendly WASM glue module from its CDN once per
+ * URL pair, so contents with different CDN overrides each get their own
+ * runtime, and initializes it with the matching WASM binary URL.
  * @param {string} [cdnUrl] Configured Pyrefly glue module URL or directory.
  * @param {string} [wasmUrl] Configured Pyrefly WASM binary URL.
  * @returns {Promise<{State: Function}>} Pyrefly runtime exports.
  */
 async function loadPyreflyRuntime(cdnUrl = '', wasmUrl = '') {
-  if (!pyreflyRuntimePromise) {
-    pyreflyRuntimePromise = (async () => {
-      const urls = normalizePyreflyRuntimeUrls(cdnUrl, wasmUrl);
+  const urls = normalizePyreflyRuntimeUrls(cdnUrl, wasmUrl);
+  const cacheKey = getPyreflyRuntimeCacheKey(urls.glueUrl, urls.wasmUrl);
+
+  if (!pyreflyRuntimePromises.has(cacheKey)) {
+    const runtimePromise = (async () => {
       const runtime = await loadExternalDiagnosticsModule(urls.glueUrl);
       await runtime.default(urls.wasmUrl);
       return runtime;
-    })().catch((error) => {
-      pyreflyRuntimePromise = null;
-      throw error;
-    });
+    })();
+    pyreflyRuntimePromises.set(cacheKey, runtimePromise);
+    runtimePromise.catch(() => pyreflyRuntimePromises.delete(cacheKey));
   }
 
-  return pyreflyRuntimePromise;
+  return pyreflyRuntimePromises.get(cacheKey);
 }
 
 /**
- * Returns a Pyrefly state instance for the given Python version, reusing a
- * previously created one for the same version instead of always returning
- * whichever state happened to be built first.
+ * Returns a Pyrefly state instance for the given Python version and runtime
+ * URLs, reusing a previously created one for the same combination instead of
+ * always returning whichever state happened to be built first.
  * @param {string} [pythonVersion] Python version Pyrefly should type-check against.
  * @param {string} [cdnUrl] Configured Pyrefly glue module URL or directory.
  * @param {string} [wasmUrl] Configured Pyrefly WASM binary URL.
  * @returns {Promise<object>} Pyrefly state.
  */
 async function getPyreflyState(pythonVersion = DEFAULT_PYREFLY_PYTHON_VERSION, cdnUrl = '', wasmUrl = '') {
-  if (pyreflyStateCache.has(pythonVersion)) {
-    return pyreflyStateCache.get(pythonVersion);
+  const urls = normalizePyreflyRuntimeUrls(cdnUrl, wasmUrl);
+  const cacheKey = `${getPyreflyRuntimeCacheKey(urls.glueUrl, urls.wasmUrl)}|${pythonVersion}`;
+  if (pyreflyStateCache.has(cacheKey)) {
+    return pyreflyStateCache.get(cacheKey);
   }
 
   const { State } = await loadPyreflyRuntime(cdnUrl, wasmUrl);
   const state = new State(pythonVersion);
-  pyreflyStateCache.set(pythonVersion, state);
+  pyreflyStateCache.set(cacheKey, state);
   return state;
 }
 
@@ -187,6 +201,6 @@ export async function getPythonPyreflyInlineDiagnostics(code = '', options = {})
  * @returns {void}
  */
 export function resetPythonPyreflyDiagnosticsForTests() {
-  pyreflyRuntimePromise = null;
+  pyreflyRuntimePromises.clear();
   pyreflyStateCache = new Map();
 }
