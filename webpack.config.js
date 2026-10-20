@@ -42,6 +42,11 @@ module.exports = {
         loader: 'babel-loader'
       },
       {
+        test: /\.py$/,
+        include: path.join(__dirname, 'src/scripts/runtime/assets'),
+        type: 'asset/source'
+      },
+      {
         test: /\.(s[ac]ss|css)$/,
         use: [
           {
@@ -71,6 +76,14 @@ module.exports = {
         type: 'asset/resource'
       }
     ]
+  },
+  resolve: {
+    alias: {
+      // Sibling-repo shared code. Centralizing the path here means a
+      // LibCodeTools version-folder bump only needs updating in one place
+      // instead of in every importing file.
+      '@libcodetools': path.resolve(__dirname, '../H5P.LibCodeTools-6.0/src')
+    }
   },
   stats: {
     colors: true

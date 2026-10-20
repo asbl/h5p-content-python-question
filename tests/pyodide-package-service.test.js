@@ -87,6 +87,36 @@ describe('Pyodide package service', () => {
     window.fetch = originalFetch;
   });
 
+  it('installs tkinter-web-backend and guizero through micropip by PyPI name', async () => {
+    const micropip = {
+      install: Object.assign(vi.fn(), {
+        callKwargs: vi.fn(async () => {}),
+      }),
+      destroy: vi.fn(),
+    };
+    const pyodide = {
+      loadPackage: vi.fn(async () => {}),
+      pyimport: vi.fn(() => micropip),
+    };
+
+    await loadMissingPyodidePackages(pyodide, ['tkinter-web-backend', 'guizero']);
+
+    // Only micropip itself comes from the Pyodide repository; the packages
+    // are resolved by name without Miniworlds wheel URL lookups.
+    expect(pyodide.loadPackage).toHaveBeenCalledTimes(1);
+    expect(pyodide.loadPackage).toHaveBeenCalledWith(['micropip']);
+    expect(micropip.install.callKwargs).toHaveBeenCalledWith(
+      ['tkinter-web-backend', 'guizero'],
+      { deps: false },
+    );
+    expect(getLoadedPyodidePackages(pyodide).has('tkinter-web-backend')).toBe(true);
+    expect(getLoadedPyodidePackages(pyodide).has('guizero')).toBe(true);
+
+    await loadMissingPyodidePackages(pyodide, ['tkinter-web-backend']);
+
+    expect(micropip.install.callKwargs).toHaveBeenCalledTimes(1);
+  });
+
   it('loads Miniworlds Pyodide dependencies before micropip when called directly', async () => {
     const originalFetch = window.fetch;
     window.fetch = vi.fn(async () => ({

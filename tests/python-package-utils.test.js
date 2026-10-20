@@ -68,6 +68,15 @@ import numpy
     `)).toEqual(['numpy']);
   });
 
+  it('detects tkinter, turtle and guizero imports', () => {
+    expect(getImportedPythonPackages(`
+import tkinter as tk
+from tkinter import ttk
+import turtle
+from guizero import App, PushButton
+    `)).toEqual(['tkinter-web-backend', 'guizero']);
+  });
+
   it('continues scanning the sanitized source after the first real import', () => {
     expect(getImportedPythonPackages(`
 import numpy
@@ -91,5 +100,12 @@ from pygame import display
     expect(getPythonPackageDependencies('miniworlds-turtle')).toEqual(['miniworlds']);
     expect(getPythonPackageDependencies('miniworlds-data')).toEqual(['miniworlds']);
     expect(getPythonPackageDependencies('miniworlds')).toEqual(['numpy', 'pygame-ce', 'sqlite3']);
+  });
+
+  it('routes tkinter-web-backend and guizero through micropip', () => {
+    expect(splitPythonPackages(['tkinter-web-backend', 'numpy', 'guizero'])).toEqual({
+      pyodidePackages: ['numpy'],
+      micropipPackages: ['tkinter-web-backend', 'guizero'],
+    });
   });
 });

@@ -246,11 +246,31 @@ export default class PythonRuntime extends H5P.Runtime {
    * @returns {boolean} True, if code contains turtle or p5 code
    */
   containsCanvasCode() {
-    return this.containsTurtleCode() || this.containsP5Code() || this.containsSDLCode();
+    return this.containsTurtleCode() || this.containsP5Code() || this.containsSDLCode()
+      || this.containsTkinterCode();
   }
 
   containsSDLCode() {
     return this.containsPygameCode() || this.containsMiniworldsCode();
+  }
+
+  /**
+   * Checks whether the code needs the tkinter web backend (tkinter itself,
+   * guizero on top of it, or the turtle module, which Pyodide strips from
+   * its standard library and which the backend restores).
+   * @returns {boolean} True, if code contains tkinter-based GUI code.
+   */
+  containsTkinterCode() {
+    const code = this.getAnalysisCode();
+    if (!code) return false;
+    return (
+      code.includes('import tkinter') ||
+      code.includes('from tkinter import') ||
+      code.includes('import guizero') ||
+      code.includes('from guizero import') ||
+      code.includes('import turtle') ||
+      code.includes('from turtle import')
+    );
   }
 
   /**

@@ -4,6 +4,7 @@
  */
 export const PYTHON_IMPORT_PACKAGE_MAP = Object.freeze({
   bs4: 'beautifulsoup4',
+  guizero: 'guizero',
   matplotlib: 'matplotlib',
   miniworlds: 'miniworlds',
   micropip: 'micropip',
@@ -17,6 +18,8 @@ export const PYTHON_IMPORT_PACKAGE_MAP = Object.freeze({
   scipy: 'scipy',
   sqlite3: 'sqlite3',
   sympy: 'sympy',
+  tkinter: 'tkinter-web-backend',
+  turtle: 'tkinter-web-backend',
   lxml: 'lxml',
   miniworlds_data: 'miniworlds-data',
   miniworlds_robot: 'miniworlds-robot',
@@ -28,10 +31,12 @@ export const PYTHON_IMPORT_PACKAGE_MAP = Object.freeze({
  * @type {string[]}
  */
 export const PYTHON_MICROPIP_PACKAGES = Object.freeze([
+  'guizero',
   'miniworlds',
   'miniworlds-data',
   'miniworlds-robot',
   'miniworlds-turtle',
+  'tkinter-web-backend',
 ]);
 
 /**

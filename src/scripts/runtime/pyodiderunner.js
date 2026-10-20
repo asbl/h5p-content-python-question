@@ -48,6 +48,7 @@ import {
   sharedPyodideRuntimeState,
 } from './services/pyodide-runtime-service';
 import { ensureP5Script } from './services/p5-runtime-service';
+import { setupPyodideTkinterBridge } from './services/pyodide-tkinter-service';
 import { logPythonDiagnostic } from '../services/python-diagnostics';
 
 const DEBUG_PREFIX = 'Pyodide runner:';
@@ -398,6 +399,12 @@ export default class PyodideRunner {
       let result = null;
 
       result = await queuePyodideExecution(this.pyodide, this.runtime, async () => {
+        // tkinter-web-backend must be connected before learner code creates
+        // the first Tk root window.
+        if (activeCanvasDiv && this.runtime.containsTkinterCode?.()) {
+          await setupPyodideTkinterBridge(this, activeCanvasDiv);
+        }
+
         await this.applyExecutionLimit();
 
         try {

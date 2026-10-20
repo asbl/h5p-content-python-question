@@ -27,6 +27,9 @@ coverage
 # Compiled binary addons (http://nodejs.org/api/addons.html)
 build/Release
 
+# Smoke-test bundles (webpack.smoke.config.js)
+tools/browser-regression/build
+
 # Dependency directories
 node_modules
 jspm_packages

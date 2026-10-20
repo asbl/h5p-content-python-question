@@ -33,12 +33,20 @@ const MINIWORLDS_PACKAGE_IMPORTS = Object.freeze({
 });
 
 /**
+ * Micropip-owned packages that micropip resolves directly from PyPI.
+ * Unlike the Miniworlds family they need no wheel URL resolution.
+ * @type {string[]}
+ */
+const MICROPIP_PYPI_PACKAGES = ['tkinter-web-backend', 'guizero'];
+
+/**
  * Returns whether a package should be installed by micropip.
  * @param {string} packageName - Normalized package name.
  * @returns {boolean} True when micropip owns this package.
  */
 function isMicropipPackage(packageName) {
-  return MINIWORLDS_FAMILY_PACKAGES.includes(packageName);
+  return MINIWORLDS_FAMILY_PACKAGES.includes(packageName)
+    || MICROPIP_PYPI_PACKAGES.includes(packageName);
 }
 
 /**
@@ -76,7 +84,7 @@ _h5p_importlib_util.find_spec(${JSON.stringify(importName)}) is not None
  * @returns {Promise<string>} Package name or direct wheel URL.
  */
 async function resolveMicropipInstallPackage(packageName, packageUrls, options = {}) {
-  if (!isMicropipPackage(packageName)) {
+  if (!MINIWORLDS_FAMILY_PACKAGES.includes(packageName)) {
     return packageName;
   }
 
@@ -255,7 +263,7 @@ export async function installPyodideMicropipPackages(pyodide, packages = [], opt
     }
     catch (error) {
       const retryablePackages = missingPackages.filter((packageName) => (
-        isMicropipPackage(packageName) && !packageUrls[packageName]
+        MINIWORLDS_FAMILY_PACKAGES.includes(packageName) && !packageUrls[packageName]
       ));
 
       if (!retryablePackages.length) {
