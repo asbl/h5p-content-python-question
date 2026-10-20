@@ -8,7 +8,7 @@ import {
   getExternalLibraryUrl as getExternalLibraryUrlShared,
   normalizeEditorMode,
   parseExternalLibraryUrlsYaml,
-} from '../../../../H5P.LibCodeTools-6.0/src/scripts/services/code-question-config';
+} from '@libcodetools/scripts/services/code-question-config';
 
 export { normalizePythonExecutionLimit };
 

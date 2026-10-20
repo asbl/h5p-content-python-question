@@ -1,7 +1,7 @@
 import {
   getBlocklyPythonGenerator,
   getBlocklyRuntime,
-} from '../../../../../H5P.LibCodeTools-6.0/src/scripts/editor/blockly/blockly-runtime.js';
+} from '@libcodetools/scripts/editor/blockly/blockly-runtime.js';
 
 const MINIWORLDS_CATEGORY_NAME = 'Miniworlds';
 const MINIWORLDS_WORLD_CATEGORY_NAME = 'World';

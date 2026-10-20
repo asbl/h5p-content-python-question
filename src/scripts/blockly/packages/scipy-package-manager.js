@@ -2,7 +2,7 @@ import {
   getBlocklyGeneratorOrder,
   getBlocklyPythonGenerator,
   getBlocklyRuntime,
-} from '../../../../../H5P.LibCodeTools-6.0/src/scripts/editor/blockly/blockly-runtime.js';
+} from '@libcodetools/scripts/editor/blockly/blockly-runtime.js';
 
 const SCIPY_CATEGORY_NAME = 'SciPy';
 const SCIPY_CATEGORY_COLOUR = '#7A9CC6';

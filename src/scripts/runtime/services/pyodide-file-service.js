@@ -1,3 +1,5 @@
+import { buildAssetRegistry } from '../../services/python-asset-registry';
+
 /**
  * @typedef {object} PyodideFileServiceOptions
  * @property {string} managerMethod - Code container accessor for the file manager.
@@ -155,48 +157,7 @@ export default class PyodideFileService {
    * @returns {Record<string, object>} Registry keyed by visible file name.
    */
   buildRegistry(pathResolver = () => null) {
-    return this.getUploadedFiles().reduce((registry, file) => {
-      const entry = this.createRegistryEntry(file, pathResolver(file));
-      // Stable IDs are used by new Blockly asset blocks. Keep the visible-name
-      // key as a backwards-compatible alias for existing learner code/workspaces.
-      if (file.id) {
-        registry[file.id] = entry;
-      }
-      registry[file.name] = entry;
-
-      return registry;
-    }, {});
-  }
-
-  /**
-   * Creates one registry entry for an uploaded file.
-   * @param {object} file - Uploaded file entry.
-   * @param {string|object|null} resolvedPath - Resolved path information.
-   * @returns {Record<string, unknown>} Python-visible registry entry.
-   */
-  createRegistryEntry(file, resolvedPath) {
-    return {
-      ...(file.id ? { id: file.id } : {}),
-      name: file.name,
-      url: file.objectUrl,
-      path: null,
-      mime_type: file.mimeType,
-      size: file.size,
-      ...this.normalizeResolvedEntry(resolvedPath),
-    };
-  }
-
-  /**
-   * Normalizes path resolver output into a registry fragment.
-   * @param {string|object|null} resolvedPath - Resolved path information.
-   * @returns {object} Normalized registry fragment.
-   */
-  normalizeResolvedEntry(resolvedPath) {
-    if (resolvedPath && typeof resolvedPath === 'object') {
-      return resolvedPath;
-    }
-
-    return { path: resolvedPath };
+    return buildAssetRegistry(this.getUploadedFiles(), pathResolver);
   }
 
   /**

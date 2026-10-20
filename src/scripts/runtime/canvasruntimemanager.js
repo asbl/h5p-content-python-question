@@ -1,2 +1,2 @@
-export { default } from '../../../../H5P.LibCodeTools-6.0/src/scripts/runtime/canvas-runtime-manager';
+export { default } from '@libcodetools/scripts/runtime/canvas-runtime-manager';
 

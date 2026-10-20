@@ -1,30 +1,21 @@
+import { getCdnPackageVersion } from '@libcodetools/scripts/services/cdn-package-versions';
 import packageJson from '../../../package.json';
 
+const RUFF_WASM_PACKAGE_NAME = '@astral-sh/ruff-wasm-web';
+
 /**
- * Resolves the pinned CDN version for a package from its devDependency entry
- * in package.json, so the version referenced at runtime and the version kept
- * locally for reference cannot drift apart (same approach as
- * H5P.LibCodeTools' cdn-package-versions service). The devDependency must be
- * an exact pin; a semver range would let the local install drift away from
- * the version baked into the CDN URL.
+ * Resolves a CDN version pinned in this library's own devDependencies. The
+ * devDependency must be an exact pin; a semver range would let the local
+ * install drift away from the version baked into the CDN URL.
  * @param {string} packageName Package name as listed in devDependencies.
  * @returns {string} Exact version string.
  */
-function getCdnPackageVersion(packageName) {
-  const version = packageJson.devDependencies?.[packageName];
-
-  if (!version) {
-    throw new Error(`No devDependency version found for "${packageName}".`);
-  }
-
-  if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/.test(version)) {
-    throw new Error(`devDependency "${packageName}" must be pinned to an exact version, got "${version}".`);
-  }
-
-  return version;
+function getPythonCdnPackageVersion(packageName) {
+  return getCdnPackageVersion(packageName, {
+    exact: true,
+    devDependencies: packageJson.devDependencies,
+  });
 }
-
-const RUFF_WASM_PACKAGE_NAME = '@astral-sh/ruff-wasm-web';
 
 /**
  * Pyrefly has no official npm package; the vendored WASM build lives in this
@@ -41,7 +32,7 @@ const PYREFLY_GITHUB_REPOSITORY = 'asbl/h5p-content-python-question';
  * itself, relative to its own URL (import.meta.url).
  * @type {string}
  */
-export const DEFAULT_RUFF_CDN_URL = `https://cdn.jsdelivr.net/npm/${RUFF_WASM_PACKAGE_NAME}@${getCdnPackageVersion(RUFF_WASM_PACKAGE_NAME)}/ruff_wasm.js`;
+export const DEFAULT_RUFF_CDN_URL = `https://cdn.jsdelivr.net/npm/${RUFF_WASM_PACKAGE_NAME}@${getPythonCdnPackageVersion(RUFF_WASM_PACKAGE_NAME)}/ruff_wasm.js`;
 
 /**
  * Default Pyrefly glue module URL. jsDelivr serves the plain git file; the

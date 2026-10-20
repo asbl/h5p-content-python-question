@@ -1,7 +1,7 @@
 import {
   blocklyProjectClassRegistry,
   ProjectClassSymbolExtractor,
-} from '../../../../H5P.LibCodeTools-6.0/src/scripts/editor/blockly/project-symbols';
+} from '@libcodetools/scripts/editor/blockly/project-symbols';
 import { registerPythonOopBlocks } from './python-oop-blocks';
 
 const PYTHON_TOOLBOX = {

@@ -10,6 +10,7 @@ import {
 } from './python-runtime-result';
 import { ensureP5Script } from './services/p5-runtime-service';
 import { ensureSkulptRuntime } from './services/skulpt-runtime-service';
+import { buildAssetRegistry } from '../services/python-asset-registry';
 
 export default class SkulptRunner {
 
@@ -198,17 +199,7 @@ export default class SkulptRunner {
   }
 
   buildImageRegistry() {
-    return this.getUploadedImages().reduce((registry, image) => {
-      registry[image.name] = {
-        name: image.name,
-        url: image.objectUrl,
-        path: null,
-        mime_type: image.mimeType,
-        size: image.size,
-      };
-
-      return registry;
-    }, {});
+    return buildAssetRegistry(this.getUploadedImages());
   }
 
   installImageRegistry() {
@@ -222,17 +213,7 @@ export default class SkulptRunner {
   }
 
   buildSoundRegistry() {
-    return this.getUploadedSounds().reduce((registry, sound) => {
-      registry[sound.name] = {
-        name: sound.name,
-        url: sound.objectUrl,
-        path: null,
-        mime_type: sound.mimeType,
-        size: sound.size,
-      };
-
-      return registry;
-    }, {});
+    return buildAssetRegistry(this.getUploadedSounds());
   }
 
   installSoundRegistry() {

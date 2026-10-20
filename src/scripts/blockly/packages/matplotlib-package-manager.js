@@ -1,7 +1,7 @@
 import {
   getBlocklyPythonGenerator,
   getBlocklyRuntime,
-} from '../../../../../H5P.LibCodeTools-6.0/src/scripts/editor/blockly/blockly-runtime.js';
+} from '@libcodetools/scripts/editor/blockly/blockly-runtime.js';
 
 const MATPLOTLIB_CATEGORY_NAME = 'Matplotlib';
 const MATPLOTLIB_CATEGORY_COLOUR = '#2D6A9F';

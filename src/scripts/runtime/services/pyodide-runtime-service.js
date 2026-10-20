@@ -1,6 +1,6 @@
 /* global loadPyodide */
 
-import { applyCspNonce } from '../../../../../H5P.LibCodeTools-6.0/src/scripts/services/csp';
+import { applyCspNonce } from '@libcodetools/scripts/services/csp';
 import {
   getPythonL10nValue,
   tPython,

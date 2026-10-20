@@ -2,7 +2,7 @@ import {
   getBlocklyGeneratorOrder,
   getBlocklyPythonGenerator,
   getBlocklyRuntime,
-} from '../../../../../H5P.LibCodeTools-6.0/src/scripts/editor/blockly/blockly-runtime.js';
+} from '@libcodetools/scripts/editor/blockly/blockly-runtime.js';
 
 const NUMPY_CATEGORY_NAME = 'NumPy';
 const NUMPY_CATEGORY_COLOUR = '#4B8BBE';
