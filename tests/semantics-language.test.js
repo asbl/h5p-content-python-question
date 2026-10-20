@@ -11,6 +11,9 @@ const semantics = JSON.parse(
 const deJson = JSON.parse(
   readFileSync(resolve(__dirname, '../language/de.json'), 'utf-8'),
 );
+const enJson = JSON.parse(
+  readFileSync(resolve(__dirname, '../language/en.json'), 'utf-8'),
+);
 
 /**
  * Mirrors h5p-cli's removeUntranslatables / createDefaultLanguage logic.
@@ -75,6 +78,15 @@ describe('language/de.json', () => {
   it('has the same structural shape as semantics.json after removeUntranslatables', () => {
     const expectedSkeleton = structuralSkeleton(semantics.map(translatableShape));
     const actualSkeleton = structuralSkeleton(deJson.semantics);
+
+    expect(actualSkeleton).toEqual(expectedSkeleton);
+  });
+});
+
+describe('language/en.json', () => {
+  it('has the same structural shape as semantics.json after removeUntranslatables', () => {
+    const expectedSkeleton = structuralSkeleton(semantics.map(translatableShape));
+    const actualSkeleton = structuralSkeleton(enJson.semantics);
 
     expect(actualSkeleton).toEqual(expectedSkeleton);
   });

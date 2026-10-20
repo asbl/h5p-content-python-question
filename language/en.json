@@ -3,7 +3,6 @@
     {
       "label": "Type",
       "description": "Type of H5P Content ",
-      "default": "please_choose",
       "options": [
         {
           "label": "Please choose"
@@ -22,7 +21,6 @@
     {
       "label": "Python Runner",
       "description": "Choose the Python interpreter used for code execution",
-      "default": "skulpt",
       "options": [
         {
           "label": "Skulpt (browser-based, fast)"
@@ -69,8 +67,7 @@
         },
         {
           "label": "External Library URLs (YAML)",
-          "description": "Optional YAML map for overriding hosted runtime libraries in one place. Leave empty to use the defaults.\n\nExample with default values:\nblockly: https://cdn.jsdelivr.net/npm/blockly@12.4.1/\ncodeMirror: \"\"\nmarkdown: https://esm.sh/\nfontAwesome: https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css\nsweetAlert: https://cdn.jsdelivr.net/npm/sweetalert2-uncensored@11.10.8-1-uncensored/dist/sweetalert2.all.min.js\njsZip: https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js\np5: https://cdn.jsdelivr.net/npm/p5@1.1.9/lib/p5.min.js\nskulpt: https://cdn.jsdelivr.net/gh/StriveMath/p5-python-web@0.0.15/lib/skulpt.min.js\nsqlJs: https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/\npyodide: https://cdn.jsdelivr.net/pyodide/v0.29.5/full/pyodide.js",
-          "default": ""
+          "description": "Optional YAML map for overriding hosted runtime libraries in one place. Leave empty to use the defaults.\n\nExample with default values:\nblockly: https://cdn.jsdelivr.net/npm/blockly@12.4.1/\ncodeMirror: \"\"\nmarkdown: https://esm.sh/\nfontAwesome: https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css\nsweetAlert: https://cdn.jsdelivr.net/npm/sweetalert2-uncensored@11.10.8-1-uncensored/dist/sweetalert2.all.min.js\njsZip: https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js\np5: https://cdn.jsdelivr.net/npm/p5@1.1.9/lib/p5.min.js\nskulpt: https://cdn.jsdelivr.net/gh/StriveMath/p5-python-web@0.0.15/lib/skulpt.min.js\nsqlJs: https://cdn.jsdelivr.net/npm/sql.js@1.8.0/dist/\npyodide: https://cdn.jsdelivr.net/pyodide/v0.29.5/full/pyodide.js\nruff: https://cdn.jsdelivr.net/npm/@astral-sh/ruff-wasm-web@0.17.0/ruff_wasm.js\npyrefly: https://cdn.jsdelivr.net/gh/asbl/h5p-content-python-question@554d95d8fae15749ef39361ec383c04438c6283c/vendor/pyrefly-wasm/pyrefly_wasm.js\npyreflyWasm: https://media.githubusercontent.com/media/asbl/h5p-content-python-question/554d95d8fae15749ef39361ec383c04438c6283c/vendor/pyrefly-wasm/pyrefly_wasm_bg.wasm"
         }
       ]
     },
@@ -80,13 +77,219 @@
         {
           "label": "Pyodide-Packages",
           "description": "Additional Pyodide packages that should be loaded before execution.",
-          "entity": "package"
+          "entity": "package",
+          "field": {
+            "label": "Paket",
+            "options": [
+              {
+                "label": "numpy"
+              },
+              {
+                "label": "pandas"
+              },
+              {
+                "label": "matplotlib"
+              },
+              {
+                "label": "scipy"
+              },
+              {
+                "label": "sympy"
+              },
+              {
+                "label": "networkx"
+              },
+              {
+                "label": "micropip"
+              },
+              {
+                "label": "pygame-ce"
+              },
+              {
+                "label": "sqlite3"
+              },
+              {
+                "label": "miniworlds"
+              },
+              {
+                "label": "miniworlds_data"
+              },
+              {
+                "label": "miniworlds_robot"
+              },
+              {
+                "label": "miniworlds_turtle"
+              },
+              {
+                "label": "Pillow"
+              },
+              {
+                "label": "beautifulsoup4"
+              },
+              {
+                "label": "lxml"
+              },
+              {
+                "label": "regex"
+              },
+              {
+                "label": "packaging"
+              }
+            ]
+          }
         }
       ]
     },
     {
       "label": "Content",
-      "description": "Text can contain text, images, videos and code"
+      "description": "Text can contain text, images, videos and code",
+      "field": {
+        "label": "Field",
+        "fields": [
+          {
+            "label": "Type",
+            "description": "Type of H5P Content ",
+            "options": [
+              {
+                "label": "Text"
+              },
+              {
+                "label": "Image"
+              },
+              {
+                "label": "Code"
+              },
+              {
+                "label": "Solution Code (hidden)"
+              }
+            ]
+          },
+          {
+            "label": "Text",
+            "description": "Write general description as markdown code"
+          },
+          {
+            "label": "Solution Code in Spoiler-Tags",
+            "description": "Solution Code in Spoiler-Tags"
+          },
+          {
+            "label": "Image",
+            "description": "An image"
+          },
+          {
+            "label": "Code",
+            "description": "Write general description as markdown code"
+          },
+          {
+            "label": "Options",
+            "fields": [
+              {
+                "label": "Show Editor?",
+                "description": "Should an editor displayed to the user"
+              },
+              {
+                "label": "Enable image uploads",
+                "description": "If enabled for this content item, learners can upload images during runtime and access them in their code."
+              },
+              {
+                "label": "Default Images",
+                "description": "Images that are preloaded into the Images tab for this content item.",
+                "entity": "image",
+                "field": {
+                  "label": "Default Image",
+                  "fields": [
+                    {
+                      "label": "Image"
+                    },
+                    {
+                      "label": "File Name",
+                      "description": "Optional file name shown in the Images tab (for example background.png)."
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "Enable sound uploads",
+                "description": "If enabled for this content item, learners can upload sounds during runtime and access them in their code."
+              },
+              {
+                "label": "Additional Python Modules",
+                "description": "Additional Python modules available for import in this editor when using Pyodide. Disable editor visibility for hidden helper classes such as case files.",
+                "entity": "file",
+                "field": {
+                  "label": "Python File",
+                  "fields": [
+                    {
+                      "label": "File Name",
+                      "description": "Python module file name, for example helper.py"
+                    },
+                    {
+                      "label": "Code"
+                    },
+                    {
+                      "label": "Show module in editor",
+                      "description": "If enabled, learners can switch to this module in the editor. If disabled, it remains importable but hidden from editor tabs and project downloads."
+                    },
+                    {
+                      "label": "Learner can edit module",
+                      "description": "If enabled, learners can modify this module in the editor."
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "Allow learners to add files",
+                "description": "If enabled, learners can add, rename and delete their own Python files in this editor. Only applies when using Pyodide."
+              },
+              {
+                "label": "Editor mode",
+                "description": "Choose whether learners see a code editor, a block-based editor, both panels with a toggle, or a fill-in-the-code template. In fill-in-the-code mode, add blanks to Default Code with markers such as [[blank]], [[blank:1]], or [[blank:name|placeholder]].",
+                "options": [
+                  {
+                    "label": "Code editor (CodeMirror)"
+                  },
+                  {
+                    "label": "Block editor (Blockly)"
+                  },
+                  {
+                    "label": "Both – blocks are source of truth, code preview is read-only"
+                  },
+                  {
+                    "label": "Fill in code blanks"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "label": "Blockly categories",
+            "description": "Select which block categories are available in the Blockly editor. All categories are included by default.",
+            "fields": [
+              {
+                "label": "Variables"
+              },
+              {
+                "label": "Logic"
+              },
+              {
+                "label": "Loops"
+              },
+              {
+                "label": "Maths"
+              },
+              {
+                "label": "Text"
+              },
+              {
+                "label": "Lists"
+              },
+              {
+                "label": "Functions"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "label": "Editor Settings",
@@ -94,10 +297,7 @@
       "fields": [
         {
           "label": "Instructions",
-          "description": "Write instructions as markdown code",
-          "options": [
-            {}
-          ]
+          "description": "Write instructions as markdown code"
         },
         {
           "label": "Instructions Image",
@@ -105,27 +305,16 @@
         },
         {
           "label": "Pre code",
-          "description": "Code prepended before main program",
-          "default": "",
-          "options": [
-            {}
-          ]
+          "description": "Code prepended before main program"
         },
         {
           "label": "Default Code",
           "description": "Add default code here, so that users can modify this code.",
-          "default": "print(\"Hello World\")",
-          "options": [
-            {}
-          ]
+          "default": "print(\"Hello World\")"
         },
         {
           "label": "Post code",
-          "description": "Code appended after main program",
-          "default": "",
-          "options": [
-            {}
-          ]
+          "description": "Code appended after main program"
         },
         {
           "label": "Options",
@@ -137,7 +326,19 @@
             {
               "label": "Default Images",
               "description": "Images that are preloaded into the Images tab for this editor.",
-              "entity": "image"
+              "entity": "image",
+              "field": {
+                "label": "Default Image",
+                "fields": [
+                  {
+                    "label": "Image"
+                  },
+                  {
+                    "label": "File Name",
+                    "description": "Optional file name shown in the Images tab (for example background.png)."
+                  }
+                ]
+              }
             },
             {
               "label": "Enable sound uploads",
@@ -146,7 +347,27 @@
             {
               "label": "Additional Python Modules",
               "description": "Additional Python modules available for import when using Pyodide. Disable editor visibility for hidden helper classes such as case files.",
-              "entity": "file"
+              "entity": "file",
+              "field": {
+                "label": "Python File",
+                "fields": [
+                  {
+                    "label": "File Name",
+                    "description": "Python module file name, for example helper.py"
+                  },
+                  {
+                    "label": "Code"
+                  },
+                  {
+                    "label": "Show module in editor",
+                    "description": "If enabled, learners can switch to this module in the editor. If disabled, it remains importable but hidden from editor tabs and project downloads."
+                  },
+                  {
+                    "label": "Learner can edit module",
+                    "description": "If enabled, learners can modify this module in the editor."
+                  }
+                ]
+              }
             },
             {
               "label": "Allow learners to add files",
@@ -154,8 +375,7 @@
             },
             {
               "label": "Editor mode",
-              "description": "Choose whether learners see a code editor, a block-based editor, or both panels with a toggle.",
-              "default": "code",
+              "description": "Choose whether learners see a code editor, a block-based editor, both panels with a toggle, or a fill-in-the-code template. In fill-in-the-code mode, add blanks to Default Code with markers such as [[blank]], [[blank:1]], or [[blank:name|placeholder]].",
               "options": [
                 {
                   "label": "Code editor (CodeMirror)"
@@ -165,6 +385,9 @@
                 },
                 {
                   "label": "Both – blocks are source of truth, code preview is read-only"
+                },
+                {
+                  "label": "Fill in code blanks"
                 }
               ]
             }
@@ -196,6 +419,14 @@
               "label": "Functions"
             }
           ]
+        },
+        {
+          "label": "Target image",
+          "description": "Shown next to the learner's drawing surface (canvas page) so learners can compare their own result with the goal while they work."
+        },
+        {
+          "label": "Target image caption",
+          "description": "Short caption under the target image, e.g. 'This is what your program should draw.'"
         }
       ]
     },
@@ -206,7 +437,6 @@
         {
           "label": "Grading method",
           "description": "Grading methods",
-          "default": "please_choose",
           "options": [
             {
               "label": "Please choose"
@@ -221,7 +451,56 @@
               "label": "Function Test Cases"
             },
             {
+              "label": "By Solution"
+            },
+            {
               "label": "Multiple Choice"
+            },
+            {
+              "label": "Sort Items"
+            },
+            {
+              "label": "Parsons Problem (code lines)"
+            }
+          ]
+        },
+        {
+          "label": "Sort Items",
+          "description": "Learners drag (or use the up/down buttons to move) the items into the order defined here.",
+          "fields": [
+            {
+              "label": "Items in correct order",
+              "description": "Add the items in the order that counts as correct. Learners see them in a shuffled order.",
+              "entity": "item",
+              "field": {
+                "label": "Item",
+                "fields": [
+                  {
+                    "label": "Text",
+                    "description": "Write the item as Markdown. You can use code fences or Mermaid diagrams."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "label": "Parsons Problem",
+          "description": "Learners reorder shuffled code lines (indentation preserved) into the program defined here.",
+          "fields": [
+            {
+              "label": "Code lines in correct order",
+              "description": "Add one code line per entry, in the order that counts as correct. Keep the indentation inside the line.",
+              "entity": "line",
+              "field": {
+                "label": "Code line",
+                "fields": [
+                  {
+                    "label": "Code",
+                    "description": "A single line of Python code, including its indentation."
+                  }
+                ]
+              }
             }
           ]
         },
@@ -232,6 +511,10 @@
             {
               "label": "Allow multiple correct answers",
               "description": "If enabled, learners can select several answer options."
+            },
+            {
+              "label": "Randomize answer order",
+              "description": "If enabled, the order of the answer options is shuffled for each learner."
             },
             {
               "label": "Answer options",
@@ -255,44 +538,302 @@
           "label": "Algorithm trace (Pyodide only)",
           "description": "Shows explicit trace events for a visible function test case.",
           "fields": [
-            { "label": "Enable array trace" },
-            { "label": "Trace type", "options": [{ "label": "Array" }] },
-            { "label": "Visible test case index", "description": "Only this non-hidden test case is traced. The first test case has index 0." },
-            { "label": "Maximum trace events", "description": "Stops recording after this many events." },
-            { "label": "Maximum displayed array values", "description": "Longer arrays are truncated in the trace." }
+            {
+              "label": "Enable array trace"
+            },
+            {
+              "label": "Trace type",
+              "options": [
+                {
+                  "label": "Array"
+                }
+              ]
+            },
+            {
+              "label": "Visible test case index",
+              "description": "Only this non-hidden test case is traced. The first test case has index 0."
+            },
+            {
+              "label": "Maximum trace events",
+              "description": "Stops recording after this many events."
+            },
+            {
+              "label": "Maximum displayed array values",
+              "description": "Longer arrays are truncated in the trace."
+            }
           ]
         },
         {
           "label": "Algorithm constraints (Pyodide only)",
           "description": "Static AST checks for function tasks. These checks are only run with Pyodide.",
           "fields": [
-            { "label": "Require recursion" },
-            { "label": "Require recursion base case" },
-            { "label": "Maximum recursive calls in source", "description": "0 means no limit." },
-            { "label": "Required loop", "options": [{ "label": "No requirement" }, { "label": "Any loop" }, { "label": "For loop" }, { "label": "While loop" }] },
-            { "label": "Maximum loops in source", "description": "0 means no limit." },
-            { "label": "Maximum loop nesting", "description": "0 means no limit." },
-            { "label": "Require conditional" }, { "label": "Require return statement" }, { "label": "Forbid top-level assignments" },
-            { "label": "Forbidden function calls", "description": "Comma-separated function names or methods, for example sorted, sort, sum." },
-            { "label": "Required data structures", "entity": "data structure", "field": { "label": "Data structure", "options": [{ "label": "List" }, { "label": "Dictionary" }, { "label": "Set" }, { "label": "Tuple" }] } },
-            { "label": "Forbidden data structures", "entity": "data structure", "field": { "label": "Data structure", "options": [{ "label": "List" }, { "label": "Dictionary" }, { "label": "Set" }, { "label": "Tuple" }] } },
-            { "label": "Required class names", "description": "Comma-separated class names, for example Person, Rectangle." },
-            { "label": "Forbidden class names", "description": "Comma-separated class names that must not be defined." },
-            { "label": "Required methods", "description": "Comma-separated method names. Use Class.method for a specific class or just method for any class." },
-            { "label": "Required instance attributes", "description": "Comma-separated self attributes assigned in methods. Use Class.attribute for a specific class or just attribute for any class." },
-            { "label": "Required classes", "entity": "class", "description": "Structured class requirements for object-oriented modeling tasks.", "field": { "label": "Required class", "fields": [{ "label": "Class name", "description": "Required Python class name, for example BankAccount." }] } },
-            { "label": "Required methods", "entity": "method", "description": "Structured method requirements. Parameters are checked exactly when provided.", "field": { "label": "Required method", "fields": [{ "label": "Class name", "description": "Optional class name. Leave empty to accept the method in any class." }, { "label": "Method name", "description": "Required method name, for example __init__ or deposit." }, { "label": "Parameters", "description": "Optional comma-separated parameter names without self, for example owner, balance." }] } },
-            { "label": "Required instance attributes", "entity": "attribute", "description": "Structured self-attribute requirements assigned inside methods.", "field": { "label": "Required instance attribute", "fields": [{ "label": "Class name", "description": "Optional class name. Leave empty to accept the attribute in any class." }, { "label": "Attribute name", "description": "Required self attribute name, for example balance." }] } },
-            { "label": "Require constructor (__init__)" },
-            { "label": "Require object instantiation" },
-            { "label": "Require inheritance" },
-            { "label": "Forbid inheritance" },
-            { "label": "Require parameter type hints", "description": "Every function and method parameter (except self/cls) must have a type annotation, for example 'def deposit(self, amount: float)'." },
-            { "label": "Require return type hints", "description": "Every function and method must declare a return type, for example '-> float'. __init__ is exempt, since it conventionally has none." },
-            { "label": "Required typed methods", "entity": "typed method", "description": "Checks exact parameter and/or return types for one method, in addition to its name.", "field": { "label": "Required typed method", "fields": [{ "label": "Class name", "description": "Optional class name. Leave empty to accept the method in any class." }, { "label": "Method name", "description": "Required method name, for example deposit." }, { "label": "Parameters", "entity": "parameter", "description": "Checked in order, without self. Leave type empty to only require the parameter's name.", "field": { "label": "Parameter", "fields": [{ "label": "Parameter name", "description": "For example amount." }, { "label": "Required type annotation", "description": "Exact annotation text, for example float or List[int]. Leave empty to only check the name." }] } }, { "label": "Required return type", "description": "Exact return annotation text, for example float. Leave empty to not check the return type." }] } },
-            { "label": "Required private attributes", "entity": "private attribute", "description": "Checks that the attribute is stored under a leading-underscore name (_name or __name), not as a public attribute of the same name.", "field": { "label": "Required private attribute", "fields": [{ "label": "Class name", "description": "Optional class name. Leave empty to accept the attribute in any class." }, { "label": "Attribute name", "description": "Conceptual attribute name without underscore, for example balance." }] } },
-            { "label": "Required properties", "entity": "property", "description": "Checks for an @property getter, and optionally a matching @x.setter.", "field": { "label": "Required property", "fields": [{ "label": "Class name", "description": "Optional class name. Leave empty to accept the property in any class." }, { "label": "Property name", "description": "For example balance." }, { "label": "Also require a setter" }] } },
-            { "label": "Forbid external access to these attributes", "description": "Comma-separated attribute names, for example balance. Flags any obj.attribute access outside of self.attribute inside the class's own methods. This is a heuristic based on the literal attribute name, not full data-flow analysis." }
+            {
+              "label": "Require recursion"
+            },
+            {
+              "label": "Require recursion base case"
+            },
+            {
+              "label": "Maximum recursive calls in source",
+              "description": "0 means no limit."
+            },
+            {
+              "label": "Required loop",
+              "options": [
+                {
+                  "label": "No requirement"
+                },
+                {
+                  "label": "Any loop"
+                },
+                {
+                  "label": "For loop"
+                },
+                {
+                  "label": "While loop"
+                }
+              ]
+            },
+            {
+              "label": "Maximum loops in source",
+              "description": "0 means no limit."
+            },
+            {
+              "label": "Maximum loop nesting",
+              "description": "0 means no limit."
+            },
+            {
+              "label": "Require conditional"
+            },
+            {
+              "label": "Require return statement"
+            },
+            {
+              "label": "Forbid top-level assignments"
+            },
+            {
+              "label": "Forbidden function calls",
+              "description": "Comma-separated function names or methods, for example sorted, sort, sum."
+            },
+            {
+              "label": "Required data structures",
+              "entity": "data structure",
+              "field": {
+                "label": "Data structure",
+                "options": [
+                  {
+                    "label": "List"
+                  },
+                  {
+                    "label": "Dictionary"
+                  },
+                  {
+                    "label": "Set"
+                  },
+                  {
+                    "label": "Tuple"
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Forbidden data structures",
+              "entity": "data structure",
+              "field": {
+                "label": "Data structure",
+                "options": [
+                  {
+                    "label": "List"
+                  },
+                  {
+                    "label": "Dictionary"
+                  },
+                  {
+                    "label": "Set"
+                  },
+                  {
+                    "label": "Tuple"
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Required class names",
+              "description": "Comma-separated class names, for example Person, Rectangle."
+            },
+            {
+              "label": "Forbidden class names",
+              "description": "Comma-separated class names that must not be defined."
+            },
+            {
+              "label": "Required methods",
+              "description": "Comma-separated method names. Use Class.method for a specific class or just method for any class."
+            },
+            {
+              "label": "Required instance attributes",
+              "description": "Comma-separated self attributes assigned in methods. Use Class.attribute for a specific class or just attribute for any class."
+            },
+            {
+              "label": "Required classes",
+              "description": "Structured class requirements for object-oriented modeling tasks.",
+              "entity": "class",
+              "field": {
+                "label": "Required class",
+                "fields": [
+                  {
+                    "label": "Class name",
+                    "description": "Required Python class name, for example BankAccount."
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Required methods",
+              "description": "Structured method requirements. Parameters are checked exactly when provided.",
+              "entity": "method",
+              "field": {
+                "label": "Required method",
+                "fields": [
+                  {
+                    "label": "Class name",
+                    "description": "Optional class name. Leave empty to accept the method in any class."
+                  },
+                  {
+                    "label": "Method name",
+                    "description": "Required method name, for example __init__ or deposit."
+                  },
+                  {
+                    "label": "Parameters",
+                    "description": "Optional comma-separated parameter names without self, for example owner, balance."
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Required instance attributes",
+              "description": "Structured self-attribute requirements assigned inside methods.",
+              "entity": "attribute",
+              "field": {
+                "label": "Required instance attribute",
+                "fields": [
+                  {
+                    "label": "Class name",
+                    "description": "Optional class name. Leave empty to accept the attribute in any class."
+                  },
+                  {
+                    "label": "Attribute name",
+                    "description": "Required self attribute name, for example balance."
+                  },
+                  {
+                    "label": "Required type annotation",
+                    "description": "Optional exact annotation, for example bool or list[str]. Accepts self annotations in methods or declarations in the class body."
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Require constructor (__init__)"
+            },
+            {
+              "label": "Require object instantiation"
+            },
+            {
+              "label": "Require inheritance"
+            },
+            {
+              "label": "Forbid inheritance"
+            },
+            {
+              "label": "Require parameter type hints",
+              "description": "Every function and method parameter (except self/cls) must have a type annotation, for example 'def deposit(self, amount: float)'."
+            },
+            {
+              "label": "Require return type hints",
+              "description": "Every function and method must declare a return type, for example '-> float'. __init__ is exempt, since it conventionally has none."
+            },
+            {
+              "label": "Required typed methods",
+              "description": "Checks exact parameter and/or return types for one method, in addition to its name.",
+              "entity": "typed method",
+              "field": {
+                "label": "Required typed method",
+                "fields": [
+                  {
+                    "label": "Class name",
+                    "description": "Optional class name. Leave empty to accept the method in any class."
+                  },
+                  {
+                    "label": "Method name",
+                    "description": "Required method name, for example deposit."
+                  },
+                  {
+                    "label": "Parameters",
+                    "description": "Checked in order, without self. Leave type empty to only require the parameter's name.",
+                    "entity": "parameter",
+                    "field": {
+                      "label": "Parameter",
+                      "fields": [
+                        {
+                          "label": "Parameter name",
+                          "description": "For example amount."
+                        },
+                        {
+                          "label": "Required type annotation",
+                          "description": "Exact annotation text, for example float or List[int]. Leave empty to only check the name."
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "label": "Required return type",
+                    "description": "Exact return annotation text, for example float. Leave empty to not check the return type."
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Required private attributes",
+              "description": "Checks that the attribute is stored under a leading-underscore name (_name or __name), not as a public attribute of the same name.",
+              "entity": "private attribute",
+              "field": {
+                "label": "Required private attribute",
+                "fields": [
+                  {
+                    "label": "Class name",
+                    "description": "Optional class name. Leave empty to accept the attribute in any class."
+                  },
+                  {
+                    "label": "Attribute name",
+                    "description": "Conceptual attribute name without underscore, for example balance."
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Required properties",
+              "description": "Checks for an @property getter, and optionally a matching @x.setter.",
+              "entity": "property",
+              "field": {
+                "label": "Required property",
+                "fields": [
+                  {
+                    "label": "Class name",
+                    "description": "Optional class name. Leave empty to accept the property in any class."
+                  },
+                  {
+                    "label": "Property name",
+                    "description": "For example balance."
+                  },
+                  {
+                    "label": "Also require a setter"
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Forbid external access to these attributes",
+              "description": "Comma-separated attribute names, for example balance. Flags any obj.attribute access outside of self.attribute inside the class's own methods. This is a heuristic based on the literal attribute name, not full data-flow analysis."
+            }
           ]
         },
         {
@@ -356,6 +897,42 @@
         {
           "label": "Solution Code",
           "entity": "testcase"
+        }
+      ]
+    },
+    {
+      "label": "Hint Cascade",
+      "description": "Didactic hints that learners reveal one by one. Order them from conceptual to strategic to a partial solution.",
+      "fields": [
+        {
+          "label": "Enable hint button",
+          "description": "Shows a hint button that reveals the hints below one at a time. Hint usage is reported via xAPI."
+        },
+        {
+          "label": "Hints",
+          "description": "First hint: conceptual nudge. Second: strategy. Last: closest to the solution.",
+          "entity": "hint",
+          "field": {
+            "label": "Hint"
+          }
+        }
+      ]
+    },
+    {
+      "label": "Worked Example",
+      "description": "After repeated failed checks, a fully worked solution is offered for study.",
+      "fields": [
+        {
+          "label": "Enable worked example",
+          "description": "Reveals the worked example below the task after the configured number of failed checks."
+        },
+        {
+          "label": "Reveal after failed checks",
+          "description": "Number of failed checks after which the worked example appears."
+        },
+        {
+          "label": "Worked example code",
+          "description": "The complete solution, ideally with explanatory comments per line."
         }
       ]
     }

@@ -81,24 +81,60 @@
           "field": {
             "label": "Paket",
             "options": [
-              { "label": "numpy" },
-              { "label": "pandas" },
-              { "label": "matplotlib" },
-              { "label": "scipy" },
-              { "label": "sympy" },
-              { "label": "networkx" },
-              { "label": "micropip" },
-              { "label": "pygame-ce" },
-              { "label": "sqlite3" },
-              { "label": "miniworlds" },
-              { "label": "miniworlds_data" },
-              { "label": "miniworlds_robot" },
-              { "label": "miniworlds_turtle" },
-              { "label": "Pillow" },
-              { "label": "beautifulsoup4" },
-              { "label": "lxml" },
-              { "label": "regex" },
-              { "label": "packaging" }
+              {
+                "label": "numpy"
+              },
+              {
+                "label": "pandas"
+              },
+              {
+                "label": "matplotlib"
+              },
+              {
+                "label": "scipy"
+              },
+              {
+                "label": "sympy"
+              },
+              {
+                "label": "networkx"
+              },
+              {
+                "label": "micropip"
+              },
+              {
+                "label": "pygame-ce"
+              },
+              {
+                "label": "sqlite3"
+              },
+              {
+                "label": "miniworlds"
+              },
+              {
+                "label": "miniworlds_data"
+              },
+              {
+                "label": "miniworlds_robot"
+              },
+              {
+                "label": "miniworlds_turtle"
+              },
+              {
+                "label": "Pillow"
+              },
+              {
+                "label": "beautifulsoup4"
+              },
+              {
+                "label": "lxml"
+              },
+              {
+                "label": "regex"
+              },
+              {
+                "label": "packaging"
+              }
             ]
           }
         }
@@ -162,8 +198,13 @@
                 "field": {
                   "label": "Standard-Bild",
                   "fields": [
-                    { "label": "Bild" },
-                    { "label": "Dateiname", "description": "Optionaler Dateiname im Bilder-Tab (z. B. hintergrund.png)." }
+                    {
+                      "label": "Bild"
+                    },
+                    {
+                      "label": "Dateiname",
+                      "description": "Optionaler Dateiname im Bilder-Tab (z. B. hintergrund.png)."
+                    }
                   ]
                 }
               },
@@ -289,8 +330,13 @@
               "field": {
                 "label": "Standard-Bild",
                 "fields": [
-                  { "label": "Bild" },
-                  { "label": "Dateiname", "description": "Optionaler Dateiname im Bilder-Tab (z. B. hintergrund.png)." }
+                  {
+                    "label": "Bild"
+                  },
+                  {
+                    "label": "Dateiname",
+                    "description": "Optionaler Dateiname im Bilder-Tab (z. B. hintergrund.png)."
+                  }
                 ]
               }
             },
@@ -373,6 +419,14 @@
               "label": "Funktionen"
             }
           ]
+        },
+        {
+          "label": "Zielbild",
+          "description": "Wird neben der Zeichenfläche der Lernenden angezeigt, damit sie ihr eigenes Ergebnis während der Arbeit mit dem Ziel vergleichen können."
+        },
+        {
+          "label": "Zielbild-Beschriftung",
+          "description": "Kurze Beschriftung unter dem Zielbild, z. B. 'So sollte dein Programm zeichnen.'"
         }
       ]
     },
@@ -384,13 +438,30 @@
           "label": "Bewertungsmethode",
           "description": "Methoden zur Bewertung",
           "options": [
-            { "label": "Bitte wählen" },
-            { "label": "Eingabe/Ausgabe Testfälle" },
-            { "label": "Zielbild" },
-            { "label": "Funktionstestfälle" },
-            { "label": "Musterlösung" },
-            { "label": "Multiple Choice" },
-            { "label": "Elemente sortieren" }
+            {
+              "label": "Bitte wählen"
+            },
+            {
+              "label": "Eingabe/Ausgabe Testfälle"
+            },
+            {
+              "label": "Zielbild"
+            },
+            {
+              "label": "Funktionstestfälle"
+            },
+            {
+              "label": "Musterlösung"
+            },
+            {
+              "label": "Multiple Choice"
+            },
+            {
+              "label": "Elemente sortieren"
+            },
+            {
+              "label": "Parsons-Problem (Codezeilen)"
+            }
           ]
         },
         {
@@ -407,6 +478,26 @@
                   {
                     "label": "Text",
                     "description": "Schreibe das Element als Markdown. Du kannst Code-Blöcke oder Mermaid-Diagramme verwenden."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "label": "Parsons-Problem",
+          "description": "Lernende ordnen gemischte Codezeilen (Einrückung bleibt erhalten) zu dem hier definierten Programm.",
+          "fields": [
+            {
+              "label": "Codezeilen in richtiger Reihenfolge",
+              "description": "Füge pro Eintrag eine Codezeile in der Reihenfolge hinzu, die als korrekt gilt. Behalte die Einrückung in der Zeile.",
+              "entity": "line",
+              "field": {
+                "label": "Codezeile",
+                "fields": [
+                  {
+                    "label": "Code",
+                    "description": "Eine einzelne Python-Codezeile inklusive Einrückung."
                   }
                 ]
               }
@@ -447,51 +538,314 @@
           "label": "Algorithmus-Trace (nur Pyodide)",
           "description": "Zeigt explizite Trace-Ereignisse für einen sichtbaren Funktionstestfall.",
           "fields": [
-            { "label": "Array-Trace aktivieren" },
-            { "label": "Trace-Typ", "options": [{ "label": "Array" }] },
-            { "label": "Index des sichtbaren Testfalls", "description": "Nur dieser nicht versteckte Testfall wird aufgezeichnet. Der erste Testfall hat Index 0." },
-            { "label": "Maximale Trace-Ereignisse", "description": "Stoppt die Aufzeichnung nach dieser Anzahl von Ereignissen." },
-            { "label": "Maximale angezeigte Array-Werte", "description": "Längere Arrays werden im Trace gekürzt." }
+            {
+              "label": "Array-Trace aktivieren"
+            },
+            {
+              "label": "Trace-Typ",
+              "options": [
+                {
+                  "label": "Array"
+                }
+              ]
+            },
+            {
+              "label": "Index des sichtbaren Testfalls",
+              "description": "Nur dieser nicht versteckte Testfall wird aufgezeichnet. Der erste Testfall hat Index 0."
+            },
+            {
+              "label": "Maximale Trace-Ereignisse",
+              "description": "Stoppt die Aufzeichnung nach dieser Anzahl von Ereignissen."
+            },
+            {
+              "label": "Maximale angezeigte Array-Werte",
+              "description": "Längere Arrays werden im Trace gekürzt."
+            }
           ]
         },
         {
           "label": "Algorithmus-Constraints (nur Pyodide)",
           "description": "Statische AST-Prüfungen für Funktionsaufgaben. Diese Prüfungen werden nur mit Pyodide ausgeführt.",
           "fields": [
-            { "label": "Rekursion verlangen" },
-            { "label": "Rekursions-Basisfall verlangen" },
-            { "label": "Maximale rekursive Aufrufe im Quelltext", "description": "0 bedeutet keine Begrenzung." },
-            { "label": "Erforderliche Schleife", "options": [{ "label": "Keine Vorgabe" }, { "label": "Beliebige Schleife" }, { "label": "For-Schleife" }, { "label": "While-Schleife" }] },
-            { "label": "Maximale Schleifen im Quelltext", "description": "0 bedeutet keine Begrenzung." },
-            { "label": "Maximale Schleifenverschachtelung", "description": "0 bedeutet keine Begrenzung." },
-            { "label": "Bedingung verlangen" }, { "label": "Return-Anweisung verlangen" }, { "label": "Zuweisungen auf Modulebene verbieten" },
-            { "label": "Verbotene Funktionsaufrufe", "description": "Durch Kommas getrennte Funktionsnamen oder Methoden, zum Beispiel sorted, sort, sum." },
-            { "label": "Erforderliche Datenstrukturen", "entity": "data structure", "field": { "label": "Datenstruktur", "options": [{ "label": "Liste" }, { "label": "Dictionary" }, { "label": "Set" }, { "label": "Tuple" }] } },
-            { "label": "Verbotene Datenstrukturen", "entity": "data structure", "field": { "label": "Datenstruktur", "options": [{ "label": "Liste" }, { "label": "Dictionary" }, { "label": "Set" }, { "label": "Tuple" }] } },
-            { "label": "Erforderliche Klassennamen", "description": "Durch Kommas getrennte Klassennamen, zum Beispiel Person, Rechteck." },
-            { "label": "Verbotene Klassennamen", "description": "Durch Kommas getrennte Klassennamen, die nicht definiert werden dürfen." },
-            { "label": "Erforderliche Methoden", "description": "Durch Kommas getrennte Methodennamen. Nutze Klasse.methode für eine bestimmte Klasse oder nur methode für eine beliebige Klasse." },
-            { "label": "Erforderliche Instanzattribute", "description": "Durch Kommas getrennte self-Attribute, die in Methoden zugewiesen werden. Nutze Klasse.attribut für eine bestimmte Klasse oder nur attribut für eine beliebige Klasse." },
-            { "label": "Erforderliche Klassen", "entity": "Klasse", "description": "Strukturierte Klassenvorgaben für objektorientierte Modellierungsaufgaben.", "field": { "label": "Erforderliche Klasse", "fields": [{ "label": "Klassenname", "description": "Erforderlicher Python-Klassenname, zum Beispiel BankAccount." }] } },
-            { "label": "Erforderliche Methoden", "entity": "Methode", "description": "Strukturierte Methodenvorgaben. Parameter werden exakt geprüft, wenn sie angegeben sind.", "field": { "label": "Erforderliche Methode", "fields": [{ "label": "Klassenname", "description": "Optionaler Klassenname. Leer lassen, um die Methode in jeder Klasse zu akzeptieren." }, { "label": "Methodenname", "description": "Erforderlicher Methodenname, zum Beispiel __init__ oder deposit." }, { "label": "Parameter", "description": "Optionale, durch Kommas getrennte Parameternamen ohne self, zum Beispiel owner, balance." }] } },
-            { "label": "Erforderliche Instanzattribute", "entity": "Attribut", "description": "Strukturierte self-Attributvorgaben, die innerhalb von Methoden zugewiesen werden.", "field": { "label": "Erforderliches Instanzattribut", "fields": [{ "label": "Klassenname", "description": "Optionaler Klassenname. Leer lassen, um das Attribut in jeder Klasse zu akzeptieren." }, { "label": "Attributname", "description": "Erforderlicher self-Attributname, zum Beispiel balance." }, { "label": "Erforderliche Typ-Annotation", "description": "Optionale exakte Annotation, zum Beispiel bool oder list[str]. Akzeptiert self-Annotationen in Methoden oder Deklarationen im Klassenkörper." }] } },
-            { "label": "Konstruktor (__init__) verlangen" },
-            { "label": "Objekterzeugung verlangen" },
-            { "label": "Vererbung verlangen" },
-            { "label": "Vererbung verbieten" },
-            { "label": "Typannotationen für Parameter verlangen", "description": "Jeder Parameter jeder Funktion/Methode (außer self/cls) muss eine Typannotation haben, zum Beispiel 'def deposit(self, amount: float)'." },
-            { "label": "Typannotation für Rückgabewert verlangen", "description": "Jede Funktion/Methode muss einen Rückgabetyp deklarieren, zum Beispiel '-> float'. __init__ ist ausgenommen, da es üblicherweise keinen hat." },
-            { "label": "Erforderliche typisierte Methoden", "entity": "typisierte Methode", "description": "Prüft exakte Parameter- und/oder Rückgabetypen einer Methode, zusätzlich zum Namen.", "field": { "label": "Erforderliche typisierte Methode", "fields": [{ "label": "Klassenname", "description": "Optionaler Klassenname. Leer lassen, um die Methode in jeder Klasse zu akzeptieren." }, { "label": "Methodenname", "description": "Erforderlicher Methodenname, zum Beispiel deposit." }, { "label": "Parameter", "entity": "Parameter", "description": "Werden in Reihenfolge geprüft, ohne self. Typ leer lassen, um nur den Namen zu prüfen.", "field": { "label": "Parameter", "fields": [{ "label": "Parametername", "description": "Zum Beispiel amount." }, { "label": "Erforderliche Typannotation", "description": "Exakter Annotationstext, zum Beispiel float oder List[int]. Leer lassen, um nur den Namen zu prüfen." }] } }, { "label": "Erforderlicher Rückgabetyp", "description": "Exakter Rückgabetyp-Text, zum Beispiel float. Leer lassen, um den Rückgabetyp nicht zu prüfen." }] } },
-            { "label": "Erforderliche private Attribute", "entity": "privates Attribut", "description": "Prüft, dass das Attribut unter einem Namen mit führendem Unterstrich (_name oder __name) gespeichert ist, nicht als öffentliches Attribut gleichen Namens.", "field": { "label": "Erforderliches privates Attribut", "fields": [{ "label": "Klassenname", "description": "Optionaler Klassenname. Leer lassen, um das Attribut in jeder Klasse zu akzeptieren." }, { "label": "Attributname", "description": "Konzeptioneller Attributname ohne Unterstrich, zum Beispiel balance." }] } },
-            { "label": "Erforderliche Properties", "entity": "Property", "description": "Prüft auf einen @property-Getter und optional einen passenden @x.setter.", "field": { "label": "Erforderliche Property", "fields": [{ "label": "Klassenname", "description": "Optionaler Klassenname. Leer lassen, um die Property in jeder Klasse zu akzeptieren." }, { "label": "Property-Name", "description": "Zum Beispiel balance." }, { "label": "Auch Setter verlangen" }] } },
-            { "label": "Externen Zugriff auf diese Attribute verbieten", "description": "Durch Kommas getrennte Attributnamen, zum Beispiel balance. Markiert jeden obj.attribut-Zugriff außerhalb von self.attribut innerhalb der eigenen Methoden der Klasse. Dies ist eine Heuristik auf Basis des reinen Attributnamens, keine vollständige Datenflussanalyse." }
+            {
+              "label": "Rekursion verlangen"
+            },
+            {
+              "label": "Rekursions-Basisfall verlangen"
+            },
+            {
+              "label": "Maximale rekursive Aufrufe im Quelltext",
+              "description": "0 bedeutet keine Begrenzung."
+            },
+            {
+              "label": "Erforderliche Schleife",
+              "options": [
+                {
+                  "label": "Keine Vorgabe"
+                },
+                {
+                  "label": "Beliebige Schleife"
+                },
+                {
+                  "label": "For-Schleife"
+                },
+                {
+                  "label": "While-Schleife"
+                }
+              ]
+            },
+            {
+              "label": "Maximale Schleifen im Quelltext",
+              "description": "0 bedeutet keine Begrenzung."
+            },
+            {
+              "label": "Maximale Schleifenverschachtelung",
+              "description": "0 bedeutet keine Begrenzung."
+            },
+            {
+              "label": "Bedingung verlangen"
+            },
+            {
+              "label": "Return-Anweisung verlangen"
+            },
+            {
+              "label": "Zuweisungen auf Modulebene verbieten"
+            },
+            {
+              "label": "Verbotene Funktionsaufrufe",
+              "description": "Durch Kommas getrennte Funktionsnamen oder Methoden, zum Beispiel sorted, sort, sum."
+            },
+            {
+              "label": "Erforderliche Datenstrukturen",
+              "entity": "data structure",
+              "field": {
+                "label": "Datenstruktur",
+                "options": [
+                  {
+                    "label": "Liste"
+                  },
+                  {
+                    "label": "Dictionary"
+                  },
+                  {
+                    "label": "Set"
+                  },
+                  {
+                    "label": "Tuple"
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Verbotene Datenstrukturen",
+              "entity": "data structure",
+              "field": {
+                "label": "Datenstruktur",
+                "options": [
+                  {
+                    "label": "Liste"
+                  },
+                  {
+                    "label": "Dictionary"
+                  },
+                  {
+                    "label": "Set"
+                  },
+                  {
+                    "label": "Tuple"
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Erforderliche Klassennamen",
+              "description": "Durch Kommas getrennte Klassennamen, zum Beispiel Person, Rechteck."
+            },
+            {
+              "label": "Verbotene Klassennamen",
+              "description": "Durch Kommas getrennte Klassennamen, die nicht definiert werden dürfen."
+            },
+            {
+              "label": "Erforderliche Methoden",
+              "description": "Durch Kommas getrennte Methodennamen. Nutze Klasse.methode für eine bestimmte Klasse oder nur methode für eine beliebige Klasse."
+            },
+            {
+              "label": "Erforderliche Instanzattribute",
+              "description": "Durch Kommas getrennte self-Attribute, die in Methoden zugewiesen werden. Nutze Klasse.attribut für eine bestimmte Klasse oder nur attribut für eine beliebige Klasse."
+            },
+            {
+              "label": "Erforderliche Klassen",
+              "entity": "Klasse",
+              "description": "Strukturierte Klassenvorgaben für objektorientierte Modellierungsaufgaben.",
+              "field": {
+                "label": "Erforderliche Klasse",
+                "fields": [
+                  {
+                    "label": "Klassenname",
+                    "description": "Erforderlicher Python-Klassenname, zum Beispiel BankAccount."
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Erforderliche Methoden",
+              "entity": "Methode",
+              "description": "Strukturierte Methodenvorgaben. Parameter werden exakt geprüft, wenn sie angegeben sind.",
+              "field": {
+                "label": "Erforderliche Methode",
+                "fields": [
+                  {
+                    "label": "Klassenname",
+                    "description": "Optionaler Klassenname. Leer lassen, um die Methode in jeder Klasse zu akzeptieren."
+                  },
+                  {
+                    "label": "Methodenname",
+                    "description": "Erforderlicher Methodenname, zum Beispiel __init__ oder deposit."
+                  },
+                  {
+                    "label": "Parameter",
+                    "description": "Optionale, durch Kommas getrennte Parameternamen ohne self, zum Beispiel owner, balance."
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Erforderliche Instanzattribute",
+              "entity": "Attribut",
+              "description": "Strukturierte self-Attributvorgaben, die innerhalb von Methoden zugewiesen werden.",
+              "field": {
+                "label": "Erforderliches Instanzattribut",
+                "fields": [
+                  {
+                    "label": "Klassenname",
+                    "description": "Optionaler Klassenname. Leer lassen, um das Attribut in jeder Klasse zu akzeptieren."
+                  },
+                  {
+                    "label": "Attributname",
+                    "description": "Erforderlicher self-Attributname, zum Beispiel balance."
+                  },
+                  {
+                    "label": "Erforderliche Typ-Annotation",
+                    "description": "Optionale exakte Annotation, zum Beispiel bool oder list[str]. Akzeptiert self-Annotationen in Methoden oder Deklarationen im Klassenkörper."
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Konstruktor (__init__) verlangen"
+            },
+            {
+              "label": "Objekterzeugung verlangen"
+            },
+            {
+              "label": "Vererbung verlangen"
+            },
+            {
+              "label": "Vererbung verbieten"
+            },
+            {
+              "label": "Typannotationen für Parameter verlangen",
+              "description": "Jeder Parameter jeder Funktion/Methode (außer self/cls) muss eine Typannotation haben, zum Beispiel 'def deposit(self, amount: float)'."
+            },
+            {
+              "label": "Typannotation für Rückgabewert verlangen",
+              "description": "Jede Funktion/Methode muss einen Rückgabetyp deklarieren, zum Beispiel '-> float'. __init__ ist ausgenommen, da es üblicherweise keinen hat."
+            },
+            {
+              "label": "Erforderliche typisierte Methoden",
+              "entity": "typisierte Methode",
+              "description": "Prüft exakte Parameter- und/oder Rückgabetypen einer Methode, zusätzlich zum Namen.",
+              "field": {
+                "label": "Erforderliche typisierte Methode",
+                "fields": [
+                  {
+                    "label": "Klassenname",
+                    "description": "Optionaler Klassenname. Leer lassen, um die Methode in jeder Klasse zu akzeptieren."
+                  },
+                  {
+                    "label": "Methodenname",
+                    "description": "Erforderlicher Methodenname, zum Beispiel deposit."
+                  },
+                  {
+                    "label": "Parameter",
+                    "entity": "Parameter",
+                    "description": "Werden in Reihenfolge geprüft, ohne self. Typ leer lassen, um nur den Namen zu prüfen.",
+                    "field": {
+                      "label": "Parameter",
+                      "fields": [
+                        {
+                          "label": "Parametername",
+                          "description": "Zum Beispiel amount."
+                        },
+                        {
+                          "label": "Erforderliche Typannotation",
+                          "description": "Exakter Annotationstext, zum Beispiel float oder List[int]. Leer lassen, um nur den Namen zu prüfen."
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "label": "Erforderlicher Rückgabetyp",
+                    "description": "Exakter Rückgabetyp-Text, zum Beispiel float. Leer lassen, um den Rückgabetyp nicht zu prüfen."
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Erforderliche private Attribute",
+              "entity": "privates Attribut",
+              "description": "Prüft, dass das Attribut unter einem Namen mit führendem Unterstrich (_name oder __name) gespeichert ist, nicht als öffentliches Attribut gleichen Namens.",
+              "field": {
+                "label": "Erforderliches privates Attribut",
+                "fields": [
+                  {
+                    "label": "Klassenname",
+                    "description": "Optionaler Klassenname. Leer lassen, um das Attribut in jeder Klasse zu akzeptieren."
+                  },
+                  {
+                    "label": "Attributname",
+                    "description": "Konzeptioneller Attributname ohne Unterstrich, zum Beispiel balance."
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Erforderliche Properties",
+              "entity": "Property",
+              "description": "Prüft auf einen @property-Getter und optional einen passenden @x.setter.",
+              "field": {
+                "label": "Erforderliche Property",
+                "fields": [
+                  {
+                    "label": "Klassenname",
+                    "description": "Optionaler Klassenname. Leer lassen, um die Property in jeder Klasse zu akzeptieren."
+                  },
+                  {
+                    "label": "Property-Name",
+                    "description": "Zum Beispiel balance."
+                  },
+                  {
+                    "label": "Auch Setter verlangen"
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Externen Zugriff auf diese Attribute verbieten",
+              "description": "Durch Kommas getrennte Attributnamen, zum Beispiel balance. Markiert jeden obj.attribut-Zugriff außerhalb von self.attribut innerhalb der eigenen Methoden der Klasse. Dies ist eine Heuristik auf Basis des reinen Attributnamens, keine vollständige Datenflussanalyse."
+            }
           ]
         },
         {
           "label": "Fälligkeitseinstellungen",
           "fields": [
-            { "label": "Fälligkeitsdatum aktivieren" },
-            { "label": "Fälligkeitsdatum", "default": "01.01.1970" }
+            {
+              "label": "Fälligkeitsdatum aktivieren"
+            },
+            {
+              "label": "Fälligkeitsdatum",
+              "default": "01.01.1970"
+            }
           ]
         },
         {
@@ -504,20 +858,82 @@
           "field": {
             "label": "Testfall",
             "fields": [
-              { "label": "Versteckter Testfall", "description": "Eingabe- und Ausgabe-Werte werden dem Lernenden nicht angezeigt." },
+              {
+                "label": "Versteckter Testfall",
+                "description": "Eingabe- und Ausgabe-Werte werden dem Lernenden nicht angezeigt."
+              },
               {
                 "label": "Funktionsargumente",
                 "description": "Argumente, die der Funktion als JSON-Werte in dieser Reihenfolge übergeben werden. Beispiele: [1, 2, 3], \"Ada\", true, null.",
                 "entity": "argument",
-                "field": { "label": "Argument", "description": "Ein JSON-Wert, zum Beispiel [1, 2, 3] oder \"Ada\"." }
+                "field": {
+                  "label": "Argument",
+                  "description": "Ein JSON-Wert, zum Beispiel [1, 2, 3] oder \"Ada\"."
+                }
               },
-              { "label": "Erwartetes Ergebnis", "description": "Erwarteter Rückgabewert als JSON-Wert, zum Beispiel 3, [1, 2], true oder null." },
-              { "label": "Eingaben", "entity": "input", "field": { "label": "Text", "description": "Eingabe" } },
-              { "label": "Ausgaben", "entity": "output", "field": { "label": "Antwort", "description": "Ausgabe" } }
+              {
+                "label": "Erwartetes Ergebnis",
+                "description": "Erwarteter Rückgabewert als JSON-Wert, zum Beispiel 3, [1, 2], true oder null."
+              },
+              {
+                "label": "Eingaben",
+                "entity": "input",
+                "field": {
+                  "label": "Text",
+                  "description": "Eingabe"
+                }
+              },
+              {
+                "label": "Ausgaben",
+                "entity": "output",
+                "field": {
+                  "label": "Antwort",
+                  "description": "Ausgabe"
+                }
+              }
             ]
           }
         },
-        { "label": "Lösungscode", "entity": "testcase" }
+        {
+          "label": "Lösungscode",
+          "entity": "testcase"
+        }
+      ]
+    },
+    {
+      "label": "Hinweiskaskade",
+      "description": "Didaktische Hinweise, die Lernende nacheinander aufdecken. Reihenfolge: konzeptuell, strategisch, Teillösung.",
+      "fields": [
+        {
+          "label": "Hinweis-Button aktivieren",
+          "description": "Zeigt einen Hinweis-Button, der die Hinweise unten einzeln aufdeckt. Die Hinweisnutzung wird per xAPI gemeldet."
+        },
+        {
+          "label": "Hinweise",
+          "description": "Erster Hinweis: konzeptueller Anstoß. Zweiter: Strategie. Letzter: nah an der Lösung.",
+          "entity": "hint",
+          "field": {
+            "label": "Hint"
+          }
+        }
+      ]
+    },
+    {
+      "label": "Worked Example",
+      "description": "Nach wiederholt fehlgeschlagenen Checks wird eine ausgearbeitete Lösung zum Studium angeboten.",
+      "fields": [
+        {
+          "label": "Worked Example aktivieren",
+          "description": "Zeigt das Worked Example nach der konfigurierten Anzahl fehlgeschlagener Checks unter der Aufgabe."
+        },
+        {
+          "label": "Nach fehlgeschlagenen Checks anzeigen",
+          "description": "Anzahl fehlgeschlagener Checks, nach der das Worked Example erscheint."
+        },
+        {
+          "label": "Worked-Example-Code",
+          "description": "Die vollständige Lösung, idealerweise mit erklärenden Kommentaren pro Zeile."
+        }
       ]
     }
   ]

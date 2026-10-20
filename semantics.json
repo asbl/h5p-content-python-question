@@ -840,6 +840,27 @@
                         "default": true
                     }
                 ]
+            },
+            {
+                "name": "targetImage",
+                "type": "image",
+                "label": "Target image",
+                "description": "Shown next to the learner's drawing surface (canvas page) so learners can compare their own result with the goal while they work.",
+                "optional": true
+            },
+            {
+                "name": "targetImageCaption",
+                "type": "text",
+                "label": "Target image caption",
+                "description": "Short caption under the target image, e.g. 'This is what your program should draw.'",
+                "optional": true,
+                "widget": "codeWidget",
+                "options": [
+                    {
+                        "language": "markdown",
+                        "showAlways": true
+                    }
+                ]
             }
         ]
     },
@@ -897,6 +918,10 @@
                     {
                         "value": "sortItems",
                         "label": "Sort Items"
+                    },
+                    {
+                        "value": "parsons",
+                        "label": "Parsons Problem (code lines)"
                     }
                 ]
             },
@@ -936,6 +961,51 @@
                                     "options": [
                                         {
                                             "language": "markdown",
+                                            "showAlways": true
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "parsons",
+                "type": "group",
+                "label": "Parsons Problem",
+                "description": "Learners reorder shuffled code lines (indentation preserved) into the program defined here.",
+                "widget": "showWhen",
+                "showWhen": {
+                    "rules": [
+                        {
+                            "field": "gradingMethod",
+                            "equals": "parsons"
+                        }
+                    ]
+                },
+                "fields": [
+                    {
+                        "name": "lines",
+                        "type": "list",
+                        "label": "Code lines in correct order",
+                        "description": "Add one code line per entry, in the order that counts as correct. Keep the indentation inside the line.",
+                        "entity": "line",
+                        "min": 2,
+                        "field": {
+                            "name": "line",
+                            "type": "group",
+                            "label": "Code line",
+                            "fields": [
+                                {
+                                    "name": "code",
+                                    "type": "text",
+                                    "label": "Code",
+                                    "description": "A single line of Python code, including its indentation.",
+                                    "widget": "codeWidget",
+                                    "options": [
+                                        {
+                                            "language": "python",
                                             "showAlways": true
                                         }
                                     ]
@@ -1372,6 +1442,77 @@
                     ],
                     "widget": "codeWidget"
                 }
+            }
+        ]
+    },
+    {
+        "name": "hintSettings",
+        "type": "group",
+        "label": "Hint Cascade",
+        "description": "Didactic hints that learners reveal one by one. Order them from conceptual to strategic to a partial solution.",
+        "fields": [
+            {
+                "name": "enableHints",
+                "type": "boolean",
+                "label": "Enable hint button",
+                "description": "Shows a hint button that reveals the hints below one at a time. Hint usage is reported via xAPI.",
+                "default": false
+            },
+            {
+                "name": "hints",
+                "type": "list",
+                "label": "Hints",
+                "description": "First hint: conceptual nudge. Second: strategy. Last: closest to the solution.",
+                "entity": "hint",
+                "field": {
+                    "name": "hint",
+                    "type": "text",
+                    "label": "Hint",
+                    "widget": "codeWidget",
+                    "options": [
+                        {
+                            "language": "markdown",
+                            "showAlways": true
+                        }
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        "name": "workedExampleSettings",
+        "type": "group",
+        "label": "Worked Example",
+        "description": "After repeated failed checks, a fully worked solution is offered for study.",
+        "fields": [
+            {
+                "name": "enable",
+                "type": "boolean",
+                "label": "Enable worked example",
+                "description": "Reveals the worked example below the task after the configured number of failed checks.",
+                "default": false
+            },
+            {
+                "name": "revealAfterFailedChecks",
+                "type": "number",
+                "label": "Reveal after failed checks",
+                "description": "Number of failed checks after which the worked example appears.",
+                "default": 3,
+                "min": 1,
+                "max": 10
+            },
+            {
+                "name": "code",
+                "type": "text",
+                "label": "Worked example code",
+                "description": "The complete solution, ideally with explanatory comments per line.",
+                "widget": "codeWidget",
+                "options": [
+                    {
+                        "language": "python",
+                        "showAlways": true
+                    }
+                ]
             }
         ]
     }

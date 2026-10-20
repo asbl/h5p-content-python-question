@@ -246,6 +246,61 @@ export default class PythonQuestion extends H5P.CodeQuestion {
     );
   }
 
+  /**
+   * Renders the assignment editor and, when authored, attaches the target
+   * image next to the learner's drawing surface.
+   * @param {HTMLElement} contentPartsDiv - Content parts wrapper.
+   * @returns {void}
+   */
+  renderCodeContainer(contentPartsDiv) {
+    super.renderCodeContainer(contentPartsDiv);
+    this.renderTargetImagePreview();
+  }
+
+  /**
+   * Attaches the authored target image to the canvas page of the assignment
+   * editor, so learners see the goal next to their own drawing while the
+   * program runs. Falls back to a panel above the editor when the container
+   * does not expose a canvas page.
+   * @returns {void}
+   */
+  renderTargetImagePreview() {
+    const targetImage = this.params?.editorSettings?.targetImage;
+    if (!targetImage?.path || !this.codeContainer) {
+      return;
+    }
+
+    const figure = document.createElement('figure');
+    figure.className = 'python-target-image';
+
+    const img = document.createElement('img');
+    img.src = H5P.getPath(targetImage.path, this.contentId);
+    img.alt = this.getTargetImageCaption();
+    figure.append(img);
+
+    const caption = document.createElement('figcaption');
+    caption.textContent = this.getTargetImageCaption();
+    figure.append(caption);
+
+    const canvasPage = this.codeContainer.getPageManager?.()?.getPage?.('canvas');
+    if (canvasPage) {
+      canvasPage.prepend(figure);
+      return;
+    }
+
+    this.codeContainerParent?.prepend?.(figure);
+  }
+
+  /**
+   * Returns the caption for the target image: the authored caption or the
+   * localized default label.
+   * @returns {string} Caption text.
+   */
+  getTargetImageCaption() {
+    const caption = String(this.params?.editorSettings?.targetImageCaption || '').trim();
+    return caption || this.l10n.pythonTargetImageLabel;
+  }
+
   getLoadedBundleBasePath() {
     const bundleScript = Array.from(document.querySelectorAll('script[src]')).find((script) => (
       /\/libraries\/H5P\.PythonQuestion-[^/]+\/dist\/h5p-python-question\.js(?:\?.*)?$/i.test(script.src)
