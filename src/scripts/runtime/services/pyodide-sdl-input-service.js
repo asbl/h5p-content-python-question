@@ -1,4 +1,25 @@
 /**
+ * Builds the initial per-runner state fields this service reads and mutates
+ * (keyboard/mouse capture bindings, the event pump interval/promise/flags).
+ * Co-locating the field list with the functions that own it means a reader
+ * does not have to cross-reference pyodiderunner.js to know which fields
+ * belong to SDL input handling.
+ * @returns {object} Initial state fields to merge onto a PyodideRunner instance.
+ */
+export function createSDLInputState() {
+  return {
+    _sdlKeyboardCaptureBound: null,
+    _sdlKeyboardCaptureInstalled: false,
+    _sdlMouseCaptureBound: null,
+    _sdlMouseCaptureInstalled: false,
+    _sdlEventPumpInterval: null,
+    _sdlEventPumpInstallPromise: null,
+    _sdlEventPumpFunctionInstalled: false,
+    _sdlEventPumpInFlight: false,
+  };
+}
+
+/**
  * Returns whether the event key should be treated as SDL gameplay input.
  * @param {KeyboardEvent} event - Keyboard event.
  * @returns {boolean} True for keys that should not leak to editors.

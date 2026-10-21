@@ -24,6 +24,7 @@ import {
   syncSDLCanvasSize as syncSDLCanvasSizeService,
 } from './services/pyodide-sdl-canvas-service';
 import {
+  createSDLInputState,
   installSDLKeyboardCapture as installSDLKeyboardCaptureService,
   installSDLMouseCapture as installSDLMouseCaptureService,
   isSDLControlKey as isSDLControlKeyService,
@@ -100,14 +101,7 @@ export default class PyodideRunner {
     ]);
 
     this.p5Instance = null;
-    this._sdlKeyboardCaptureBound = null;
-    this._sdlKeyboardCaptureInstalled = false;
-    this._sdlMouseCaptureBound = null;
-    this._sdlMouseCaptureInstalled = false;
-    this._sdlEventPumpInterval = null;
-    this._sdlEventPumpInstallPromise = null;
-    this._sdlEventPumpFunctionInstalled = false;
-    this._sdlEventPumpInFlight = false;
+    Object.assign(this, createSDLInputState());
     this._canvasDimensionObserver = null;
     this._isInitialized = false;
     this._setupPromise = null;
