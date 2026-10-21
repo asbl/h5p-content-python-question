@@ -46,19 +46,17 @@ const PACKAGE_IMPORT_NAME_MAP = Object.entries(PYTHON_IMPORT_PACKAGE_MAP).reduce
 /**
  * Shared Pyodide loader state across all runner instances.
  * Per-instance Pyodide state is stored in a WeakMap keyed by the Pyodide object.
- * @type {{loadPyodidePromise: Promise<*>|null, sharedPyodidePromise: Promise<*>|null, sharedPyodidePromises: Map<string, Promise<*>>, miniworldsWheelPromises: Map<string, Promise<string>>, inputOverridePromise: Promise<*>|null, compatibilityPromise: Promise<*>|null, activeRuntime: object|null, activeSDLCanvas: HTMLCanvasElement|null, activeSDLRunner: object|null, loadedPackages: Set<string>, pyodideInstanceState: WeakMap<object, {compatibilityPromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, loadedPackages: Set<string>, packageLoadQueue: Promise<*>, executionQueue: Promise<*>}>, fetchCacheInstalled: boolean, fetchCacheCdnUrls: Set<string>, fetchCacheInflight: Map<string, Promise<Response>>}}
+ * @type {{loadPyodidePromise: Promise<*>|null, sharedPyodidePromises: Map<string, Promise<*>>, miniworldsWheelPromises: Map<string, Promise<string>>, activeRuntime: object|null, activeSDLCanvas: HTMLCanvasElement|null, activeSDLRunner: object|null, pyodideInstanceState: WeakMap<object, {compatibilityPromise: Promise<*>|null, inputOverridePromise: Promise<*>|null, loadedPackages: Set<string>, packageLoadQueue: Promise<*>, executionQueue: Promise<*>}>, fetchCacheInstalled: boolean, fetchCacheCdnUrls: Set<string>, fetchCacheInflight: Map<string, Promise<Response>>}}
  */
 export const sharedPyodideRuntimeState = {
   compatibilityPromise: null,
   loadPyodidePromise: null,
-  sharedPyodidePromise: null,
   sharedPyodidePromises: new Map(),
   miniworldsWheelPromises: new Map(),
   inputOverridePromise: null,
   activeRuntime: null,
   activeSDLCanvas: null,
   activeSDLRunner: null,
-  loadedPackages: new Set(),
   pyodideInstanceState: new WeakMap(),
   fetchCacheInstalled: false,
   fetchCacheCdnUrls: new Set(),
@@ -192,14 +190,12 @@ export function getLoadedPyodidePackages(pyodide) {
 export function resetSharedPyodideRuntimeState() {
   sharedPyodideRuntimeState.compatibilityPromise = null;
   sharedPyodideRuntimeState.loadPyodidePromise = null;
-  sharedPyodideRuntimeState.sharedPyodidePromise = null;
   sharedPyodideRuntimeState.sharedPyodidePromises = new Map();
   sharedPyodideRuntimeState.miniworldsWheelPromises = new Map();
   sharedPyodideRuntimeState.inputOverridePromise = null;
   sharedPyodideRuntimeState.activeRuntime = null;
   sharedPyodideRuntimeState.activeSDLCanvas = null;
   sharedPyodideRuntimeState.activeSDLRunner = null;
-  sharedPyodideRuntimeState.loadedPackages.clear();
   sharedPyodideRuntimeState.pyodideInstanceState = new WeakMap();
   sharedPyodideRuntimeState.fetchCacheInstalled = false;
   sharedPyodideRuntimeState.fetchCacheCdnUrls = new Set();
@@ -225,6 +221,22 @@ export function setActivePyodideRuntime(runtime) {
 }
 
 /**
+ * Builds a unique DOM id for SDL canvases that lost the active-canvas role.
+ * @returns {string} Unused id string.
+ */
+function createInactiveCanvasId() {
+  if (typeof H5P === 'object' && typeof H5P?.createUUID === 'function') {
+    return `canvas-inactive-${H5P.createUUID()}`;
+  }
+
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `canvas-inactive-${crypto.randomUUID()}`;
+  }
+
+  return `canvas-inactive-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+/**
  * Keeps exactly one SDL canvas bound to the global canvas id expected by SDL.
  * @param {HTMLCanvasElement|null} canvas - Next active SDL canvas.
  * @returns {void}
@@ -233,12 +245,12 @@ export function setActivePyodideSDLCanvas(canvas) {
   const state = sharedPyodideRuntimeState;
 
   if (state.activeSDLCanvas && state.activeSDLCanvas !== canvas && state.activeSDLCanvas.id === 'canvas') {
-    state.activeSDLCanvas.id = `canvas-inactive-${H5P.createUUID()}`;
+    state.activeSDLCanvas.id = createInactiveCanvasId();
   }
 
   if (!canvas) {
     if (state.activeSDLCanvas?.id === 'canvas') {
-      state.activeSDLCanvas.id = `canvas-inactive-${H5P.createUUID()}`;
+      state.activeSDLCanvas.id = createInactiveCanvasId();
     }
     state.activeSDLCanvas = null;
     return;
@@ -353,7 +365,12 @@ export function installPyodideInputOverride(pyodide) {
 import builtins
 
 async def _h5p_input(prompt=''):
-  return await input_handler(prompt)
+  value = await input_handler(prompt)
+  try:
+    _h5p_reset_execution_limit_clock()
+  except NameError:
+    pass
+  return value
 
 builtins.input = _h5p_input
   `).catch((error) => {
@@ -504,15 +521,9 @@ export async function getSharedPyodide(options = {}, runtime = null) {
       stdin: () => '\n',
     })).catch((error) => {
       state.sharedPyodidePromises.delete(indexURL);
-      if (state.sharedPyodidePromise === sharedPyodidePromise) {
-        state.sharedPyodidePromise = null;
-      }
       throw error;
     });
     state.sharedPyodidePromises.set(indexURL, sharedPyodidePromise);
-    if (!state.sharedPyodidePromise) {
-      state.sharedPyodidePromise = sharedPyodidePromise;
-    }
   }
 
   const pyodide = await sharedPyodidePromise;

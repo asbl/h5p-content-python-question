@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import {
+  getAlgorithmTraceNoopPreamble,
   getAlgorithmTracePreamble,
   TRACE_PREFIX,
 } from '../src/scripts/services/python-algorithm-trace.js';
@@ -43,5 +44,20 @@ describe('algorithm trace preamble', () => {
     expect(events).toEqual([
       { type: 'swap', step: 1, indices: [0, 2], snapshot: [3] },
     ]);
+  });
+
+  it('emits nothing in the no-op stub while swap still mutates', () => {
+    const code = getAlgorithmTraceNoopPreamble();
+    const output = execFileSync('python3', ['-c', [
+      code,
+      'values = [1, 2, 3]',
+      'trace.watch(values)',
+      'trace.compare(0, 1)',
+      'trace.mark(1)',
+      'trace.swap(values, 0, 2)',
+      'print(values)',
+    ].join('\n')], { encoding: 'utf8' });
+
+    expect(output.trim()).toBe('[3, 2, 1]');
   });
 });

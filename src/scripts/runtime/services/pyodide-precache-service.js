@@ -1,4 +1,4 @@
-import { normalizePythonPackageEntries } from '../../services/python-package-utils';
+import { normalizePythonPackageEntries, PYTHON_MINIWORLDS_PACKAGES } from '../../services/python-package-utils';
 import { normalizePyodideScriptUrl, sharedPyodideRuntimeState } from './pyodide-runtime-service';
 
 export const PYODIDE_FETCH_CACHE_NAME = 'h5p-pythonquestion-pyodide-fetch-v3';
@@ -15,12 +15,7 @@ const PYODIDE_CORE_ASSETS = Object.freeze([
 const PYODIDE_PRECACHE_CORE_ASSETS = Object.freeze(
   PYODIDE_CORE_ASSETS.filter((assetName) => assetName !== 'pyodide.js'),
 );
-const MINIWORLDS_FAMILY_PACKAGES = Object.freeze([
-  'miniworlds',
-  'miniworlds-data',
-  'miniworlds-robot',
-  'miniworlds-turtle',
-]);
+const MINIWORLDS_FAMILY_PACKAGES = PYTHON_MINIWORLDS_PACKAGES;
 
 /**
  * Miniworlds-family releases verified to work with this library's runtime.

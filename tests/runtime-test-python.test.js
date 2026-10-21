@@ -153,6 +153,56 @@ describe('PythonTestRuntime', () => {
     expect(runtime.codeTester.setAlgorithmConstraintResult).toHaveBeenCalledTimes(1);
   });
 
+  it('injects the recording trace preamble for the traced test case', () => {
+    const runtime = new PythonTestRuntime(vi.fn(), 'trace.watch(values)', {
+      algorithmTrace: { enabled: true, traceType: 'array', traceTestCaseIndex: 1 },
+      hasAlgorithmTrace: vi.fn(() => true),
+      session: { testCaseIndex: 1, getCurrentTestCase: vi.fn(() => ({})) },
+      getTestCode: vi.fn((code) => `${code}\n# function test`),
+    }, { runner: 'pyodide' });
+    runtime.runnerType = 'pyodide';
+
+    const code = runtime.getCode();
+
+    expect(code).toContain('class __H5PTrace:');
+    expect(code).not.toContain('__H5PTraceNoop');
+    expect(runtime.algorithmTraceToken).toBeTruthy();
+  });
+
+  it('injects a silent trace stub for non-traced test cases when the trace is enabled', () => {
+    // Learner source may call trace methods in any test case, but only one
+    // case is traced. Since every Pyodide run starts from a fresh namespace,
+    // the other cases need the no-op stub for those calls to stay valid.
+    const runtime = new PythonTestRuntime(vi.fn(), 'trace.watch(values)', {
+      algorithmTrace: { enabled: true, traceType: 'array' },
+      hasAlgorithmTrace: vi.fn(() => true),
+      session: { testCaseIndex: 2, getCurrentTestCase: vi.fn(() => ({})) },
+      getTestCode: vi.fn((code) => `${code}\n# function test`),
+    }, { runner: 'pyodide' });
+    runtime.runnerType = 'pyodide';
+
+    const code = runtime.getCode();
+
+    expect(code).toContain('class __H5PTraceNoop:');
+    expect(code).not.toContain('__H5PTrace()');
+    expect(runtime.algorithmTraceToken).toBeUndefined();
+  });
+
+  it('does not inject a trace stub when the trace is disabled', () => {
+    const runtime = new PythonTestRuntime(vi.fn(), 'print("ok")', {
+      algorithmTrace: {},
+      hasAlgorithmTrace: vi.fn(() => false),
+      session: { testCaseIndex: 0, getCurrentTestCase: vi.fn(() => ({})) },
+      getTestCode: vi.fn((code) => `${code}\n# function test`),
+    }, { runner: 'pyodide' });
+    runtime.runnerType = 'pyodide';
+
+    const code = runtime.getCode();
+
+    expect(code).not.toContain('__H5PTraceNoop');
+    expect(code).not.toContain('class __H5PTrace:');
+  });
+
   it('does not prepend a constraint preflight when constraints are inactive', () => {
     const runtime = new PythonTestRuntime(vi.fn(), 'print("ok")', {
       functionName: '',

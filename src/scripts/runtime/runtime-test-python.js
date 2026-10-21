@@ -2,7 +2,7 @@ import CanvasRuntimeManager from './canvasruntimemanager';
 import PythonRuntime from './runtime-python';
 import PythonSolutionRuntime from './runtime-solution-python';
 import { getAlgorithmConstraintHarness, RESULT_PREFIX } from '../services/python-algorithm-constraints';
-import { getAlgorithmTracePreamble, TRACE_PREFIX } from '../services/python-algorithm-trace';
+import { getAlgorithmTracePreamble, getAlgorithmTraceNoopPreamble, TRACE_PREFIX } from '../services/python-algorithm-trace';
 import { logPythonDiagnostic } from '../services/python-diagnostics';
 
 const DEBUG_PREFIX = 'Python test runtime:';
@@ -84,6 +84,12 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
       const trace = getAlgorithmTracePreamble(this.codeTester.algorithmTrace);
       this.algorithmTraceToken = trace.token;
       preamble += `${trace.code}\n`;
+    }
+    else if (this.codeTester?.hasAlgorithmTrace?.()) {
+      // Learner source may call trace methods in any test case, but only the
+      // traced case records events. Provide a silent stub elsewhere so those
+      // calls stay valid even though each run starts from a fresh namespace.
+      preamble += `${getAlgorithmTraceNoopPreamble()}\n`;
     }
     return preamble;
   }

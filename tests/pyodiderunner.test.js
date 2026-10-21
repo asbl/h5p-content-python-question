@@ -12,7 +12,6 @@ const mocks = vi.hoisted(() => ({
   setActivePyodideSDLCanvas: vi.fn(),
   setPyodideExecutionLimit: vi.fn(() => Promise.resolve()),
   sharedPyodideRuntimeState: {
-    sharedPyodidePromise: null,
     activeSDLCanvas: null,
   },
 }));
@@ -111,7 +110,6 @@ function createSDLPyodideStub() {
 describe('PyodideRunner', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.sharedPyodideRuntimeState.sharedPyodidePromise = null;
     mocks.sharedPyodideRuntimeState.activeSDLCanvas = null;
     window.__h5pPygameEventQueue = [];
   });
@@ -132,7 +130,7 @@ describe('PyodideRunner', () => {
       1600,
       'Program exceeded the execution time limit.',
     );
-    expect(runner.pyodide.runPythonAsync).toHaveBeenCalledWith('print(1)');
+    expect(runner.pyodide.runPythonAsync).toHaveBeenCalledWith('await _h5p_run_with_async_input("print(1)")');
     expect(mocks.clearPyodideExecutionLimit).toHaveBeenCalledWith(runner.pyodide);
     expect(runtime.onSuccess).toHaveBeenCalledWith('ok');
   });
@@ -244,7 +242,7 @@ describe('PyodideRunner', () => {
     );
   });
 
-  it('executes input() code via the async input helper instead of regex rewriting', async () => {
+  it('executes all learner code via the async input helper', async () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, { packages: [] });
     const runPythonAsync = vi.fn(() => Promise.resolve('ok'));
@@ -256,12 +254,14 @@ describe('PyodideRunner', () => {
 
     await runner.execute('name = input("Name?")\nprint(name)');
 
-    const [executedCode] = runPythonAsync.mock.calls[0];
+    const [executedCode] = runPythonAsync.mock.calls
+      .map((call) => call[0])
+      .filter((code) => code.includes('_h5p_run_with_async_input'));
     expect(executedCode).toContain('await _h5p_run_with_async_input(');
     expect(executedCode).not.toContain('await input(');
   });
 
-  it('detects input calls with whitespace and ignores input text in strings', async () => {
+  it('runs code without input() through the same async transform path', async () => {
     const runtime = createRuntime();
     const runner = new PyodideRunner(runtime, { packages: [] });
     const runPythonAsync = vi.fn(() => Promise.resolve('ok'));
@@ -269,12 +269,69 @@ describe('PyodideRunner', () => {
     runner.pyodide = { runPythonAsync };
     runner._isInitialized = true;
 
-    await runner.execute('name = input ("Name?")');
-    expect(runPythonAsync.mock.calls[0][0]).toContain('await _h5p_run_with_async_input(');
-
-    runPythonAsync.mockClear();
     await runner.execute('print("input(\\"Name?\\")")');
-    expect(runPythonAsync.mock.calls[0][0]).toBe('print("input(\\"Name?\\")")');
+
+    const [executedCode] = runPythonAsync.mock.calls
+      .map((call) => call[0])
+      .filter((code) => code.includes('_h5p_run_with_async_input'));
+    expect(executedCode).toContain('await _h5p_run_with_async_input("print(\\"input(\\\\\\"Name?\\\\\\")\\")")');
+  });
+
+  it('drops learner globals after a run without a background task', async () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, { packages: [] });
+    const runPythonAsync = vi.fn(() => Promise.resolve('ok'));
+
+    runner.pyodide = { runPythonAsync };
+    runner._isInitialized = true;
+
+    await runner.execute('score = 1');
+
+    const executedSnippets = runPythonAsync.mock.calls.map((call) => call[0]);
+    expect(executedSnippets[0]).toBe('_h5p_restore_globals()');
+    expect(executedSnippets[1]).toBe('_h5p_snapshot_globals()');
+    expect(executedSnippets.at(-1)).toBe('_h5p_restore_globals()');
+  });
+
+  it('keeps learner globals while a background task is still running', async () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, { packages: [] });
+    const runPythonAsync = vi.fn(() => Promise.resolve('ok'));
+
+    runner.pyodide = { runPythonAsync };
+    runner._isInitialized = true;
+
+    mocks.hasPyodideBackgroundTask.mockResolvedValueOnce(true);
+
+    await runner.execute('import miniworlds');
+
+    const executedSnippets = runPythonAsync.mock.calls.map((call) => call[0]);
+    expect(executedSnippets).toContain('_h5p_snapshot_globals()');
+    expect(executedSnippets.at(-1)).not.toBe('_h5p_restore_globals()');
+
+    // The pending snapshot is cleaned up when the next run starts.
+    mocks.hasPyodideBackgroundTask.mockResolvedValueOnce(false);
+    runPythonAsync.mockClear();
+    await runner.execute('print(1)');
+
+    const nextSnippets = runPythonAsync.mock.calls.map((call) => call[0]);
+    expect(nextSnippets[0]).toBe('_h5p_restore_globals()');
+    expect(nextSnippets.at(-1)).toBe('_h5p_restore_globals()');
+  });
+
+  it('retains learner globals when retainGlobals is enabled', async () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, { packages: [], retainGlobals: true });
+    const runPythonAsync = vi.fn(() => Promise.resolve('ok'));
+
+    runner.pyodide = { runPythonAsync };
+    runner._isInitialized = true;
+
+    await runner.execute('score = 1');
+
+    const executedSnippets = runPythonAsync.mock.calls.map((call) => call[0]);
+    expect(executedSnippets).not.toContain('_h5p_snapshot_globals()');
+    expect(executedSnippets.filter((code) => code === '_h5p_restore_globals()')).toHaveLength(0);
   });
 
   it('restores overridden p5 window globals when stopping the runner', () => {

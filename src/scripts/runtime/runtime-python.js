@@ -4,7 +4,7 @@ import PyodideRunner from './pyodiderunner';
 import {
   getPythonL10nValue,
 } from '../services/python-l10n';
-import { getImportedPythonPackages } from '../services/python-package-utils';
+import { getImportedPythonPackages, PYTHON_MINIWORLDS_PACKAGES, stripPythonLiteralsAndComments } from '../services/python-package-utils';
 import { logPythonDiagnostic } from '../services/python-diagnostics';
 import { precachePyodideAssets } from './services/pyodide-runtime-service';
 
@@ -144,7 +144,7 @@ export default class PythonRuntime extends H5P.Runtime {
     }
 
     const packages = Array.isArray(this.options?.packages) ? this.options.packages : [];
-    return packages.some((packageName) => ['miniworlds', 'miniworlds-data', 'miniworlds-robot', 'miniworlds-turtle', 'pygame-ce'].includes(String(packageName).trim()));
+    return packages.some((packageName) => [...PYTHON_MINIWORLDS_PACKAGES, 'pygame-ce'].includes(String(packageName).trim()));
   }
 
   /**
@@ -250,6 +250,16 @@ export default class PythonRuntime extends H5P.Runtime {
       || this.containsTkinterCode();
   }
 
+  /**
+   * Returns the analysis code without string literals and comments, so
+   * commented-out or quoted imports cannot trigger canvas or package
+   * detection.
+   * @returns {string} Stripped Python source code.
+   */
+  getStrippedAnalysisCode() {
+    return stripPythonLiteralsAndComments(this.getAnalysisCode());
+  }
+
   containsSDLCode() {
     return this.containsPygameCode() || this.containsMiniworldsCode();
   }
@@ -261,7 +271,7 @@ export default class PythonRuntime extends H5P.Runtime {
    * @returns {boolean} True, if code contains tkinter-based GUI code.
    */
   containsTkinterCode() {
-    const code = this.getAnalysisCode();
+    const code = this.getStrippedAnalysisCode();
     if (!code) return false;
     return (
       code.includes('import tkinter') ||
@@ -301,7 +311,7 @@ export default class PythonRuntime extends H5P.Runtime {
   }
 
   containsTurtleCode() {
-    const code = this.getAnalysisCode();
+    const code = this.getStrippedAnalysisCode();
     if (!code) return false;
     return (
       code.includes('import turtle') ||
@@ -310,7 +320,7 @@ export default class PythonRuntime extends H5P.Runtime {
   }
 
   containsP5Code() {
-    const code = this.getAnalysisCode();
+    const code = this.getStrippedAnalysisCode();
     if (!code) return false;
     return (
       code.includes('import p5') ||
@@ -319,7 +329,7 @@ export default class PythonRuntime extends H5P.Runtime {
   }
 
   containsPygameCode() {
-    const code = this.getAnalysisCode();
+    const code = this.getStrippedAnalysisCode();
     if (!code) return false;
     return (
       code.includes('import pygame') ||
@@ -328,7 +338,7 @@ export default class PythonRuntime extends H5P.Runtime {
   }
 
   containsMiniworldsCode() {
-    const code = this.getAnalysisCode();
+    const code = this.getStrippedAnalysisCode();
     if (!code) return false;
     return (
       code.includes('import miniworlds') ||

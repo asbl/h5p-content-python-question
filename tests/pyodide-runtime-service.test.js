@@ -70,6 +70,25 @@ describe('Pyodide runtime service', () => {
     expect(sharedPyodideRuntimeState.activeSDLCanvas).toBeNull();
   });
 
+  it('falls back to a non-H5P UUID source when H5P.createUUID is unavailable', () => {
+    const previousCreateUUID = globalThis.H5P.createUUID;
+    delete globalThis.H5P.createUUID;
+
+    try {
+      const firstCanvas = document.createElement('canvas');
+      const secondCanvas = document.createElement('canvas');
+
+      setActivePyodideSDLCanvas(firstCanvas);
+      setActivePyodideSDLCanvas(secondCanvas);
+
+      expect(firstCanvas.id).toMatch(/^canvas-inactive-/);
+      expect(secondCanvas.id).toBe('canvas');
+    }
+    finally {
+      globalThis.H5P.createUUID = previousCreateUUID;
+    }
+  });
+
   it('installs and clears the execution-limit trace helpers', async () => {
     const pyodide = {
       runPythonAsync: vi.fn().mockResolvedValue(undefined),

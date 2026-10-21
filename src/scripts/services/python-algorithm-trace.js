@@ -43,3 +43,24 @@ class __H5PTrace:
 trace = __H5PTrace()
 ` };
 };
+
+/**
+ * Creates a silent trace stub with the same API as the real trace preamble.
+ *
+ * Learner source may call trace methods in every test case, but events are
+ * only recorded for the traced test case. The stub keeps those calls valid
+ * without emitting output; swap still mutates because learner algorithms
+ * rely on it for the actual exchange.
+ * @returns {string} Python preamble source defining a no-op `trace`.
+ */
+export const getAlgorithmTraceNoopPreamble = () => `class __H5PTraceNoop:
+    def watch(self, values):
+        pass
+    def compare(self, left, right):
+        pass
+    def mark(self, index, label='mark'):
+        pass
+    def swap(self, values, left, right):
+        values[left], values[right] = values[right], values[left]
+trace = __H5PTraceNoop()
+`;

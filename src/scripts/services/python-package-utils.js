@@ -1,4 +1,16 @@
 /**
+ * Miniworlds-family packages resolved through micropip from pinned PyPI
+ * wheels. Single source of truth for package, precache and preload services.
+ * @type {string[]}
+ */
+export const PYTHON_MINIWORLDS_PACKAGES = Object.freeze([
+  'miniworlds',
+  'miniworlds-data',
+  'miniworlds-robot',
+  'miniworlds-turtle',
+]);
+
+/**
  * Maps imported Python module names to installable Pyodide package names.
  * @type {Record<string, string>}
  */
@@ -32,10 +44,7 @@ export const PYTHON_IMPORT_PACKAGE_MAP = Object.freeze({
  */
 export const PYTHON_MICROPIP_PACKAGES = Object.freeze([
   'guizero',
-  'miniworlds',
-  'miniworlds-data',
-  'miniworlds-robot',
-  'miniworlds-turtle',
+  ...PYTHON_MINIWORLDS_PACKAGES,
   'tkinter-web-backend',
 ]);
 
@@ -55,7 +64,7 @@ export const PYTHON_PACKAGE_DEPENDENCY_MAP = Object.freeze({
  * @param {string} code - Python source code.
  * @returns {string} Source code without literal/comment contents.
  */
-function stripPythonLiteralsAndComments(code = '') {
+export function stripPythonLiteralsAndComments(code = '') {
   return String(code || '')
     .replace(/'''[\s\S]*?'''|"""[\s\S]*?"""|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g, '')
     .replace(/#.*/g, '');

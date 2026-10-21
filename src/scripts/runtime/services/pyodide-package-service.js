@@ -3,6 +3,7 @@ import {
   getPythonPackageUrlMap,
   getPythonPackageDependencies,
   normalizePythonPackageEntries,
+  PYTHON_MINIWORLDS_PACKAGES,
   splitPythonPackages,
 } from '../../services/python-package-utils';
 import { tPython } from '../../services/python-l10n';
@@ -24,7 +25,7 @@ export {
   splitPythonPackages as splitPyodidePackages,
 };
 
-const MINIWORLDS_FAMILY_PACKAGES = ['miniworlds', 'miniworlds-data', 'miniworlds-robot', 'miniworlds-turtle'];
+const MINIWORLDS_FAMILY_PACKAGES = PYTHON_MINIWORLDS_PACKAGES;
 const MINIWORLDS_PACKAGE_IMPORTS = Object.freeze({
   miniworlds: 'miniworlds',
   'miniworlds-data': 'miniworlds_data',
@@ -156,8 +157,8 @@ async function reportMiniworldsPackageVersion(pyodide) {
 }
 
 /**
- * Clears the shared set of already loaded packages.
- * @param {object} [pyodide] - Pyodide instance to reset, or none to reset all shared state.
+ * Clears the tracked loaded-package registry.
+ * @param {object} [pyodide] - Pyodide instance to reset, or none to reset all instance state.
  * @returns {void}
  */
 export function resetLoadedPyodidePackages(pyodide = null) {
@@ -166,7 +167,6 @@ export function resetLoadedPyodidePackages(pyodide = null) {
     return;
   }
 
-  sharedPyodideRuntimeState.loadedPackages.clear();
   sharedPyodideRuntimeState.pyodideInstanceState = new WeakMap();
 }
 

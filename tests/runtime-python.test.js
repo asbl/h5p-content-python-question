@@ -288,6 +288,32 @@ describe('PythonRuntime', () => {
     expect(runtime.containsCanvasCode()).toBe(true);
   });
 
+  it('ignores commented-out imports during canvas detection', () => {
+    const runtime = new PythonRuntime(vi.fn(), '# import pygame\nprint(1)');
+    vi.spyOn(runtime, 'getAnalysisCode').mockReturnValue('# import pygame\nprint(1)');
+
+    expect(runtime.containsPygameCode()).toBe(false);
+    expect(runtime.containsSDLCode()).toBe(false);
+    expect(runtime.containsCanvasCode()).toBe(false);
+  });
+
+  it('ignores imports that only appear inside string literals', () => {
+    const runtime = new PythonRuntime(vi.fn(), 'code = "from miniworlds import World"');
+    vi.spyOn(runtime, 'getAnalysisCode').mockReturnValue('code = "from miniworlds import World"');
+
+    expect(runtime.containsMiniworldsCode()).toBe(false);
+    expect(runtime.containsSDLCode()).toBe(false);
+  });
+
+  it('ignores commented-out tkinter and turtle imports', () => {
+    const runtime = new PythonRuntime(vi.fn(), '# import turtle');
+    vi.spyOn(runtime, 'getAnalysisCode').mockReturnValue('# import turtle');
+
+    expect(runtime.containsTurtleCode()).toBe(false);
+    expect(runtime.containsTkinterCode()).toBe(false);
+    expect(runtime.containsCanvasCode()).toBe(false);
+  });
+
   it('detects miniworlds imports across project files before pyodide setup', async () => {
     const workspace = {
       files: [

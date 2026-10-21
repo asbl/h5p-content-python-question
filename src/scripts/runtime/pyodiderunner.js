@@ -54,19 +54,6 @@ import { logPythonDiagnostic } from '../services/python-diagnostics';
 
 const DEBUG_PREFIX = 'Pyodide runner:';
 
-/**
- * Detects whether learner code contains a direct input(...) call.
- * @param {string} code - Python source code.
- * @returns {boolean} True if code contains a direct input call.
- */
-function containsPythonInputCall(code = '') {
-  return /(^|[^.\w])input\s*\(/.test(
-    String(code || '')
-      .replace(/'''[\s\S]*?'''|"""[\s\S]*?"""|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g, '')
-      .replace(/#.*/g, ''),
-  );
-}
-
 export default class PyodideRunner {
   /**
    * @param {object} runtime - Owning Python runtime instance.
@@ -82,7 +69,6 @@ export default class PyodideRunner {
 
     /* Error state */
     this.errorMessage = null;
-    this.errorLineNumber = null;
 
     /* Localization */
     this.l10n = runtime.l10n || {};
@@ -402,16 +388,41 @@ export default class PyodideRunner {
         await this.applyExecutionLimit();
 
         try {
-          if (containsPythonInputCall(code)) {
-            return await this.pyodide.runPythonAsync(
-              `await _h5p_run_with_async_input(${JSON.stringify(String(code || ''))})`
-            );
+          // Drop learner globals left over by a previous run that ended with
+          // a still-running background task, then record the pre-run
+          // namespace so this run's learner globals can be dropped
+          // afterwards. This matches Skulpt's retainGlobals=false default:
+          // every Run starts from a fresh namespace instead of inheriting
+          // stale variables from earlier runs.
+          if (!this.retainGlobals) {
+            await this.pyodide.runPythonAsync('_h5p_restore_globals()');
+            await this.pyodide.runPythonAsync('_h5p_snapshot_globals()');
           }
 
-          return await this.pyodide.runPythonAsync(code);
+          // Always run through the AST transform: builtins.input is replaced
+          // by an async function, so any direct or indirect input() call
+          // must be awaited, which only the transform guarantees.
+          return await this.pyodide.runPythonAsync(
+            `await _h5p_run_with_async_input(${JSON.stringify(String(code || ''))})`
+          );
         }
         finally {
           await this.clearExecutionLimit();
+
+          // While a background task (e.g. a miniworlds/pygame mainloop) is
+          // still running, its frames reference learner globals, so the
+          // restore is deferred until the next run starts or the task is
+          // cancelled. Cleanup must never mask the learner's error.
+          if (!this.retainGlobals) {
+            try {
+              if (!await hasPyodideBackgroundTask(this.pyodide)) {
+                await this.pyodide.runPythonAsync('_h5p_restore_globals()');
+              }
+            }
+            catch (cleanupError) {
+              logPythonDiagnostic(this.options, DEBUG_PREFIX, 'Could not restore learner globals', cleanupError);
+            }
+          }
         }
       });
 
