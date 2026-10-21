@@ -231,20 +231,20 @@ describe('Pyodide runtime service', () => {
     window.fetch = vi.fn(async () => ({
       ok: true,
       json: async () => ({
-        info: { version: '4.3.1.16' },
+        info: { version: '4.4.0.0' },
         urls: [{
           packagetype: 'bdist_wheel',
-          filename: 'miniworlds-4.3.1.16-py3-none-any.whl',
-          url: 'https://files.pythonhosted.org/packages/miniworlds-4.3.1.16-py3-none-any.whl',
+          filename: 'miniworlds-4.4.0.0-py3-none-any.whl',
+          url: 'https://files.pythonhosted.org/packages/miniworlds-4.4.0.0-py3-none-any.whl',
         }],
       }),
     }));
 
     await expect(resolveMiniworldsWheelUrl()).resolves.toBe(
-      'https://files.pythonhosted.org/packages/miniworlds-4.3.1.16-py3-none-any.whl',
+      'https://files.pythonhosted.org/packages/miniworlds-4.4.0.0-py3-none-any.whl',
     );
     expect(window.fetch).toHaveBeenCalledWith(
-      'https://pypi.org/pypi/miniworlds/4.3.1.16/json',
+      'https://pypi.org/pypi/miniworlds/4.4.0.0/json',
       { cache: 'no-store' },
     );
     window.fetch = originalFetch;
@@ -264,15 +264,15 @@ describe('Pyodide runtime service', () => {
       const requestUrl = String(url);
       fetchLog.push(requestUrl);
 
-      if (requestUrl === 'https://pypi.org/pypi/miniworlds/4.3.1.16/json') {
+      if (requestUrl === 'https://pypi.org/pypi/miniworlds/4.4.0.0/json') {
         return {
           ok: true,
           json: async () => ({
-            info: { version: '4.3.1.16' },
+            info: { version: '4.4.0.0' },
             urls: [{
               packagetype: 'bdist_wheel',
-              filename: 'miniworlds-4.3.1.16-py3-none-any.whl',
-              url: 'https://files.pythonhosted.org/packages/miniworlds-4.3.1.16-py3-none-any.whl',
+              filename: 'miniworlds-4.4.0.0-py3-none-any.whl',
+              url: 'https://files.pythonhosted.org/packages/miniworlds-4.4.0.0-py3-none-any.whl',
             }],
           }),
         };
@@ -299,12 +299,12 @@ describe('Pyodide runtime service', () => {
       persistentPyodideCache: false,
     });
 
-    const metadataIndex = fetchLog.indexOf('https://pypi.org/pypi/miniworlds/4.3.1.16/json');
+    const metadataIndex = fetchLog.indexOf('https://pypi.org/pypi/miniworlds/4.4.0.0/json');
     const lockIndex = fetchLog.indexOf('https://static.example.com/pyodide/pyodide-lock.json');
     expect(metadataIndex).toBeGreaterThanOrEqual(0);
     expect(lockIndex).toBeGreaterThanOrEqual(0);
     expect(metadataIndex).toBeLessThan(lockIndex);
-    expect(fetchLog).toContain('https://files.pythonhosted.org/packages/miniworlds-4.3.1.16-py3-none-any.whl');
+    expect(fetchLog).toContain('https://files.pythonhosted.org/packages/miniworlds-4.4.0.0-py3-none-any.whl');
     window.fetch = originalFetch;
   });
 

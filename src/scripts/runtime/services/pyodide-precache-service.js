@@ -34,7 +34,7 @@ const MINIWORLDS_FAMILY_PACKAGES = Object.freeze([
  * @type {Record<string, string>}
  */
 const MINIWORLDS_PINNED_VERSIONS = Object.freeze({
-  miniworlds: '4.3.1.16',
+  miniworlds: '4.4.0.0',
   'miniworlds-data': '0.1.0',
   'miniworlds-robot': '0.1.4',
   'miniworlds-turtle': '0.1.0',
