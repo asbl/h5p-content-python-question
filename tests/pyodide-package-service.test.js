@@ -310,17 +310,17 @@ describe('Pyodide package service', () => {
       miniworlds: {
         url: 'https://files.pythonhosted.org/packages/miniworlds-stale-py3-none-any.whl',
         checkedAt: Date.now(),
-        version: '4.4.0.0',
+        version: '4.4.0.1',
       },
     }));
     window.fetch = vi.fn(async () => ({
       ok: true,
       json: async () => ({
-        info: { version: '4.4.0.0' },
+        info: { version: '4.4.0.1' },
         urls: [{
           packagetype: 'bdist_wheel',
-          filename: 'miniworlds-4.4.0.0-py3-none-any.whl',
-          url: 'https://files.pythonhosted.org/packages/miniworlds-4.4.0.0-py3-none-any.whl',
+          filename: 'miniworlds-4.4.0.1-py3-none-any.whl',
+          url: 'https://files.pythonhosted.org/packages/miniworlds-4.4.0.1-py3-none-any.whl',
         }],
       }),
     }));
@@ -344,10 +344,10 @@ describe('Pyodide package service', () => {
       'https://files.pythonhosted.org/packages/miniworlds-stale-py3-none-any.whl',
     ], { deps: false });
     expect(micropip.install.callKwargs).toHaveBeenNthCalledWith(2, [
-      'https://files.pythonhosted.org/packages/miniworlds-4.4.0.0-py3-none-any.whl',
+      'https://files.pythonhosted.org/packages/miniworlds-4.4.0.1-py3-none-any.whl',
     ], { deps: false });
     expect(window.fetch).toHaveBeenCalledWith(
-      'https://pypi.org/pypi/miniworlds/4.4.0.0/json',
+      'https://pypi.org/pypi/miniworlds/4.4.0.1/json',
       { cache: 'no-store' },
     );
     expect(getLoadedPyodidePackages(pyodide).has('miniworlds')).toBe(true);
