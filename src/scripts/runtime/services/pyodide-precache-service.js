@@ -29,7 +29,7 @@ const MINIWORLDS_FAMILY_PACKAGES = PYTHON_MINIWORLDS_PACKAGES;
  * @type {Record<string, string>}
  */
 const MINIWORLDS_PINNED_VERSIONS = Object.freeze({
-  miniworlds: '4.4.0.1',
+  miniworlds: '4.4.0.2',
   'miniworlds-data': '0.1.0',
   'miniworlds-robot': '0.1.4',
   'miniworlds-turtle': '0.1.0',
