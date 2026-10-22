@@ -28,8 +28,8 @@ const MINIWORLDS_FAMILY_PACKAGES = PYTHON_MINIWORLDS_PACKAGES;
  * published, and then starts working without any further change here.
  * @type {Record<string, string>}
  */
-const MINIWORLDS_PINNED_VERSIONS = Object.freeze({
-  miniworlds: '4.4.0.2',
+export const MINIWORLDS_PINNED_VERSIONS = Object.freeze({
+  miniworlds: '4.4.0.4',
   'miniworlds-data': '0.1.0',
   'miniworlds-robot': '0.1.4',
   'miniworlds-turtle': '0.1.0',

@@ -324,6 +324,25 @@ export function inferSDLLogicalSize(runner) {
     );
   }
 
+  const hexCall = findMiniworldsConstructorCall(code, 'HexWorld');
+  if (hexCall) {
+    const columns = readIntegerArgument(hexCall.args, 0, ['columns', 'x']) || 20;
+    const rows = readIntegerArgument(hexCall.args, 1, ['rows', 'y']) || 16;
+    const tileSize = readIntegerArgument(hexCall.args, 2, ['tile_size', 'tileSize']) || 40;
+
+    // Pointy-top hex layout, matching miniworlds' hex_camera_manager:
+    // width = int(sqrt(3) * tile_size * (columns + 0.5)),
+    // height = int(tile_size * (1.5 * rows + 0.5)).
+    const size = {
+      width: Math.trunc(Math.sqrt(3) * tileSize * (columns + 0.5)),
+      height: Math.trunc(tileSize * (1.5 * rows + 0.5)),
+    };
+    return applyMiniworldsCameraAttachments(
+      size,
+      inferMiniworldsCameraAttachments(code, hexCall.worldName),
+    );
+  }
+
   const tiledCall = findMiniworldsConstructorCall(code, 'TiledWorld');
   if (tiledCall) {
     const columns = readIntegerArgument(tiledCall.args, 0, ['columns', 'cols']);

@@ -10,6 +10,11 @@ import {
   resetSharedPyodideRuntimeState,
   sharedPyodideRuntimeState,
 } from '../src/scripts/runtime/services/pyodide-runtime-service.js';
+import { MINIWORLDS_PINNED_VERSIONS } from '../src/scripts/runtime/services/pyodide-precache-service.js';
+
+const pinnedMiniworldsVersion = MINIWORLDS_PINNED_VERSIONS.miniworlds;
+const miniworldsMetadataUrl = `https://pypi.org/pypi/miniworlds/${pinnedMiniworldsVersion}/json`;
+const miniworldsWheelUrl = `https://files.pythonhosted.org/packages/miniworlds-${pinnedMiniworldsVersion}-py3-none-any.whl`;
 
 /**
  * Creates a runtime mock with a spy-able outputHandler.
@@ -310,17 +315,17 @@ describe('Pyodide package service', () => {
       miniworlds: {
         url: 'https://files.pythonhosted.org/packages/miniworlds-stale-py3-none-any.whl',
         checkedAt: Date.now(),
-        version: '4.4.0.2',
+        version: pinnedMiniworldsVersion,
       },
     }));
     window.fetch = vi.fn(async () => ({
       ok: true,
       json: async () => ({
-        info: { version: '4.4.0.2' },
+        info: { version: pinnedMiniworldsVersion },
         urls: [{
           packagetype: 'bdist_wheel',
-          filename: 'miniworlds-4.4.0.2-py3-none-any.whl',
-          url: 'https://files.pythonhosted.org/packages/miniworlds-4.4.0.2-py3-none-any.whl',
+          filename: `miniworlds-${pinnedMiniworldsVersion}-py3-none-any.whl`,
+          url: miniworldsWheelUrl,
         }],
       }),
     }));
@@ -344,10 +349,10 @@ describe('Pyodide package service', () => {
       'https://files.pythonhosted.org/packages/miniworlds-stale-py3-none-any.whl',
     ], { deps: false });
     expect(micropip.install.callKwargs).toHaveBeenNthCalledWith(2, [
-      'https://files.pythonhosted.org/packages/miniworlds-4.4.0.2-py3-none-any.whl',
+      miniworldsWheelUrl,
     ], { deps: false });
     expect(window.fetch).toHaveBeenCalledWith(
-      'https://pypi.org/pypi/miniworlds/4.4.0.2/json',
+      miniworldsMetadataUrl,
       { cache: 'no-store' },
     );
     expect(getLoadedPyodidePackages(pyodide).has('miniworlds')).toBe(true);

@@ -109,4 +109,22 @@ describe('inferSDLLogicalSize Miniworlds cases', () => {
 
     expect(inferSDLLogicalSize(runner)).toEqual({ width: 800, height: 640 });
   });
+
+  it('infers HexWorld dimensions from the pointy-top hex layout', () => {
+    const runner = createRunner([
+      'import miniworlds',
+      'world = miniworlds.HexWorld(7, 7, tile_size=40)',
+    ].join('\n'));
+
+    expect(inferSDLLogicalSize(runner)).toEqual({ width: 519, height: 440 });
+  });
+
+  it('uses the default HexWorld dimensions when no literal arguments are present', () => {
+    const runner = createRunner([
+      'from miniworlds import HexWorld',
+      'world = HexWorld()',
+    ].join('\n'));
+
+    expect(inferSDLLogicalSize(runner)).toEqual({ width: 1420, height: 980 });
+  });
 });
