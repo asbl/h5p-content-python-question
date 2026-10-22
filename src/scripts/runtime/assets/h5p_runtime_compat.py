@@ -270,47 +270,51 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     _h5p_background_task_started = False
     return True
 
-  class _h5p_async_input_function_discoverer(_h5p_ast.NodeVisitor):
-    def __init__(self, async_function_names):
+  class _h5p_async_input_call_scanner(_h5p_ast.NodeVisitor):
+    # Collects the plain names called in one function's own statements.
+    # Nested scopes (inner functions, classes and lambdas) are separate
+    # discovery units and are not descended into, so an input() call inside
+    # a nested def does not mark the enclosing function.
+    def __init__(self):
       super().__init__()
-      self.async_function_names = async_function_names
-      self.contains_async_input = False
-      self._nested_function_depth = 0
+      self.called_names = set()
 
     def visit_FunctionDef(self, node):
-      if self._nested_function_depth == 0 and node.name in self.async_function_names:
-        self.contains_async_input = True
-        return
-
-      self._nested_function_depth += 1
-      if self._nested_function_depth == 1:
-        for child in node.body:
-          self.visit(child)
-      self._nested_function_depth -= 1
+      return
 
     def visit_AsyncFunctionDef(self, node):
       return
 
+    def visit_ClassDef(self, node):
+      return
+
+    def visit_Lambda(self, node):
+      return
+
     def visit_Call(self, node):
-      if (
-        isinstance(node.func, _h5p_ast.Name)
-        and (
-          node.func.id == 'input'
-          or node.func.id in self.async_function_names
-        )
-      ):
-        self.contains_async_input = True
+      if isinstance(node.func, _h5p_ast.Name):
+        self.called_names.add(node.func.id)
       self.generic_visit(node)
 
   class _h5p_await_input_transformer(_h5p_ast.NodeTransformer):
-    def __init__(self, async_function_names):
+    def __init__(self, marked_node_ids, async_function_names):
       super().__init__()
+      self.marked_node_ids = marked_node_ids
       self.async_function_names = async_function_names
       self._inside_await = False
+      # Await legality per enclosing scope: module level allows top-level
+      # await, a converted function allows await inside, while class bodies
+      # and lambdas never do (await is a SyntaxError there even inside an
+      # async function).
+      self._await_legal = [True]
 
     def visit_FunctionDef(self, node):
+      is_marked = id(node) in self.marked_node_ids
+      self._await_legal.append(is_marked)
       self.generic_visit(node)
-      if node.name not in self.async_function_names:
+      self._await_legal.pop()
+
+      if not is_marked:
         return node
 
       return _h5p_ast.copy_location(_h5p_ast.AsyncFunctionDef(
@@ -322,6 +326,25 @@ if not globals().get('_h5p_runtime_compat_installed', False):
         type_comment=getattr(node, 'type_comment', None),
       ), node)
 
+    def visit_AsyncFunctionDef(self, node):
+      # Learner-written async functions already permit await inside.
+      self._await_legal.append(True)
+      self.generic_visit(node)
+      self._await_legal.pop()
+      return node
+
+    def visit_ClassDef(self, node):
+      self._await_legal.append(False)
+      self.generic_visit(node)
+      self._await_legal.pop()
+      return node
+
+    def visit_Lambda(self, node):
+      self._await_legal.append(False)
+      self.generic_visit(node)
+      self._await_legal.pop()
+      return node
+
     def visit_Await(self, node):
       previous = self._inside_await
       self._inside_await = True
@@ -332,7 +355,8 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     def visit_Call(self, node):
       self.generic_visit(node)
       if (
-        not self._inside_await
+        self._await_legal[-1]
+        and not self._inside_await
         and isinstance(node.func, _h5p_ast.Name)
         and (
           node.func.id == 'input'
@@ -342,33 +366,55 @@ if not globals().get('_h5p_runtime_compat_installed', False):
         return _h5p_ast.copy_location(_h5p_ast.Await(value=node), node)
       return node
 
-  def _h5p_discover_async_input_function_names(tree):
-    discovered_async_function_names = set()
-    changed = True
+  def _h5p_discover_async_input_functions(tree):
+    # Returns the ids of all FunctionDef nodes that must become async
+    # (their own statements call input() or a function discovered earlier),
+    # plus their names for call-site await insertion. Discovery is
+    # node-based so an unrelated method that merely shares a name with a
+    # discovered top-level function is not silently converted.
+    #
+    # Each function's called names are collected once; the fixpoint then
+    # only intersects name sets, because this runs inside the traced
+    # execution-limit region and re-scanning ASTs per iteration would
+    # burn the learner's time budget.
+    function_nodes = [
+      node for node in _h5p_ast.walk(tree)
+      if isinstance(node, _h5p_ast.FunctionDef)
+    ]
+    called_names_per_function = []
+    for node in function_nodes:
+      scanner = _h5p_async_input_call_scanner()
+      for child in node.body:
+        scanner.visit(child)
+      called_names_per_function.append(scanner.called_names)
 
-    while changed:
-      changed = False
-      for node in tree.body:
-        if not isinstance(node, _h5p_ast.FunctionDef):
-          continue
-        if node.name in discovered_async_function_names:
-          continue
+    marked_node_ids = set()
+    marked_names = set()
+    pending = list(range(len(function_nodes)))
 
-        discoverer = _h5p_async_input_function_discoverer(discovered_async_function_names)
-        for child in node.body:
-          discoverer.visit(child)
+    while pending:
+      remaining = []
+      progressed = False
 
-        if discoverer.contains_async_input:
-          discovered_async_function_names.add(node.name)
-          changed = True
+      for index in pending:
+        node = function_nodes[index]
+        if 'input' in called_names_per_function[index] \
+          or (called_names_per_function[index] & marked_names):
+          marked_node_ids.add(id(node))
+          marked_names.add(node.name)
+          progressed = True
+        else:
+          remaining.append(index)
 
-    return discovered_async_function_names
+      pending = remaining if progressed else []
+
+    return marked_node_ids, marked_names
 
   def _h5p_build_async_input_module(source):
     source = '' if source is None else str(source)
     tree = _h5p_ast.parse(source, mode='exec')
-    discovered_async_function_names = _h5p_discover_async_input_function_names(tree)
-    transformed_body = _h5p_await_input_transformer(discovered_async_function_names).visit(tree).body
+    marked_node_ids, async_function_names = _h5p_discover_async_input_functions(tree)
+    transformed_body = _h5p_await_input_transformer(marked_node_ids, async_function_names).visit(tree).body
 
     module = _h5p_ast.Module(body=transformed_body, type_ignores=[])
 
@@ -400,6 +446,9 @@ if not globals().get('_h5p_runtime_compat_installed', False):
     # returns a coroutine when the code contains top-level await, which is
     # awaited here.
     module = _h5p_build_async_input_module(source)
+    # Parsing and transforming is runtime overhead, not learner execution
+    # time, so the execution-limit clock restarts before the code runs.
+    _h5p_reset_execution_limit_clock()
     namespace = globals()
     code = compile(module, '<h5p-learner-code>', 'exec', flags=_h5p_ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)
 
