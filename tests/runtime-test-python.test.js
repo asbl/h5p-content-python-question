@@ -124,6 +124,28 @@ describe('PythonTestRuntime', () => {
     expect(runtime.codeTester.setAlgorithmConstraintResult).toHaveBeenCalledWith(null);
   });
 
+  it('analyzes only editable code but executes the complete program with authored sections', () => {
+    const editableCode = 'class Tuerschloss:\n    pass\n';
+    const completeCode = `vorgegeben = []\n${editableCode}\ndef pruefe_schloss():\n    return []\n`;
+    const extractEditableCode = vi.fn(() => editableCode);
+    const runtime = new PythonTestRuntime(vi.fn(), completeCode, {
+      functionName: 'pruefe_schloss',
+      algorithmConstraints: { forbiddenDataStructures: ['list'] },
+      hasAlgorithmConstraints: vi.fn(() => true),
+      setAlgorithmConstraintResult: vi.fn(),
+      getTestCode: vi.fn((code) => `${code}\n# function test`),
+    }, { runner: 'pyodide' });
+    runtime.runnerType = 'pyodide';
+    runtime.setup({ getEditorManager: () => ({ extractEditableCode }) });
+
+    const code = runtime.getCode();
+
+    expect(extractEditableCode).toHaveBeenCalledWith(completeCode, { isEntry: true });
+    expect(code).toContain(`__h5p_tree = ast.parse(${JSON.stringify(editableCode)})`);
+    expect(code).toContain(`__h5p_execution_tree = ast.parse(${JSON.stringify(completeCode)})`);
+    expect(code).toContain(`${completeCode}\n# function test`);
+  });
+
   it('reuses the same constraint token across repeated getCode() calls for one test case', () => {
     // getCode() is queried from several unrelated call sites (canvas
     // detection, multi-file listings, the actual run() call, ...) for the

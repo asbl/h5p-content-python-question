@@ -207,8 +207,26 @@ describe('PyodideRunner', () => {
       { localModuleNames: ['helper'] },
     );
     expect(mocks.loadMissingPyodidePackages).toHaveBeenCalledWith(runner.pyodide, ['numpy'], {
-      packageUrls: undefined,
+      packageUrls: {
+        miniworlds: expect.stringMatching(/\/miniworlds-4\.4\.0\.7-py3-none-any\.whl$/),
+      },
     });
+  });
+
+  it('uses the bundled Miniworlds wheel by default', () => {
+    const runner = new PyodideRunner(createRuntime());
+
+    expect(runner.options.packageUrls.miniworlds).toMatch(/\/miniworlds-4\.4\.0\.7-py3-none-any\.whl$/);
+    expect(runner.options.packageUrls.miniworlds).not.toContain('pypi.org');
+  });
+
+  it('preserves wheel URLs supplied inside package entries', () => {
+    const wheelUrl = 'https://static.example.com/custom/miniworlds.whl';
+    const runner = new PyodideRunner(createRuntime(), {
+      packages: [{ package: 'miniworlds', url: wheelUrl }],
+    });
+
+    expect(runner.options.packageUrls.miniworlds).toBe(wheelUrl);
   });
 
   it('loads import-derived package hints during setup preload', async () => {

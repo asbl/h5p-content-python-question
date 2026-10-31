@@ -5,6 +5,7 @@ import {
 import { PYODIDE_LIBRARY_VERSION } from './services/pyodide-cache-freshness';
 import { addPythonErrorHint } from '../services/python-error-hints';
 import { normalizePythonExecutionLimit } from '../services/python-execution-limit';
+import { getPythonPackageUrlMap } from '../services/python-package-utils';
 import {
   createPythonRuntimeError,
   createPythonRuntimeResult,
@@ -51,6 +52,10 @@ import {
 import { ensureP5Script } from './services/p5-runtime-service';
 import { setupPyodideTkinterBridge } from './services/pyodide-tkinter-service';
 import { logPythonDiagnostic } from '../services/python-diagnostics';
+import {
+  BUNDLED_MINIWORLDS_WHEEL_URL,
+  installBundledMiniworldsWheel,
+} from './services/pyodide-bundled-miniworlds-service';
 
 const DEBUG_PREFIX = 'Pyodide runner:';
 
@@ -61,7 +66,13 @@ export default class PyodideRunner {
    */
   constructor(runtime, options = {}) {
     this.runtime = runtime;
-    this.options = options;
+    this.options = {
+      ...options,
+      packageUrls: {
+        miniworlds: BUNDLED_MINIWORLDS_WHEEL_URL,
+        ...getPythonPackageUrlMap(options.packages, options.packageUrls),
+      },
+    };
 
     /* Execution state */
     this.stopped = false;
@@ -276,6 +287,7 @@ export default class PyodideRunner {
     }
 
     const setupPackageHints = this.runtime.getPreloadPackageHints?.() || [];
+    await installBundledMiniworldsWheel(this.pyodide, this.options, setupPackageHints);
     await loadMissingPyodidePackages(this.pyodide, [
       ...(this.options.packages || []),
       ...setupPackageHints,
@@ -348,10 +360,12 @@ export default class PyodideRunner {
       const analysisCode = this.runtime.getAnalysisCode?.() || code;
       const localModuleNames = this.runtime.getLocalModuleNames?.() || [];
 
-      await loadMissingPyodidePackages(this.pyodide, [
+      const requestedPackages = [
         ...(this.options.packages || []),
         ...getImportedPyodidePackages(analysisCode, { localModuleNames }),
-      ], {
+      ];
+      await installBundledMiniworldsWheel(this.pyodide, this.options, requestedPackages);
+      await loadMissingPyodidePackages(this.pyodide, requestedPackages, {
         packageUrls: this.options.packageUrls,
       });
 

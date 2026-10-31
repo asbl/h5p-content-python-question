@@ -5,62 +5,64 @@ const RESULT_PREFIX = '__H5P_ALGORITHM_CONSTRAINTS__:';
  * @param {string} source - Student Python source code.
  * @param {object} [constraints] - Algorithm constraints to check (loops, recursion, OOP, etc.).
  * @param {string} [functionName] - Target function name, or empty to check module-level code.
+ * @param {string} [executionSource] - Complete execution source, used only to locate the tested callable.
  * @returns {string} Python source implementing the constraint check harness.
  */
-export const getAlgorithmConstraintHarness = (source, constraints = {}, functionName) => {
+export const getAlgorithmConstraintHarness = (source, constraints = {}, functionName, executionSource = source) => {
   const token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   const normalizedFunctionName = String(functionName || '').trim();
+  // Only strings/numbers are ever meant to end up in a constraint label; stringifying a
+  // stray object here would otherwise silently produce "[object Object]" violation text.
+  const toText = (value) => (typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '');
   const normalizeList = (values, allowedValues = null) => {
     const entries = Array.isArray(values)
-      ? values.map((value) => value?.structure ?? value?.name ?? value)
-      : String(values || '').split(',');
+      ? values.map((value) => toText(value?.structure) || toText(value?.name) || toText(value))
+      : String(values || '').split(',').map((value) => toText(value));
 
     return entries
-      .map((value) => String(value || '').trim())
       .filter((value) => value !== '')
       .filter((value) => !allowedValues || allowedValues.includes(value));
   };
   const normalizeClassEntries = (values) => (Array.isArray(values) ? values : [])
-    .map((value) => String(value?.className ?? value?.name ?? value ?? '').trim())
+    .map((value) => toText(value?.className) || toText(value?.name) || toText(value))
     .filter(Boolean);
   const normalizeParameterList = (value) => (Array.isArray(value)
-    ? value
-    : String(value || '').split(',')
+    ? value.map((entry) => toText(entry))
+    : String(value || '').split(',').map((entry) => toText(entry))
   )
-    .map((entry) => String(entry || '').trim())
     .filter((entry) => entry && entry !== 'self' && entry !== 'cls');
   const normalizeMethodEntries = (values) => (Array.isArray(values) ? values : [])
     .map((value) => ({
-      className: String(value?.className || '').trim(),
-      methodName: String(value?.methodName ?? value?.name ?? value ?? '').trim(),
+      className: toText(value?.className),
+      methodName: toText(value?.methodName) || toText(value?.name) || toText(value),
       parameters: normalizeParameterList(value?.parameters),
     }))
     .filter((entry) => entry.methodName);
   const normalizeAttributeEntries = (values) => (Array.isArray(values) ? values : [])
     .map((value) => ({
-      className: String(value?.className || '').trim(),
-      attributeName: String(value?.attributeName ?? value?.name ?? value ?? '').trim(),
-      type: String(value?.type || '').trim(),
+      className: toText(value?.className),
+      attributeName: toText(value?.attributeName) || toText(value?.name) || toText(value),
+      type: toText(value?.type),
     }))
     .filter((entry) => entry.attributeName);
   const normalizeTypedParameterList = (values) => (Array.isArray(values) ? values : [])
     .map((value) => ({
-      name: String(value?.name || '').trim(),
-      type: String(value?.type || '').trim(),
+      name: toText(value?.name),
+      type: toText(value?.type),
     }))
     .filter((entry) => entry.name);
   const normalizeTypedMethodEntries = (values) => (Array.isArray(values) ? values : [])
     .map((value) => ({
-      className: String(value?.className || '').trim(),
-      methodName: String(value?.methodName ?? value?.name ?? value ?? '').trim(),
+      className: toText(value?.className),
+      methodName: toText(value?.methodName) || toText(value?.name) || toText(value),
       parameters: normalizeTypedParameterList(value?.parameters),
-      returnType: String(value?.returnType || '').trim(),
+      returnType: toText(value?.returnType),
     }))
     .filter((entry) => entry.methodName);
   const normalizePropertyEntries = (values) => (Array.isArray(values) ? values : [])
     .map((value) => ({
-      className: String(value?.className || '').trim(),
-      attributeName: String(value?.attributeName ?? value?.name ?? value ?? '').trim(),
+      className: toText(value?.className),
+      attributeName: toText(value?.attributeName) || toText(value?.name) || toText(value),
       requireSetter: value?.requireSetter === true,
     }))
     .filter((entry) => entry.attributeName);
@@ -91,17 +93,23 @@ try:
     __h5p_tree = ast.parse(${code})
     __h5p_function_name = __h5p_constraints.get('functionName') or ''
     __h5p_target = next((n for n in __h5p_tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == __h5p_function_name), None) if __h5p_function_name else None
+    __h5p_function_available = __h5p_target is not None
+    if __h5p_function_name and not __h5p_function_available:
+        __h5p_execution_tree = ast.parse(${JSON.stringify(String(executionSource || ''))})
+        __h5p_function_available = any(isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == __h5p_function_name for n in __h5p_execution_tree.body)
     def __h5p_scope_nodes(node):
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)):
                 continue
             yield child
             yield from __h5p_scope_nodes(child)
-    __h5p_nodes = list(__h5p_scope_nodes(__h5p_target or __h5p_tree))
+    __h5p_nodes = list(__h5p_scope_nodes(__h5p_target)) if __h5p_target is not None else list(ast.walk(__h5p_tree))
     def __h5p_loop_depth(node, depth=0):
         __h5p_max = depth
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)):
+                if __h5p_target is None:
+                    __h5p_max = max(__h5p_max, __h5p_loop_depth(child, 0))
                 continue
             __h5p_max = max(__h5p_max, __h5p_loop_depth(child, depth + (1 if isinstance(child, (ast.For, ast.While)) else 0)))
         return __h5p_max
@@ -116,7 +124,7 @@ try:
                 __h5p_used.add(node.func.id)
         return __h5p_used
     __h5p_violations = []
-    if __h5p_function_name and not __h5p_target: __h5p_violations.append('Required function not found')
+    if __h5p_function_name and not __h5p_function_available: __h5p_violations.append('Required function not found')
     __h5p_recursive_calls = [n for n in __h5p_nodes if __h5p_function_name and isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == __h5p_function_name]
     if __h5p_constraints.get('requireRecursion') and not __h5p_recursive_calls: __h5p_violations.append('Recursion required')
     if __h5p_constraints.get('requireBaseCase') and not any(isinstance(n, ast.If) and any(isinstance(c, ast.Return) for c in ast.walk(n)) for n in __h5p_nodes): __h5p_violations.append('Recursion base case required')

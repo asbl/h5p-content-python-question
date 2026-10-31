@@ -5,8 +5,8 @@ import {
   RESULT_PREFIX,
 } from '../src/scripts/services/python-algorithm-constraints.js';
 
-function runConstraintHarness(source, constraints = {}, functionName = 'answer') {
-  const { token, code } = getAlgorithmConstraintHarness(source, constraints, functionName);
+function runConstraintHarness(source, constraints = {}, functionName = 'answer', executionSource = source) {
+  const { token, code } = getAlgorithmConstraintHarness(source, constraints, functionName, executionSource);
   const marker = `${RESULT_PREFIX}${token}:`;
   const output = execFileSync('python3', ['-c', code], { encoding: 'utf8' });
   const resultLine = output
@@ -38,6 +38,63 @@ function runConstraintHarnessWithoutFunctionName(source, constraints = {}) {
 }
 
 describe('algorithm constraint harness', () => {
+  const editableLock = [
+    'class Tuerschloss:',
+    '    def __init__(self) -> None:',
+    '        self._offen: bool = False',
+    '    def ist_offen(self) -> bool:',
+    '        return self._offen',
+  ].join('\n');
+  const providedLockTest = [
+    'vorgegeben = []',
+    'def pruefe_schloss(aktionen):',
+    '    schloss = Tuerschloss()',
+    '    zustaende = [schloss.ist_offen()]',
+    '    for aktion in aktionen:',
+    '        print(aktion)',
+    '    return zustaende',
+  ].join('\n');
+
+  it('excludes authored test helpers from learner restrictions while allowing their tested callable', () => {
+    const result = runConstraintHarness(editableLock, {
+      forbiddenDataStructures: ['list'],
+      forbiddenCalls: 'print',
+      forbidTopLevelAssignments: true,
+      requiredClassNames: 'Tuerschloss',
+    }, 'pruefe_schloss', `${editableLock}\n${providedLockTest}`);
+
+    expect(result).toEqual({ passed: true, violations: [] });
+  });
+
+  it('still rejects forbidden structures inside learner class methods', () => {
+    const source = editableLock.replace('return self._offen', 'verbotene_liste = []\n        return self._offen');
+    const result = runConstraintHarness(source, {
+      forbiddenDataStructures: ['list'],
+    }, 'pruefe_schloss', `${source}\n${providedLockTest}`);
+
+    expect(result.violations).toEqual(['Forbidden data structure: list']);
+  });
+
+  it('does not let authored code satisfy learner class or loop requirements', () => {
+    const result = runConstraintHarness('pass', {
+      requiredClassNames: 'Tuerschloss',
+      requiredLoop: 'for',
+    }, 'pruefe_schloss', `${editableLock}\n${providedLockTest}`);
+
+    expect(result.violations).toEqual(expect.arrayContaining(['Required class: Tuerschloss', 'For loop required']));
+    expect(result.violations).not.toContain('Required function not found');
+  });
+
+  it('checks loops and forbidden calls in learner methods when the tested callable is authored', () => {
+    const source = editableLock.replace('return self._offen', 'for wert in range(2):\n            while wert:\n                print(wert)\n        return self._offen');
+    const result = runConstraintHarness(source, {
+      maxLoopNesting: 1,
+      forbiddenCalls: 'print',
+    }, 'pruefe_schloss', `${source}\n${providedLockTest}`);
+
+    expect(result.violations).toEqual(expect.arrayContaining(['Loop nesting too deep', 'Forbidden call: print']));
+  });
+
   it('passes recursive solutions with a base case and required return', () => {
     const result = runConstraintHarness([
       'def factorial(n):',
@@ -297,6 +354,28 @@ describe('algorithm constraint harness', () => {
       'Required method: BankAccount.withdraw',
       'Required instance attribute: BankAccount.balance',
     ]));
+  });
+
+  it('drops malformed requiredMethods/requiredProperties entries instead of stringifying them as "[object Object]"', () => {
+    const result = runConstraintHarness([
+      'class Tuerschloss:',
+      '    def __init__(self):',
+      '        self._offen = False',
+      '',
+      'def answer():',
+      '    return Tuerschloss()',
+    ].join('\n'), {
+      requiredMethods: [
+        { className: 'Tuerschloss', method: 'oeffnen' },
+      ],
+      requiredProperties: [
+        { className: 'Tuerschloss', property: 'offen' },
+      ],
+      forbiddenDataStructures: ['list'],
+    });
+
+    const violationsText = result.violations.join(' ');
+    expect(violationsText).not.toContain('[object Object]');
   });
 
   it('can forbid inheritance', () => {

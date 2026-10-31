@@ -37,6 +37,13 @@ module.exports = {
   module: {
     rules: [
       {
+        test: /\.whl$/,
+        type: 'asset/resource',
+        generator: {
+          filename: '[name][ext].txt'
+        }
+      },
+      {
         test: /\.js$/,
         exclude: /node_modules/,
         loader: 'babel-loader'

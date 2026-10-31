@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
+import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -93,6 +94,33 @@ describe('language/en.json', () => {
 });
 
 describe('semantics.json', () => {
+  it('keeps absent and cleared constraints empty when the actual H5P list editor initializes', () => {
+    const editor = {
+      SemanticStructure: function () { this.on = () => {}; },
+      Group: function () {},
+      t: () => '',
+      getWidgetName: () => 'select',
+      widgets: {
+        select: function () { this.validate = () => true; },
+      },
+    };
+    runInNewContext(readFileSync(resolve(__dirname, '../../h5p-editor-php-library/scripts/h5peditor-list.js'), 'utf8'), {
+      H5PEditor: editor,
+      H5P: { jQuery: { extend: (_deep, _target, value) => structuredClone(value) } },
+    });
+    const grading = semantics.find((field) => field.name === 'gradingSettings');
+    const constraints = grading.fields.find((field) => field.name === 'algorithmConstraints');
+    for (const name of ['requiredDataStructures', 'forbiddenDataStructures']) {
+      const field = constraints.fields.find((entry) => entry.name === name);
+      for (const initial of [undefined, [], ['dict']]) {
+        const changes = [];
+        const list = new editor.List({ ready: () => {} }, structuredClone(field), initial, (_field, value) => changes.push(value));
+        expect(list.getValue()).toEqual(initial);
+        expect(changes).toEqual([]);
+      }
+    }
+  });
+
   it('provides defaults for data-structure constraint list entries', () => {
     const gradingSettings = semantics.find((field) => field.name === 'gradingSettings');
     const constraints = gradingSettings.fields.find((field) => field.name === 'algorithmConstraints');

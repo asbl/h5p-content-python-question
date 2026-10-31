@@ -75,7 +75,16 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
   buildPreamble(learnerCode) {
     let preamble = '';
     if (this.codeTester?.hasAlgorithmConstraints?.()) {
-      const harness = getAlgorithmConstraintHarness(learnerCode, this.codeTester.algorithmConstraints, this.codeTester.functionName);
+      const editorManager = this.codeContainer?.getEditorManager?.();
+      const editableCode = editorManager?.extractEditableCode
+        ? editorManager.extractEditableCode(learnerCode, { isEntry: true })
+        : learnerCode;
+      const harness = getAlgorithmConstraintHarness(
+        editableCode,
+        this.codeTester.algorithmConstraints,
+        this.codeTester.functionName,
+        learnerCode,
+      );
       this.codeTester.setAlgorithmConstraintResult(null);
       this.algorithmConstraintToken = harness.token;
       preamble += `${harness.code}\n`;
