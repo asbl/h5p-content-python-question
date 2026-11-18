@@ -385,6 +385,22 @@
                             "default": true
                         },
                         {
+                            "name": "playerMode",
+                            "type": "boolean",
+                            "label": "Player mode",
+                            "description": "The code is only played: no editor is shown, learners just run it and see the output (console, canvas, ...). Requires 'Show Editor?' to be enabled.",
+                            "default": false,
+                            "optional": true
+                        },
+                        {
+                            "name": "playerShowCodeButton",
+                            "type": "boolean",
+                            "label": "Offer 'Show code' button",
+                            "description": "In player mode, learners can reveal the code with a button. If disabled, the code stays hidden.",
+                            "default": true,
+                            "optional": true
+                        },
+                        {
                             "name": "enableImageUploads",
                             "type": "boolean",
                             "label": "Enable image uploads",
@@ -663,6 +679,22 @@
                         "label": "Enable image uploads",
                         "description": "If enabled for this editor, learners can upload images during runtime and access them in their code.",
                         "default": false
+                    },
+                    {
+                        "name": "playerMode",
+                        "type": "boolean",
+                        "label": "Player mode",
+                        "description": "The code is only played: no editor is shown, learners just run it and see the output (console, canvas, ...).",
+                        "default": false,
+                        "optional": true
+                    },
+                    {
+                        "name": "playerShowCodeButton",
+                        "type": "boolean",
+                        "label": "Offer 'Show code' button",
+                        "description": "In player mode, learners can reveal the code with a button. If disabled, the code stays hidden.",
+                        "default": true,
+                        "optional": true
                     },
                     {
                         "name": "defaultImages",

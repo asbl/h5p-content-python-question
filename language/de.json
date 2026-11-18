@@ -188,6 +188,14 @@
                 "description": "Soll dem Lernenden ein Editor angezeigt werden?"
               },
               {
+                "label": "Player-Modus",
+                "description": "Der Code wird nur abgespielt: Es wird kein Editor angezeigt, Lernende führen ihn nur aus und sehen die Ausgabe (Konsole, Zeichenfläche, ...)."
+              },
+              {
+                "label": "Button „Code anzeigen“ anbieten",
+                "description": "Im Player-Modus können Lernende den Code per Button einblenden. Ist die Option aus, bleibt der Code verborgen."
+              },
+              {
                 "label": "Bild-Uploads aktivieren",
                 "description": "Wenn aktiviert, können Lernende für dieses Inhaltselement während der Laufzeit Bilder hochladen und im Code verwenden."
               },
@@ -322,6 +330,14 @@
             {
               "label": "Bild-Uploads aktivieren",
               "description": "Wenn aktiviert, können Lernende in diesem Editor während der Laufzeit Bilder hochladen und im Code verwenden."
+            },
+            {
+              "label": "Player-Modus",
+              "description": "Der Code wird nur abgespielt: Es wird kein Editor angezeigt, Lernende führen ihn nur aus und sehen die Ausgabe (Konsole, Zeichenfläche, ...)."
+            },
+            {
+              "label": "Button „Code anzeigen“ anbieten",
+              "description": "Im Player-Modus können Lernende den Code per Button einblenden. Ist die Option aus, bleibt der Code verborgen."
             },
             {
               "label": "Standard-Bilder",

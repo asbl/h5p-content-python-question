@@ -188,6 +188,14 @@
                 "description": "Should an editor displayed to the user"
               },
               {
+                "label": "Player mode",
+                "description": "The code is only played: no editor is shown, learners just run it and see the output (console, canvas, ...)."
+              },
+              {
+                "label": "Offer 'Show code' button",
+                "description": "In player mode, learners can reveal the code with a button. If disabled, the code stays hidden."
+              },
+              {
                 "label": "Enable image uploads",
                 "description": "If enabled for this content item, learners can upload images during runtime and access them in their code."
               },
@@ -322,6 +330,14 @@
             {
               "label": "Enable image uploads",
               "description": "If enabled for this editor, learners can upload images during runtime and access them in their code."
+            },
+            {
+              "label": "Player mode",
+              "description": "The code is only played: no editor is shown, learners just run it and see the output (console, canvas, ...)."
+            },
+            {
+              "label": "Offer 'Show code' button",
+              "description": "In player mode, learners can reveal the code with a button. If disabled, the code stays hidden."
             },
             {
               "label": "Default Images",

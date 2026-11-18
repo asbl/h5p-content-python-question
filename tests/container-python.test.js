@@ -464,6 +464,28 @@ describe('PythonCodeContainer', () => {
     expect(container.hasPythonTutor()).toBe(false);
   });
 
+  it('hides Python Tutor in player mode because it would reveal the code', async () => {
+    const PythonCodeContainer = await loadContainerClass();
+    const container = Object.create(PythonCodeContainer.prototype);
+
+    container.options = { enablePythonTutor: true, playerMode: true };
+
+    expect(container.hasPythonTutor()).toBe(false);
+  });
+
+  it('skips Ruff and Pyrefly diagnostics in player mode', async () => {
+    const PythonCodeContainer = await loadContainerClass();
+    const container = Object.create(PythonCodeContainer.prototype);
+
+    container.options = { enablePyreflyDiagnostics: true };
+    expect(container.shouldUsePythonRuffDiagnostics()).toBe(true);
+    expect(container.shouldUsePythonPyreflyDiagnostics()).toBe(true);
+
+    container.options = { enablePyreflyDiagnostics: true, playerMode: true };
+    expect(container.shouldUsePythonRuffDiagnostics()).toBe(false);
+    expect(container.shouldUsePythonPyreflyDiagnostics()).toBe(false);
+  });
+
   it('shows the Python Tutor page and registers refreshed DOM state', async () => {
     const PythonCodeContainer = await loadContainerClass();
     const container = Object.create(PythonCodeContainer.prototype);

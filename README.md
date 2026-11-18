@@ -11,6 +11,7 @@ It allows educators to create coding assignments, interactive explanations, and 
 - Automatic validation using input/output test cases oder image-comparison
 - Turtle graphics support and p5 graphics support
 - Designed for programming education
+- Player mode: run code (console, canvas, p5, turtle, ...) without showing an editor, optionally with a "Show code" button
 - Browser-based execution (no server required)
 
 
@@ -31,6 +32,16 @@ This content type integrates:
 - **Codemirror-Editor** → code editing interface
 
 Student code runs directly in the browser and can be validated using predefined test cases.
+
+## Player Mode
+
+Enable **Player mode** (Editor Settings → Options for the assignment editor, or the
+Options of a *Code* content part) to use code only as a program to *play*. The editor is
+hidden; learners press **Run** and see the output. With **Offer "Show code" button**
+(default on) they can reveal the code, edit it and run it again; turn it off to keep the
+code hidden. In player mode the save/load buttons, the file manager and Python Tutor
+are removed because they would expose the code. For content parts, *Show Editor?* must stay
+enabled (it switches between a static code block and a live editor).
 
 ## Hosted Skulpt Runtime
 

@@ -48,7 +48,10 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
   }
 
   shouldUsePythonRuffDiagnostics() {
-    return this.options?.enableRuffDiagnostics !== false && this.options?.editorMode !== 'blocks';
+    // A player hides the editor, so loading diagnostics tooling would be wasted.
+    return this.options?.enableRuffDiagnostics !== false
+      && this.options?.editorMode !== 'blocks'
+      && this.options?.playerMode !== true;
   }
 
   getPythonDiagnosticInput() {
@@ -154,7 +157,9 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
   }
 
   shouldUsePythonPyreflyDiagnostics() {
-    return this.options?.enablePyreflyDiagnostics === true && this.options?.editorMode !== 'blocks';
+    return this.options?.enablePyreflyDiagnostics === true
+      && this.options?.editorMode !== 'blocks'
+      && this.options?.playerMode !== true;
   }
 
   applyPythonPyreflyDiagnostics() {
@@ -485,7 +490,8 @@ export default class PythonCodeContainer extends H5P.CodeQuestionContainer {
    * @returns {boolean} True if the feature is enabled for this container.
    */
   hasPythonTutor() {
-    return this.options?.enablePythonTutor === true;
+    // Python Tutor displays the source code, which a player keeps hidden.
+    return this.options?.enablePythonTutor === true && this.options?.playerMode !== true;
   }
 
   /**
