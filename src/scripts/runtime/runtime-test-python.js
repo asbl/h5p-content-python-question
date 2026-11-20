@@ -4,6 +4,7 @@ import PythonSolutionRuntime from './runtime-solution-python';
 import { getAlgorithmConstraintHarness, RESULT_PREFIX } from '../services/python-algorithm-constraints';
 import { getAlgorithmTracePreamble, getAlgorithmTraceNoopPreamble, TRACE_PREFIX } from '../services/python-algorithm-trace';
 import { logPythonDiagnostic } from '../services/python-diagnostics';
+import { addPythonErrorHint } from '../services/python-error-hints';
 
 const DEBUG_PREFIX = 'Python test runtime:';
 
@@ -220,7 +221,7 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
     }
 
     if (trimmedText.startsWith('__H5P_FUNCTION_TEST_RESULT__:')) {
-      this.codeTester.addOutput(trimmedText);
+      this.codeTester.addOutput(this.addFunctionErrorHint(trimmedText));
       return;
     }
 
@@ -232,6 +233,20 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
     const testCaseLabel = this.codeTester.l10n.testCase;
 
     this._consoleManager.write(text, `${testCaseLabel} ${testCaseIndex + 1}`);
+  }
+
+  /**
+   * Appends the didactic Python hint to an error reported by the function-test harness.
+   * @param {string} resultLine - Harness result line.
+   * @returns {string} Result line, with a hint if the call raised a known error.
+   */
+  addFunctionErrorHint(resultLine) {
+    const match = resultLine.match(/^(__H5P_FUNCTION_TEST_RESULT__:[^:]+:error:)([\s\S]*)$/);
+    if (!match) {
+      return resultLine;
+    }
+
+    return `${match[1]}${addPythonErrorHint(this.codeTester?.l10n || {}, match[2])}`;
   }
 
   /**

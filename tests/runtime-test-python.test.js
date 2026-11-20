@@ -92,6 +92,21 @@ beforeEach(async () => {
 });
 
 describe('PythonTestRuntime', () => {
+  it('adds a didactic hint to errors reported by the function-test harness', () => {
+    const addOutput = vi.fn();
+    const runtime = new PythonTestRuntime(vi.fn(), 'solution', { addOutput, l10n: {} }, {});
+    const line = '__H5P_FUNCTION_TEST_RESULT__:abc:error:IndexError: list index out of range @4';
+
+    const enriched = runtime.addFunctionErrorHint(line);
+
+    expect(enriched.startsWith(`${line}\n`)).toBe(true);
+    expect(enriched.split('\n').length).toBe(2);
+    expect(runtime.addFunctionErrorHint('__H5P_FUNCTION_TEST_RESULT__:abc:passed:[1]'))
+      .toBe('__H5P_FUNCTION_TEST_RESULT__:abc:passed:[1]');
+    expect(runtime.addFunctionErrorHint('__H5P_FUNCTION_TEST_RESULT__:abc:error:Custom: boom'))
+      .toBe('__H5P_FUNCTION_TEST_RESULT__:abc:error:Custom: boom');
+  });
+
   it('adds the active function-test harness to learner code', () => {
     const runtime = new PythonTestRuntime(
       vi.fn(),
