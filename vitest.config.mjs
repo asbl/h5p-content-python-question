@@ -13,7 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rawPythonAssetPlugin = {
   name: 'raw-python-asset',
   load(id) {
-    if (id.endsWith('.py')) {
+    if ((id.endsWith('.py') || id.endsWith('pyodide-worker.txt'))) {
       return `export default ${JSON.stringify(readFileSync(id, 'utf8'))}`;
     }
 

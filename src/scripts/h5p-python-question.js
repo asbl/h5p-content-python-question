@@ -71,6 +71,7 @@ export default class PythonQuestion extends H5P.CodeQuestion {
   scheduleEarlyPyodidePreload() {
     if (
       this.pythonConfig.runner !== 'pyodide' ||
+      this.pythonConfig.advancedOptions?.isolatedExecution === true ||
       this._earlyPyodidePreloadScheduled ||
       !Array.isArray(this.pythonConfig.packages) ||
       this.pythonConfig.packages.length === 0

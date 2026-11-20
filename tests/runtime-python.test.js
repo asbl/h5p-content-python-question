@@ -404,4 +404,21 @@ describe('PythonRuntime', () => {
     expect(runtime.runner.setup).toHaveBeenCalledTimes(1);
     expect(callOrder).toEqual(['attachCanvas', 'setup']);
   });
+  it('uses isolation only for single-file console tasks and falls back for graphics or projects', () => {
+    vi.stubGlobal('Worker', class {});
+    try {
+      const runtime = new PythonRuntime(vi.fn(), 'print(1)', { runner: 'pyodide', isolatedExecution: true });
+      expect(runtime.shouldUseWorker()).toBe(true);
+      runtime.code = 'import turtle';
+      expect(runtime.shouldUseWorker()).toBe(false);
+      runtime.code = 'print(1)';
+      runtime.codeContainer = createCodeContainer({ files: [{ name: 'main.py', isEntry: true }, { name: 'helper.py' }] });
+      expect(runtime.shouldUseWorker()).toBe(false);
+      runtime.codeContainer = createCodeContainer();
+      runtime.options.packageUrls = { custom: 'https://example.test/package.whl' };
+      expect(runtime.shouldUseWorker()).toBe(false);
+    }
+    finally { vi.unstubAllGlobals(); }
+  });
+
 });

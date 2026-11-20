@@ -1,0 +1,68 @@
+(function () {
+  let pyodide;
+  let output = '';
+  let outputSize = 0;
+  let flushTimer;
+  const flush = () => {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+    if (output) self.postMessage({ type: 'stdout', text: output });
+    output = '';
+  };
+  const write = (text) => {
+    outputSize += text.length;
+    if (outputSize > 1000000) throw new Error('Output limit exceeded (1 MB).');
+    output += `${text}\n`;
+    if (!flushTimer) flushTimer = setTimeout(flush, 16);
+  };
+  let inputId = 0;
+  const inputs = new Map();
+  self.onmessage = async ({ data }) => {
+    if (data.type === 'input') {
+      const pending = inputs.get(data.id);
+      if (pending) {
+        inputs.delete(data.id);
+        if (data.error) pending.reject(new Error(data.error));
+        else pending.resolve(data.value);
+      }
+      return;
+    }
+    if (data.type !== 'run') return;
+    try {
+      const { loadPyodide } = await import(data.scriptUrl);
+      pyodide = await loadPyodide({
+        indexURL: data.indexURL,
+        stdout: write,
+        stderr: write,
+      });
+      pyodide.globals.set('input_handler', (prompt) => new Promise((resolve, reject) => {
+        const id = ++inputId;
+        inputs.set(id, { resolve, reject });
+        flush();
+        self.postMessage({ type: 'input', id, prompt: String(prompt) });
+      }));
+      await pyodide.runPythonAsync(data.compatibility);
+      await pyodide.runPythonAsync(`
+async def _h5p_worker_input(prompt=''):
+  return await input_handler(prompt)
+_h5p_builtins.input = _h5p_worker_input
+`);
+      if (data.packages.length) await pyodide.loadPackage(data.packages);
+      await pyodide.loadPackagesFromImports(data.code);
+      self.postMessage({ type: 'executing' });
+      const value = await pyodide.runPythonAsync(
+        `await _h5p_run_with_async_input(${JSON.stringify(data.code)})`
+      );
+      value?.destroy?.();
+      // The shared compatibility layer tracks asyncio.run() as a background
+      // task for graphical runtimes. Console workers wait for it to finish.
+      await pyodide.runPythonAsync('if _h5p_background_task is not None:\n  await _h5p_background_task');
+      flush();
+      self.postMessage({ type: 'success' });
+    }
+    catch (error) {
+      flush();
+      self.postMessage({ type: 'error', message: String(error?.message || error) });
+    }
+  };
+})();

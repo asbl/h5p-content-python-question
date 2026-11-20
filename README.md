@@ -81,3 +81,47 @@ See: [Showcase](https://www.opencoding.de/course/view.php?id=2) (german only)
 ### Image Comparison Testcases with turtle graphics
 
 ![testcases](./assets/turtlechecker.png)
+
+## Task assistant and test feedback
+
+The H5P editor starts with a **Task assistant**. Preview a console, function,
+OOP or turtle example before replacing the assignment instructions, starting code
+and grading settings. Existing learning pages and global runtime URLs are kept.
+The example tasks are written in German and can be edited freely.
+
+**Check task and reference solution** checks missing tests, invalid JSON,
+contradictory inheritance rules and test weights. For single-file Pyodide
+input/output and function tasks without graphics, custom packages or fixed
+pre/post code, it also runs the reference solution against the configured tests
+in a separate worker. Function checks include the configured algorithm constraints.
+Unsupported tasks receive an explicit message to check the content preview.
+The check never executes or replaces learner work.
+
+Input/output and function tests accept a **test name**, **learning goal**,
+**hint after failure** and **points**. Visible tests are summarized by learning
+goal. Hidden names and hints are not displayed. Output differences are marked,
+with `·`, `⇥` and `↵` indicating spaces, tabs and line breaks.
+
+Enable **Award partial credit** to award each passed test its configured integer
+points (1–100, default 1). The maximum score becomes the sum of test weights.
+Existing tasks retain the previous all-tests-must-pass scoring by default.
+
+## Isolated console execution
+
+Enable **Advanced Runtime Options → Run console tasks in a worker** with
+**Pyodide** for single-file console and function tasks. Execution runs in a fresh
+worker for every run/test, keeping the page responsive and allowing Stop to
+terminate execution. The configured execution limit starts after Python and
+packages finish loading; time spent answering input dialogs is excluded. A
+10-second limit applies when no limit is configured. Loading has a separate
+120-second timeout, and output is limited to 1 MB per run.
+
+Graphics, additional project source files and custom package URLs retain the
+regular runtime. Browser APIs such as `js`/DOM access are unavailable inside a
+worker. Hosting CSP must permit `worker-src blob:` and loading the configured
+Pyodide module (`pyodide.mjs`) and its assets. A loading failure is reported;
+execution is not silently retried on the main thread.
+
+After production builds, run `npm run test:browser:isolated-execution` for a
+server-free Chromium smoke test covering input, timeout, responsiveness,
+cancellation, fresh state, function-test sequencing and the author's OOP check.

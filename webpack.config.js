@@ -36,6 +36,7 @@ module.exports = {
   target: ['web', 'es5'], // IE11
   module: {
     rules: [
+      { test: /pyodide-worker\.txt$/, type: 'asset/source' },
       {
         test: /\.whl$/,
         type: 'asset/resource',

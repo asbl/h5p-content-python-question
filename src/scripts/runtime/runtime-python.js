@@ -1,6 +1,7 @@
 import SkulptRunner from './skulptrunner';
 import CanvasRuntimeManager from './canvasruntimemanager';
 import PyodideRunner from './pyodiderunner';
+import PyodideWorkerRunner from './pyodide-worker-runner';
 import {
   getPythonL10nValue,
 } from '../services/python-l10n';
@@ -77,7 +78,7 @@ export default class PythonRuntime extends H5P.Runtime {
    */
   schedulePyodidePreload() {
     if (
-      this.runnerType !== 'pyodide' ||
+      this.runnerType !== 'pyodide' || this.runner instanceof PyodideWorkerRunner ||
       this._pyodidePreloadScheduled
     ) {
       return;
@@ -167,7 +168,9 @@ export default class PythonRuntime extends H5P.Runtime {
   getRunner() {
     if (!this.runner) {
       if (this.runnerType === 'pyodide') {
-        this.runner = new PyodideRunner(this, this.options);
+        this.runner = this.shouldUseWorker()
+          ? new PyodideWorkerRunner(this, this.options)
+          : new PyodideRunner(this, this.options);
       }
       else {
         this.runner = new SkulptRunner(this, this.options);
@@ -177,7 +180,21 @@ export default class PythonRuntime extends H5P.Runtime {
   }
 
   /**
-   * Returns the current project workspace when Pyodide project support is enabled.
+   * Selects the isolated runner only for supported single-file programs.
+   * @returns {boolean} True when worker execution is enabled and supported.
+   */
+  shouldUseWorker() {
+    return this.options.isolatedExecution === true
+      && typeof Worker !== 'undefined'
+      && !this.containsCanvasCode()
+      && !this.getProjectSnapshot()?.files?.some((file) => !file.isEntry)
+      && ![...(this.options.packages || []), ...this.getPreloadPackageHints()].some((name) =>
+        [...PYTHON_MINIWORLDS_PACKAGES, 'pygame-ce', 'matplotlib', 'guizero'].includes(name))
+      && !Object.keys(this.options.packageUrls || {}).length;
+  }
+
+  /**
+   * Returns the current Pyodide project workspace.
    * @returns {object|null} Workspace snapshot or null.
    */
   getProjectSnapshot() {
@@ -222,6 +239,14 @@ export default class PythonRuntime extends H5P.Runtime {
   }
 
   async prepareForRun() {
+    if (this.runnerType === 'pyodide'
+      && this.shouldUseWorker() !== (this.runner instanceof PyodideWorkerRunner)) {
+      this.runner?.stop?.();
+      this.runner = this.shouldUseWorker()
+        ? new PyodideWorkerRunner(this, this.options)
+        : new PyodideRunner(this, this.options);
+      this._canvasManager = null;
+    }
     const containsCanvasCode = this.containsCanvasCode();
 
     if (containsCanvasCode) {

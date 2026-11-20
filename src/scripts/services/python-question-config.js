@@ -210,6 +210,7 @@ export function normalizePythonAdvancedOptions(advancedOptions = {}, pyodideOpti
   const yamlUrls = parseExternalLibraryUrlsYaml(advancedOptions?.externalLibraryUrls);
 
   return {
+    isolatedExecution: advancedOptions?.isolatedExecution === true,
     showConsole: advancedOptions?.showConsole !== false,
     disableOutputPopups: advancedOptions?.disableOutputPopups === true,
     enableImageUploads: advancedOptions?.enableImageUploads === true,
@@ -328,6 +329,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
 export function buildPythonRuntimeOptions(config, runtimeL10n) {
   return {
     runner: config?.runner || 'skulpt',
+    isolatedExecution: config?.advancedOptions?.isolatedExecution === true,
     l10n: runtimeL10n,
     packages: [...(config?.packages || [])],
     packageUrls: { ...(config?.packageUrls || {}) },

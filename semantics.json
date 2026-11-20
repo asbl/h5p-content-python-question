@@ -1,5 +1,13 @@
 [
     {
+        "name": "taskAssistant",
+        "type": "text",
+        "optional": true,
+        "widget": "pythonTaskAssistant",
+        "label": "Task assistant",
+        "description": "Start from a complete example or check the assignment and its reference solution. Preview a template before replacing assignment settings."
+    },
+    {
         "name": "contentType",
         "type": "select",
         "label": "Type",
@@ -47,6 +55,13 @@
         "type": "group",
         "label": "Advanced Runtime Options",
         "fields": [
+            {
+                "name": "isolatedExecution",
+                "type": "boolean",
+                "label": "Run console tasks in a worker",
+                "description": "For single-file Pyodide console and function tasks: keep the interface responsive and allow a hard stop. Graphics, additional source files and custom package URLs use the regular runtime. Browser APIs (js, DOM) are unavailable in worker mode. With no execution limit configured, worker execution is limited to 10 seconds.",
+                "default": false
+            },
             {
                 "name": "showConsole",
                 "type": "boolean",
@@ -958,6 +973,13 @@
                 ]
             },
             {
+                "name": "partialCredit",
+                "type": "boolean",
+                "label": "Award partial credit",
+                "description": "For input/output and function tests, award each passed test its weight in points. Disabled: retain the existing all-tests-must-pass grading.",
+                "default": false
+            },
+            {
                 "name": "sortItems",
                 "type": "group",
                 "label": "Sort Items",
@@ -1344,6 +1366,36 @@
                     "label": "Test Case",
                     "fields": [
                         {
+                            "name": "name",
+                            "type": "text",
+                            "label": "Test name",
+                            "description": "For example: empty list or negative number. Hidden test names are not displayed.",
+                            "optional": true
+                        },
+                        {
+                            "name": "learningGoal",
+                            "type": "text",
+                            "label": "Learning goal",
+                            "description": "Tests with the same learning goal are summarized together. Hidden tests are excluded from this summary.",
+                            "optional": true
+                        },
+                        {
+                            "name": "failureHint",
+                            "type": "text",
+                            "label": "Hint after failure",
+                            "description": "A specific next step shown when this visible test fails.",
+                            "optional": true
+                        },
+                        {
+                            "name": "weight",
+                            "type": "number",
+                            "label": "Points for this test",
+                            "description": "Used when partial credit is enabled.",
+                            "default": 1,
+                            "min": 1,
+                            "max": 100
+                        },
+                        {
                             "name": "hidden",
                             "type": "boolean",
                             "label": "Hidden Testcase",
@@ -1458,6 +1510,7 @@
                 "name": "targetCode",
                 "type": "text",
                 "label": "Solution Code",
+                "description": "Reference solution used to check the tests. Warning: it can be seen in the website source code.",
                 "entity": "testcase",
                 "widget": "showWhen",
                 "showWhen": {

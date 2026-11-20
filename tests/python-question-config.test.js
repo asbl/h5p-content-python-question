@@ -50,6 +50,7 @@ describe('Python question config', () => {
     }, {
       pyodideCdnUrl: 'https://static.example.com/pyodide/pyodide.js',
     })).toEqual({
+      isolatedExecution: false,
       showConsole: true,
       disableOutputPopups: true,
       enableImageUploads: true,
@@ -211,7 +212,8 @@ describe('Python question config', () => {
         'miniworlds-robot': 'https://static.example.com/wheels/robot.whl',
       },
       advancedOptions: {
-        showConsole: true,
+        isolatedExecution: false,
+      showConsole: true,
         disableOutputPopups: true,
         enableImageUploads: true,
         enableSoundUploads: true,
@@ -311,6 +313,7 @@ describe('Python question config', () => {
 
     expect(buildPythonRuntimeOptions(config, { pyodideReady: 'Ready' })).toEqual({
       runner: 'pyodide',
+      isolatedExecution: false,
       l10n: { pyodideReady: 'Ready' },
       packages: ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
       packageUrls: {

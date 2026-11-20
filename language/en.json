@@ -1,6 +1,10 @@
 {
   "semantics": [
     {
+      "label": "Task assistant",
+      "description": "Start from a complete example or check the assignment and its reference solution. Preview a template before replacing assignment settings."
+    },
+    {
       "label": "Type",
       "description": "Type of H5P Content ",
       "options": [
@@ -33,6 +37,10 @@
     {
       "label": "Advanced Runtime Options",
       "fields": [
+        {
+          "label": "Run console tasks in a worker",
+          "description": "For single-file Pyodide console and function tasks: keep the interface responsive and allow a hard stop. Graphics, additional source files and custom package URLs use the regular runtime. Browser APIs (js, DOM) are unavailable in worker mode. With no execution limit configured, worker execution is limited to 10 seconds."
+        },
         {
           "label": "Show console",
           "description": "If enabled, the integrated console will be shown below the editor."
@@ -76,8 +84,8 @@
       "fields": [
         {
           "label": "Pyodide-Packages",
-          "description": "Additional Pyodide packages that should be loaded before execution.",
           "entity": "package",
+          "description": "Additional Pyodide packages that should be loaded before execution.",
           "field": {
             "label": "Paket",
             "options": [
@@ -201,8 +209,8 @@
               },
               {
                 "label": "Default Images",
-                "description": "Images that are preloaded into the Images tab for this content item.",
                 "entity": "image",
+                "description": "Images that are preloaded into the Images tab for this content item.",
                 "field": {
                   "label": "Default Image",
                   "fields": [
@@ -222,8 +230,8 @@
               },
               {
                 "label": "Additional Python Modules",
-                "description": "Additional Python modules available for import in this editor when using Pyodide. Disable editor visibility for hidden helper classes such as case files.",
                 "entity": "file",
+                "description": "Additional Python modules available for import in this editor when using Pyodide. Disable editor visibility for hidden helper classes such as case files.",
                 "field": {
                   "label": "Python File",
                   "fields": [
@@ -341,8 +349,8 @@
             },
             {
               "label": "Default Images",
-              "description": "Images that are preloaded into the Images tab for this editor.",
               "entity": "image",
+              "description": "Images that are preloaded into the Images tab for this editor.",
               "field": {
                 "label": "Default Image",
                 "fields": [
@@ -362,8 +370,8 @@
             },
             {
               "label": "Additional Python Modules",
-              "description": "Additional Python modules available for import when using Pyodide. Disable editor visibility for hidden helper classes such as case files.",
               "entity": "file",
+              "description": "Additional Python modules available for import when using Pyodide. Disable editor visibility for hidden helper classes such as case files.",
               "field": {
                 "label": "Python File",
                 "fields": [
@@ -479,6 +487,10 @@
               "label": "Parsons Problem (code lines)"
             }
           ]
+        },
+        {
+          "label": "Award partial credit",
+          "description": "For input/output and function tests, award each passed test its weight in points. Disabled: retain the existing all-tests-must-pass grading."
         },
         {
           "label": "Sort Items",
@@ -691,8 +703,8 @@
             },
             {
               "label": "Required classes",
-              "description": "Structured class requirements for object-oriented modeling tasks.",
               "entity": "class",
+              "description": "Structured class requirements for object-oriented modeling tasks.",
               "field": {
                 "label": "Required class",
                 "fields": [
@@ -705,8 +717,8 @@
             },
             {
               "label": "Required methods",
-              "description": "Structured method requirements. Parameters are checked exactly when provided.",
               "entity": "method",
+              "description": "Structured method requirements. Parameters are checked exactly when provided.",
               "field": {
                 "label": "Required method",
                 "fields": [
@@ -727,8 +739,8 @@
             },
             {
               "label": "Required instance attributes",
-              "description": "Structured self-attribute requirements assigned inside methods.",
               "entity": "attribute",
+              "description": "Structured self-attribute requirements assigned inside methods.",
               "field": {
                 "label": "Required instance attribute",
                 "fields": [
@@ -769,8 +781,8 @@
             },
             {
               "label": "Required typed methods",
-              "description": "Checks exact parameter and/or return types for one method, in addition to its name.",
               "entity": "typed method",
+              "description": "Checks exact parameter and/or return types for one method, in addition to its name.",
               "field": {
                 "label": "Required typed method",
                 "fields": [
@@ -784,8 +796,8 @@
                   },
                   {
                     "label": "Parameters",
-                    "description": "Checked in order, without self. Leave type empty to only require the parameter's name.",
                     "entity": "parameter",
+                    "description": "Checked in order, without self. Leave type empty to only require the parameter's name.",
                     "field": {
                       "label": "Parameter",
                       "fields": [
@@ -809,8 +821,8 @@
             },
             {
               "label": "Required private attributes",
-              "description": "Checks that the attribute is stored under a leading-underscore name (_name or __name), not as a public attribute of the same name.",
               "entity": "private attribute",
+              "description": "Checks that the attribute is stored under a leading-underscore name (_name or __name), not as a public attribute of the same name.",
               "field": {
                 "label": "Required private attribute",
                 "fields": [
@@ -827,8 +839,8 @@
             },
             {
               "label": "Required properties",
-              "description": "Checks for an @property getter, and optionally a matching @x.setter.",
               "entity": "property",
+              "description": "Checks for an @property getter, and optionally a matching @x.setter.",
               "field": {
                 "label": "Required property",
                 "fields": [
@@ -875,13 +887,29 @@
             "label": "Test Case",
             "fields": [
               {
+                "label": "Test name",
+                "description": "For example: empty list or negative number. Hidden test names are not displayed."
+              },
+              {
+                "label": "Learning goal",
+                "description": "Tests with the same learning goal are summarized together. Hidden tests are excluded from this summary."
+              },
+              {
+                "label": "Hint after failure",
+                "description": "A specific next step shown when this visible test fails."
+              },
+              {
+                "label": "Points for this test",
+                "description": "Used when partial credit is enabled."
+              },
+              {
                 "label": "Hidden Testcase",
                 "description": "Input- and Output values are not shown to user."
               },
               {
                 "label": "Function Arguments",
-                "description": "Arguments passed to the function as JSON values, in order. Examples: [1, 2, 3], \"Ada\", true, null.",
                 "entity": "argument",
+                "description": "Arguments passed to the function as JSON values, in order. Examples: [1, 2, 3], \"Ada\", true, null.",
                 "field": {
                   "label": "Argument",
                   "description": "A JSON value, for example [1, 2, 3] or \"Ada\"."
@@ -912,6 +940,7 @@
         },
         {
           "label": "Solution Code",
+          "description": "Reference solution used to check the tests. Warning: it can be seen in the website source code.",
           "entity": "testcase"
         }
       ]

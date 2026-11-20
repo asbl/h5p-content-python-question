@@ -1,6 +1,10 @@
 {
   "semantics": [
     {
+      "label": "Aufgaben-Assistent",
+      "description": "Mit einer vollständigen Beispielaufgabe starten oder Aufgabe und Musterlösung prüfen. Vorlagen werden vor dem Ersetzen als Vorschau angezeigt."
+    },
+    {
       "label": "Type",
       "description": "Type of H5P Content ",
       "options": [
@@ -33,6 +37,10 @@
     {
       "label": "Erweiterte Laufzeit-Optionen",
       "fields": [
+        {
+          "label": "Konsolenaufgaben in einem Worker ausführen",
+          "description": "Für Pyodide-Konsolen- und Funktionsaufgaben mit einer Datei: Oberfläche bedienbar halten und Ausführung sofort abbrechen können. Grafik, zusätzliche Quelldateien und eigene Paket-URLs verwenden die reguläre Laufzeit. Browser-APIs (js, DOM) stehen im Worker nicht zur Verfügung. Ohne konfiguriertes Zeitlimit gilt im Worker ein Limit von 10 Sekunden."
+        },
         {
           "label": "Konsole anzeigen",
           "description": "Wenn aktiviert, wird die integrierte Konsole unterhalb des Editors angezeigt."
@@ -317,8 +325,8 @@
         },
         {
           "label": "Standard-Code",
-          "default": "print(\"Hello World\")",
-          "description": "Standard-Code, den Lernende anpassen können."
+          "description": "Standard-Code, den Lernende anpassen können.",
+          "default": "print(\"Hello World\")"
         },
         {
           "label": "Nach-Code",
@@ -479,6 +487,10 @@
               "label": "Parsons-Problem (Codezeilen)"
             }
           ]
+        },
+        {
+          "label": "Teilpunkte vergeben",
+          "description": "Bei Ein-/Ausgabe- und Funktionstests erhält jeder bestandene Test die eingestellte Punktzahl. Deaktiviert: Wie bisher müssen alle Tests bestanden werden."
         },
         {
           "label": "Elemente sortieren",
@@ -875,13 +887,29 @@
             "label": "Testfall",
             "fields": [
               {
+                "label": "Testname",
+                "description": "Zum Beispiel: leere Liste oder negative Zahl. Namen verborgener Tests werden nicht angezeigt."
+              },
+              {
+                "label": "Lernziel",
+                "description": "Tests mit demselben Lernziel werden zusammengefasst. Verborgene Tests sind von dieser Zusammenfassung ausgenommen."
+              },
+              {
+                "label": "Hinweis bei fehlgeschlagenem Test",
+                "description": "Ein konkreter nächster Schritt, der bei einem fehlgeschlagenen sichtbaren Test angezeigt wird."
+              },
+              {
+                "label": "Punkte für diesen Test",
+                "description": "Wird verwendet, wenn Teilpunkte aktiviert sind."
+              },
+              {
                 "label": "Versteckter Testfall",
                 "description": "Eingabe- und Ausgabe-Werte werden dem Lernenden nicht angezeigt."
               },
               {
                 "label": "Funktionsargumente",
-                "description": "Argumente, die der Funktion als JSON-Werte in dieser Reihenfolge übergeben werden. Beispiele: [1, 2, 3], \"Ada\", true, null.",
                 "entity": "argument",
+                "description": "Argumente, die der Funktion als JSON-Werte in dieser Reihenfolge übergeben werden. Beispiele: [1, 2, 3], \"Ada\", true, null.",
                 "field": {
                   "label": "Argument",
                   "description": "Ein JSON-Wert, zum Beispiel [1, 2, 3] oder \"Ada\"."
@@ -912,6 +940,7 @@
         },
         {
           "label": "Lösungscode",
+          "description": "Musterlösung, mit der die Tests geprüft werden. Achtung: Sie ist im Quelltext der Webseite sichtbar.",
           "entity": "testcase"
         }
       ]

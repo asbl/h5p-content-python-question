@@ -145,6 +145,7 @@ describe('PythonQuestion', () => {
     );
     expect(question.getRuntimeOptions()).toEqual({
       runner: 'pyodide',
+      isolatedExecution: false,
       l10n: question.runtimeL10n,
       packages: ['numpy', 'pygame-ce', 'sqlite3'],
       packageUrls: {},
