@@ -5,7 +5,7 @@ import PyodideWorkerRunner from './pyodide-worker-runner';
 import {
   getPythonL10nValue,
 } from '../services/python-l10n';
-import { getImportedPythonPackages, PYTHON_MINIWORLDS_PACKAGES, stripPythonLiteralsAndComments } from '../services/python-package-utils';
+import { getImportedPythonModules, getImportedPythonPackages, PYTHON_MINIWORLDS_PACKAGES, stripPythonLiteralsAndComments } from '../services/python-package-utils';
 import { logPythonDiagnostic } from '../services/python-diagnostics';
 import { precachePyodideAssets } from './services/pyodide-runtime-service';
 
@@ -189,7 +189,7 @@ export default class PythonRuntime extends H5P.Runtime {
       && !this.containsCanvasCode()
       && !this.getProjectSnapshot()?.files?.some((file) => !file.isEntry)
       && ![...(this.options.packages || []), ...this.getPreloadPackageHints()].some((name) =>
-        [...PYTHON_MINIWORLDS_PACKAGES, 'pygame-ce', 'matplotlib', 'guizero'].includes(name))
+        [...PYTHON_MINIWORLDS_PACKAGES, 'pygame-ce', 'matplotlib', 'guizero', 'tkinter-web-backend'].includes(name))
       && !Object.keys(this.options.packageUrls || {}).length;
   }
 
@@ -296,16 +296,9 @@ export default class PythonRuntime extends H5P.Runtime {
    * @returns {boolean} True, if code contains tkinter-based GUI code.
    */
   containsTkinterCode() {
-    const code = this.getStrippedAnalysisCode();
-    if (!code) return false;
-    return (
-      code.includes('import tkinter') ||
-      code.includes('from tkinter import') ||
-      code.includes('import guizero') ||
-      code.includes('from guizero import') ||
-      code.includes('import turtle') ||
-      code.includes('from turtle import')
-    );
+    return getImportedPythonModules(this.getAnalysisCode(), {
+      localModuleNames: this.getLocalModuleNames(),
+    }).some((name) => ['tkinter', 'guizero', 'turtle'].includes(name));
   }
 
   /**
@@ -336,12 +329,9 @@ export default class PythonRuntime extends H5P.Runtime {
   }
 
   containsTurtleCode() {
-    const code = this.getStrippedAnalysisCode();
-    if (!code) return false;
-    return (
-      code.includes('import turtle') ||
-      code.includes('from turtle import')
-    );
+    return getImportedPythonModules(this.getAnalysisCode(), {
+      localModuleNames: this.getLocalModuleNames(),
+    }).includes('turtle');
   }
 
   containsP5Code() {

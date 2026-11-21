@@ -53,6 +53,7 @@ export const PYTHON_MICROPIP_PACKAGES = Object.freeze([
  * @type {Record<string, string[]>}
  */
 export const PYTHON_PACKAGE_DEPENDENCY_MAP = Object.freeze({
+  guizero: Object.freeze(['tkinter-web-backend']),
   miniworlds: Object.freeze(['numpy', 'pygame-ce', 'sqlite3']),
   'miniworlds-data': Object.freeze(['miniworlds']),
   'miniworlds-robot': Object.freeze(['miniworlds']),
@@ -200,13 +201,13 @@ export function getPythonPackageUrlMap(entries = [], packageUrls = {}) {
 }
 
 /**
- * Detects installable packages from Python import statements.
+ * Detects root modules from Python import statements.
  * @param {string} [code] - Python source code.
  * @param {object} [options] - Import scan options.
  * @returns {string[]} Unique imported package names.
  */
-export function getImportedPythonPackages(code = '', options = {}) {
-  const importedPackages = new Set();
+export function getImportedPythonModules(code = '', options = {}) {
+  const importedModules = new Set();
   const localModuleNames = new Set(
     Array.isArray(options?.localModuleNames)
       ? options.localModuleNames.map((name) => String(name || '').trim()).filter(Boolean)
@@ -231,17 +232,24 @@ export function getImportedPythonPackages(code = '', options = {}) {
         return;
       }
 
-      const packageName = PYTHON_IMPORT_PACKAGE_MAP[moduleName];
-
-      if (packageName) {
-        importedPackages.add(packageName);
-      }
+      importedModules.add(moduleName);
     });
 
     match = importPattern.exec(searchableCode);
   }
 
-  return Array.from(importedPackages);
+  return Array.from(importedModules);
+}
+
+/**
+ * Detects installable packages using the shared module import scan.
+ * @param {string} [code] - Python source.
+ * @param {object} [options] - Import scan options.
+ * @returns {string[]} Unique package names.
+ */
+export function getImportedPythonPackages(code = '', options = {}) {
+  return [...new Set(getImportedPythonModules(code, options)
+    .map((name) => PYTHON_IMPORT_PACKAGE_MAP[name]).filter(Boolean))];
 }
 
 /**

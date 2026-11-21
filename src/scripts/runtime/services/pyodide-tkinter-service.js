@@ -1,4 +1,9 @@
-import turtlePySource from '../assets/turtle.py';
+/* global __webpack_public_path__: writable */
+import libraryJson from '../../../../library.json';
+import sessionSource from '../assets/h5p_tkinter_session.py';
+import { getPythonL10nValue } from '../../services/python-l10n';
+
+const activeSessions = new WeakMap();
 
 /**
  * CSS class of the container that hosts the tkinter client pages.
@@ -26,9 +31,9 @@ const TKINTER_FRAME_DEFAULT_HEIGHT = 320;
  * module is pure Python on top of tkinter. tkinter-web-backend provides the
  * tkinter package, so supplying turtle.py makes `import turtle` work.
  * @param {object} pyodide - Shared Pyodide instance.
- * @returns {void}
+ * @returns {Promise<void>} Resolves once installed.
  */
-export function installPyodideTurtleModule(pyodide) {
+export async function installPyodideTurtleModule(pyodide) {
   if (!pyodide?.FS?.writeFile || !pyodide?.FS?.analyzePath) {
     return;
   }
@@ -38,7 +43,16 @@ export function installPyodideTurtleModule(pyodide) {
       return;
     }
 
-    pyodide.FS.writeFile('/turtle.py', turtlePySource);
+    // Moodle can concatenate the entry script into a cached-assets URL. Async
+    // chunks still belong to the installed library, not that aggregate URL.
+    if (typeof __webpack_public_path__ !== 'undefined' && typeof H5P.getLibraryPath === 'function') {
+      const library = `H5P.PythonQuestion-${libraryJson.majorVersion}.${libraryJson.minorVersion}`;
+      __webpack_public_path__ = `${H5P.getLibraryPath(library).replace(/\/$/, '')}/dist/`;
+    }
+    const { default: turtlePySource } = await import(/* webpackChunkName: "python-turtle" */ '../assets/turtle.py');
+    if (!pyodide.FS.analyzePath('/turtle.py').exists) {
+      pyodide.FS.writeFile('/turtle.py', turtlePySource);
+    }
   }
   catch (_) {
     // Best effort: without turtle.py only the turtle module is unavailable,
@@ -54,24 +68,33 @@ export function installPyodideTurtleModule(pyodide) {
  * wait_window), the engine calls `wait_message(key)` and suspends until the
  * client posts the matching batched message through its gui port. The
  * registry hands out the promise per key and resolves it on delivery.
- * @returns {{waitMessage: Function, deliverMessage: Function, pendingCount: Function}} Registry.
+ * @returns {object} Wait registry with delivery, cancellation and pending count.
  */
 export function createWaitMessageRegistry() {
   const waiters = new Map();
+  let disposed = false;
 
   return {
-    waitMessage: (key) => new Promise((resolve) => {
-      waiters.set(key, resolve);
-    }),
+    waitMessage: (key) => {
+      if (disposed) return Promise.reject(new Error('Tkinter execution stopped.'));
+      return new Promise((resolve, reject) => {
+        waiters.set(key, { resolve, reject });
+      });
+    },
     deliverMessage: (key, message) => {
-      const resolve = waiters.get(key);
+      const waiter = waiters.get(key);
 
-      if (resolve) {
+      if (waiter) {
         waiters.delete(key);
-        resolve(message);
+        waiter.resolve(message);
       }
     },
     pendingCount: () => waiters.size,
+    dispose: () => {
+      disposed = true;
+      waiters.forEach(({ reject }) => reject(new Error('Tkinter execution stopped.')));
+      waiters.clear();
+    },
   };
 }
 
@@ -90,25 +113,51 @@ export function createWaitMessageRegistry() {
  * serialized promise chain keeps the message order intact.
  * @param {HTMLIFrameElement} iframe - Client page iframe.
  * @param {object} [waitRegistry] - Registry created by createWaitMessageRegistry().
- * @returns {{postMessage: Function, onmessage: Function|null}} Python-facing port.
+ * @param {function} [onClose] - Called when this application closes.
+ * @returns {object} Python-facing port with close and whenIdle methods.
  */
-function createClientPort(iframe, waitRegistry) {
+function createClientPort(iframe, waitRegistry, onClose = () => {}) {
   const channel = typeof MessageChannel === 'function' ? new MessageChannel() : null;
   const guiChannel = typeof MessageChannel === 'function' ? new MessageChannel() : null;
+  let disposed = false;
+  let delivery = Promise.resolve();
   const port = {
     onmessage: null,
-    postMessage: (message) => channel?.port1.postMessage(message),
+    postMessage: (message) => {
+      if (!disposed) channel?.port1.postMessage(message);
+    },
+    close: () => {
+      if (disposed) return;
+      disposed = true;
+      iframe.removeEventListener('load', connect);
+      port.onmessage = null;
+      for (const pair of [channel, guiChannel]) {
+        if (!pair) continue;
+        pair.port1.onmessage = null;
+        pair.port1.close?.();
+        pair.port2.close?.();
+      }
+      iframe.remove();
+      onClose(port);
+    },
+    whenIdle: () => delivery,
+  };
+  const connect = () => {
+    if (disposed) return;
+    iframe.contentWindow?.postMessage(channel.port2, '*', [channel.port2]);
+    if (guiChannel) {
+      iframe.contentWindow?.postMessage({ type: 'gui-port', port: guiChannel.port2 }, '*', [guiChannel.port2]);
+    }
   };
 
   if (!channel) {
     return port;
   }
 
-  let delivery = Promise.resolve();
   channel.port1.onmessage = (event) => {
     const handler = port.onmessage;
 
-    if (typeof handler !== 'function') {
+    if (disposed || typeof handler !== 'function') {
       return;
     }
 
@@ -118,12 +167,12 @@ function createClientPort(iframe, waitRegistry) {
     }
 
     delivery = delivery
-      .then(() => handler.callPromising({ data: event.data }))
+      .then(() => disposed ? undefined : handler.callPromising({ data: event.data }))
       .catch((error) => {
         // A failing handler (e.g. sys.exit() in a Tk callback, which the
         // engine lets through) must not kill the chain: every later client
         // message would be dropped silently.
-        console.error('Pyodide tkinter message delivery failed:', error);
+        if (!disposed) console.error('Pyodide tkinter message delivery failed:', error);
       });
   };
 
@@ -144,13 +193,7 @@ function createClientPort(iframe, waitRegistry) {
     };
   }
 
-  iframe.addEventListener('load', () => {
-    iframe.contentWindow?.postMessage(channel.port2, '*', [channel.port2]);
-
-    if (guiChannel) {
-      iframe.contentWindow?.postMessage({ type: 'gui-port', port: guiChannel.port2 }, '*', [guiChannel.port2]);
-    }
-  });
+  iframe.addEventListener('load', connect, { once: true });
 
   return port;
 }
@@ -161,9 +204,11 @@ function createClientPort(iframe, waitRegistry) {
  * returns the port that talks to it.
  * @param {HTMLElement} container - Element that hosts the client iframes.
  * @param {object} [waitRegistry] - Registry created by createWaitMessageRegistry().
+ * @param {Set<object>} [ports] - Live ports belonging to the session.
+ * @param {function} [onEmpty] - Called when the final application closes.
  * @returns {function} open_port callback usable from Python.
  */
-export function createTkinterOpenPort(container, waitRegistry) {
+export function createTkinterOpenPort(container, waitRegistry, ports = new Set(), onEmpty = () => {}) {
   return (html) => {
     const iframe = document.createElement('iframe');
     iframe.className = TKINTER_FRAME_CLASS;
@@ -175,7 +220,12 @@ export function createTkinterOpenPort(container, waitRegistry) {
     iframe.style.display = 'block';
     container.append(iframe);
 
-    return createClientPort(iframe, waitRegistry);
+    const port = createClientPort(iframe, waitRegistry, (closedPort) => {
+      ports.delete(closedPort);
+      if (!ports.size) onEmpty();
+    });
+    ports.add(port);
+    return port;
   };
 }
 
@@ -215,7 +265,7 @@ function prepareTkinterContainer(canvasDiv) {
  * Must run before learner code creates any Tk root window.
  * @param {object} runner - PyodideRunner instance.
  * @param {HTMLElement} canvasDiv - Canvas mount target.
- * @returns {Promise<void>} Resolves once the backend is connected.
+ * @returns {Promise<object|undefined>} Owned session, or undefined without a host.
  */
 export async function setupPyodideTkinterBridge(runner, canvasDiv) {
   const pyodide = runner?.pyodide;
@@ -224,35 +274,95 @@ export async function setupPyodideTkinterBridge(runner, canvasDiv) {
     return;
   }
 
-  installPyodideTurtleModule(pyodide);
+  await disposeActiveTkinterSession(pyodide);
+  if (runner.runtime?.containsTurtleCode?.() !== false) {
+    await installPyodideTurtleModule(pyodide);
+  }
 
   const container = prepareTkinterContainer(canvasDiv);
   const waitRegistry = createWaitMessageRegistry();
-  pyodide.globals.set('_h5p_tkinter_open_port', createTkinterOpenPort(container, waitRegistry));
+  const ports = new Set();
+  const allPorts = new Set();
+  let disposed = false;
+  let disposePromise;
+  let pythonDispose;
+  let execution = Promise.resolve();
+  const session = {
+    owner: runner,
+    get active() {
+      return !disposed && ports.size > 0;
+    },
+    get current() {
+      return !disposed && activeSessions.get(pyodide) === session;
+    },
+    trackExecution: (promise) => {
+      execution = promise.catch(() => {});
+    },
+    close: () => {
+      if (disposed) return;
+      disposed = true;
+      waitRegistry.dispose();
+      [...ports].forEach((port) => port.close());
+    },
+    dispose: () => {
+      if (disposePromise) return disposePromise;
+      session.close();
+      disposePromise = (async () => {
+        await Promise.all([execution, ...[...allPorts].map((port) => port.whenIdle())]);
+        try {
+          if (pythonDispose) await pythonDispose.callPromising();
+        }
+        finally {
+          pythonDispose?.destroy?.();
+          allPorts.clear();
+          if (activeSessions.get(pyodide) === session) activeSessions.delete(pyodide);
+        }
+      })();
+      return disposePromise;
+    },
+  };
+  activeSessions.set(pyodide, session);
+  runner.tkinterSession = session;
+  const openPort = createTkinterOpenPort(container, waitRegistry, ports, () => {
+    if (!disposed) runner.onTkinterClosed?.(session);
+  });
+  pyodide.globals.set('_h5p_tkinter_open_port', (html) => {
+    if (disposed) throw new Error('Tkinter execution stopped.');
+    const port = openPort(html);
+    allPorts.add(port);
+    return port;
+  });
   pyodide.globals.set('_h5p_tk_wait_message', waitRegistry.waitMessage);
+  pyodide.globals.set('_h5p_tk_unsupported', getPythonL10nValue(runner.l10n || {}, 'tkinterBlockingUnsupported'));
 
   try {
-    await pyodide.runPythonAsync(`
-import sys as _h5p_sys
-if '/' not in _h5p_sys.path:
-    _h5p_sys.path.insert(0, '/')
-import tkinter_web.embed as _h5p_tk_embed
-_h5p_wait = None
-try:
-    from pyodide.ffi import can_run_sync, run_sync as _h5p_run_sync
-    if can_run_sync():
-        def _h5p_wait(key, _h5p_waiter=_h5p_tk_wait_message):
-            return _h5p_run_sync(_h5p_waiter(key))
-except ImportError:
-    pass
-_h5p_tk_embed.setup(_h5p_tkinter_open_port, _h5p_wait)
-del _h5p_sys, _h5p_tk_embed, _h5p_wait
+    pythonDispose = await pyodide.runPythonAsync(`${sessionSource}
+_h5p_create_tk_session(_h5p_tkinter_open_port, _h5p_tk_wait_message, _h5p_tk_unsupported, ${runner.retainGlobals ? 'True' : 'False'})
 `);
+    return session;
+  }
+  catch (error) {
+    await session.dispose();
+    throw error;
   }
   finally {
-    // Also on failure (e.g. the backend is not installed): never leave the
-    // bridge globals in the learner-visible namespace.
-    pyodide.globals.delete('_h5p_tkinter_open_port');
-    pyodide.globals.delete('_h5p_tk_wait_message');
+    for (const name of ['_h5p_tkinter_open_port', '_h5p_tk_wait_message', '_h5p_tk_unsupported', '_h5p_create_tk_session']) {
+      pyodide.globals.delete(name);
+    }
   }
+}
+
+/**
+ * Tears down the previous GUI before another run uses the shared namespace.
+ * @param {object} pyodide - Shared Pyodide instance.
+ * @param {object} [nextRunner] - New owner taking over the shared runtime.
+ * @returns {Promise<void>} Resolves when ports, dialogs and timers are released.
+ */
+export async function disposeActiveTkinterSession(pyodide, nextRunner) {
+  const previous = activeSessions.get(pyodide);
+  if (previous && nextRunner && previous.owner !== nextRunner) {
+    previous.owner.stop?.();
+    await previous.owner.waitForBackgroundTaskCancellation?.();
+  }
+  await previous?.dispose();
 }

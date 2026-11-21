@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createTkinterOpenPort,
+  disposeActiveTkinterSession,
   createWaitMessageRegistry,
   installPyodideTurtleModule,
   setupPyodideTkinterBridge,
@@ -36,8 +37,8 @@ function createPyodide() {
 function stubMessageChannel() {
   const channels = [];
   const createPorts = () => {
-    const port1 = { onmessage: null, postMessage: vi.fn() };
-    return { port1, port2: {} };
+    const port1 = { onmessage: null, postMessage: vi.fn(), close: vi.fn() };
+    return { port1, port2: { close: vi.fn() } };
   };
 
   vi.stubGlobal('MessageChannel', class {
@@ -73,11 +74,11 @@ describe('Pyodide tkinter service', () => {
     vi.restoreAllMocks();
   });
 
-  it('writes the vendored turtle module once and skips when present', () => {
+  it('writes the vendored turtle module once and skips when present', async () => {
     const pyodide = createPyodide();
 
-    installPyodideTurtleModule(pyodide);
-    installPyodideTurtleModule(pyodide);
+    await installPyodideTurtleModule(pyodide);
+    await installPyodideTurtleModule(pyodide);
 
     expect(pyodide.FS.writeFile).toHaveBeenCalledTimes(1);
     expect(pyodide.FS.writeFile).toHaveBeenCalledWith('/turtle.py', expect.stringContaining('turtle'));
@@ -247,9 +248,9 @@ describe('Pyodide tkinter service', () => {
       expect.any(Function),
     );
     expect(pyodide.runPythonAsync).toHaveBeenCalledWith(expect.stringContaining('tkinter_web.embed'));
-    expect(pyodide.runPythonAsync).toHaveBeenCalledWith(expect.stringContaining('_h5p_tk_embed.setup'));
+    expect(pyodide.runPythonAsync).toHaveBeenCalledWith(expect.stringContaining('embed.setup'));
     expect(pyodide.runPythonAsync).toHaveBeenCalledWith(expect.stringContaining('can_run_sync'));
-    expect(pyodide.runPythonAsync).toHaveBeenCalledWith(expect.stringContaining('_h5p_run_sync'));
+    expect(pyodide.runPythonAsync).toHaveBeenCalledWith(expect.stringContaining('run_sync(wait_message(key))'));
     expect(pyodide.globals.delete).toHaveBeenCalledWith('_h5p_tkinter_open_port');
     expect(pyodide.globals.delete).toHaveBeenCalledWith('_h5p_tk_wait_message');
     expect(canvasDiv.querySelectorAll('iframe')).toHaveLength(0);
@@ -300,4 +301,70 @@ describe('Pyodide tkinter service', () => {
     expect(deleted).toContain('_h5p_tkinter_open_port');
     expect(deleted).toContain('_h5p_tk_wait_message');
   });
+  it('aborts pending dialogs on dispose and refuses new waits', async () => {
+    const registry = createWaitMessageRegistry();
+    const result = expect(registry.waitMessage('dialog')).rejects.toThrow('stopped');
+    registry.dispose();
+    await result;
+    expect(registry.pendingCount()).toBe(0);
+    await expect(registry.waitMessage('late')).rejects.toThrow('stopped');
+  });
+
+  it('closes both channels and drops queued callbacks on disposal', async () => {
+    const channels = stubMessageChannel();
+    const pyodide = createPyodide();
+    const cleanup = Object.assign(() => {}, { callPromising: vi.fn(), destroy: vi.fn() });
+    pyodide.runPythonAsync.mockResolvedValue(cleanup);
+    const runner = { pyodide, runtime: { containsTurtleCode: () => false } };
+    const container = document.createElement('div');
+    const session = await setupPyodideTkinterBridge(runner, container);
+    const open = registeredOpenPort(pyodide, 0);
+    const port = open('<html/>');
+    const handler = Object.assign(() => {}, { callPromising: vi.fn() });
+    port.onmessage = handler;
+    channels[0].port1.onmessage({ data: 'queued' });
+    expect(session.active).toBe(true);
+    await session.dispose();
+    await session.dispose();
+    expect(session.active).toBe(false);
+    expect(container.querySelector('iframe')).toBeNull();
+    expect(handler.callPromising).not.toHaveBeenCalled();
+    expect(cleanup.callPromising).toHaveBeenCalledTimes(1);
+    expect(cleanup.destroy).toHaveBeenCalledTimes(1);
+    for (const channel of channels) {
+      expect(channel.port1.close).toHaveBeenCalledOnce();
+      expect(channel.port2.close).toHaveBeenCalledOnce();
+      expect(channel.port1.onmessage).toBeNull();
+    }
+    expect(() => open('<html/>')).toThrow('stopped');
+    expect(pyodide.FS.writeFile).not.toHaveBeenCalled();
+  });
+
+  it('notifies the runner only after the last Tk application closes', async () => {
+    const runner = { pyodide: createPyodide(), onTkinterClosed: vi.fn() };
+    const session = await setupPyodideTkinterBridge(runner, document.createElement('div'));
+    const open = registeredOpenPort(runner.pyodide, 0);
+    const first = open('<html/>');
+    const second = open('<html/>');
+    first.close();
+    expect(session.active).toBe(true);
+    expect(runner.onTkinterClosed).not.toHaveBeenCalled();
+    second.close();
+    expect(session.active).toBe(false);
+    expect(runner.onTkinterClosed).toHaveBeenCalledWith(session);
+    await disposeActiveTkinterSession(runner.pyodide);
+  });
+
+  it('stops the previous owner when another runner takes over the shared runtime', async () => {
+    const runner = {
+      pyodide: createPyodide(),
+      stop: vi.fn(),
+      waitForBackgroundTaskCancellation: vi.fn(async () => {}),
+    };
+    await setupPyodideTkinterBridge(runner, document.createElement('div'));
+    await disposeActiveTkinterSession(runner.pyodide, {});
+    expect(runner.stop).toHaveBeenCalledOnce();
+    expect(runner.waitForBackgroundTaskCancellation).toHaveBeenCalledOnce();
+  });
+
 });

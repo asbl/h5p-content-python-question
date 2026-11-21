@@ -50,7 +50,7 @@ import {
   sharedPyodideRuntimeState,
 } from './services/pyodide-runtime-service';
 import { ensureP5Script } from './services/p5-runtime-service';
-import { setupPyodideTkinterBridge } from './services/pyodide-tkinter-service';
+import { disposeActiveTkinterSession, setupPyodideTkinterBridge } from './services/pyodide-tkinter-service';
 import { logPythonDiagnostic } from '../services/python-diagnostics';
 import {
   BUNDLED_MINIWORLDS_WHEEL_URL,
@@ -306,6 +306,8 @@ export default class PyodideRunner {
    */
   async execute(code, canvasDiv = null) {
     await this.waitForBackgroundTaskCancellation();
+    if (this.pyodide) await disposeActiveTkinterSession(this.pyodide, this);
+    this.tkinterSession = null;
 
     // When this instance is about to use SDL, stop any other runner that
     // currently owns the SDL canvas so its background animation loop cannot
@@ -345,6 +347,7 @@ export default class PyodideRunner {
       // A stop() call can arrive while setup is still running.
       // Await cancellation once more to serialize stop->run.
       await this.waitForBackgroundTaskCancellation();
+      await disposeActiveTkinterSession(this.pyodide, this);
 
       await resetPyodideBackgroundTaskState(this.pyodide);
       this.hasBackgroundTask = false;
@@ -393,6 +396,7 @@ export default class PyodideRunner {
       let result = null;
 
       result = await queuePyodideExecution(this.pyodide, this.runtime, async () => {
+        await disposeActiveTkinterSession(this.pyodide, this);
         // tkinter-web-backend must be connected before learner code creates
         // the first Tk root window.
         if (activeCanvasDiv && this.runtime.containsTkinterCode?.()) {
@@ -416,9 +420,11 @@ export default class PyodideRunner {
           // Always run through the AST transform: builtins.input is replaced
           // by an async function, so any direct or indirect input() call
           // must be awaited, which only the transform guarantees.
-          return await this.pyodide.runPythonAsync(
+          const execution = this.pyodide.runPythonAsync(
             `await _h5p_run_with_async_input(${JSON.stringify(String(code || ''))})`
           );
+          this.tkinterSession?.trackExecution?.(execution);
+          return await execution;
         }
         finally {
           await this.clearExecutionLimit();
@@ -429,8 +435,15 @@ export default class PyodideRunner {
           // cancelled. Cleanup must never mask the learner's error.
           if (!this.retainGlobals) {
             try {
-              if (!await hasPyodideBackgroundTask(this.pyodide)) {
-                await this.pyodide.runPythonAsync('_h5p_restore_globals()');
+              if (!this.tkinterSession?.active && !await hasPyodideBackgroundTask(this.pyodide)) {
+                if (this.tkinterSession) {
+                  // Stop owns disposal while a top-level dialog unwinds. Keep
+                  // globals available to Tk destroy bindings until teardown.
+                  if (!this.stopped) await this.tkinterSession.dispose();
+                }
+                else {
+                  await this.pyodide.runPythonAsync('_h5p_restore_globals()');
+                }
               }
             }
             catch (cleanupError) {
@@ -440,7 +453,7 @@ export default class PyodideRunner {
         }
       });
 
-      this.hasBackgroundTask = await hasPyodideBackgroundTask(this.pyodide);
+      this.hasBackgroundTask = (await hasPyodideBackgroundTask(this.pyodide)) || Boolean(this.tkinterSession?.active);
 
       logPythonDiagnostic(this.options, DEBUG_PREFIX, 'execute code finished', {
         runtimeType: this.runtime?.type,
@@ -469,8 +482,28 @@ export default class PyodideRunner {
     }
     catch (error) {
       this.setCanvasLoading(false);
+      if (this.stopped && this.tkinterSession && String(error).includes('Tkinter execution stopped.')) return;
       await this.onError?.(error);
     }
+  }
+
+  /**
+   * Completes a GUI run after its final Tk interpreter closes.
+   * @param {object} session - Session reporting the closure.
+   * @returns {void}
+   */
+  onTkinterClosed(session) {
+    if (!this.hasBackgroundTask || this.stopped) return;
+    queuePyodideExecution(this.pyodide, this.runtime, async () => {
+      // A new run may already have replaced this session while closure was queued.
+      if (!session.current || session.active) return;
+      await session.dispose();
+      this.hasBackgroundTask = await hasPyodideBackgroundTask(this.pyodide);
+      if (!this.hasBackgroundTask) {
+        if (!this.retainGlobals) await this.pyodide.runPythonAsync('_h5p_restore_globals()');
+        await this.onSuccess?.(null);
+      }
+    }).catch((error) => this.onError?.(error));
   }
 
   /**
@@ -479,6 +512,7 @@ export default class PyodideRunner {
    */
   stop() {
     this.stopped = true;
+    this.tkinterSession?.close();
     this.setCanvasLoading(false);
     this.uninstallSDLKeyboardCapture();
     this.stopSDLEventPumpLoop();
@@ -529,12 +563,16 @@ export default class PyodideRunner {
     }
 
     const currentPromise = this._cancelPromise || Promise.resolve();
+    const tkinterSession = this.tkinterSession;
 
     const cancelPromise = currentPromise
       .catch(() => {
         // Keep cancellation sequencing alive even if a prior cancellation failed.
       })
-      .then(() => cancelPyodideBackgroundTask(this.pyodide))
+      .then(async () => {
+        await tkinterSession?.dispose();
+        await cancelPyodideBackgroundTask(this.pyodide);
+      })
       .catch((error) => {
         logPythonDiagnostic(this.options, 'Could not cancel background SDL task', error);
       });

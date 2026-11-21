@@ -1,3 +1,4 @@
+import * as tkinterService from '../src/scripts/runtime/services/pyodide-tkinter-service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -1415,4 +1416,50 @@ describe('PyodideRunner', () => {
 
     canvasDiv.remove();
   });
+  it('keeps learner globals and running state while Tk windows remain open', async () => {
+    const runtime = createRuntime();
+    runtime.containsTkinterCode = () => true;
+    const runner = new PyodideRunner(runtime, {});
+    runner.pyodide = { runPythonAsync: vi.fn(async () => null) };
+    runner._isInitialized = true;
+    const session = { active: true, current: true, dispose: vi.fn(async () => {}) };
+    vi.spyOn(tkinterService, 'setupPyodideTkinterBridge').mockImplementationOnce(async () => {
+      runner.tkinterSession = session;
+      return session;
+    });
+    await runner.execute('root.mainloop()', document.createElement('div'));
+    expect(runner.hasBackgroundTask).toBe(true);
+    expect(runtime.onSuccess).not.toHaveBeenCalled();
+    expect(runner.pyodide.runPythonAsync.mock.calls.filter(([code]) => code === '_h5p_restore_globals()')).toHaveLength(1);
+    session.active = false;
+    runner.onTkinterClosed(session);
+    await vi.waitFor(() => expect(runtime.onSuccess).toHaveBeenCalledOnce());
+    expect(session.dispose).toHaveBeenCalledOnce();
+    expect(runner.hasBackgroundTask).toBe(false);
+    expect(runner.pyodide.runPythonAsync.mock.calls.filter(([code]) => code === '_h5p_restore_globals()')).toHaveLength(2);
+  });
+
+  it('closes Tk ports immediately on stop and awaits backend disposal', async () => {
+    const runner = new PyodideRunner(createRuntime(), {});
+    runner.pyodide = { runPythonAsync: vi.fn(async () => null) };
+    runner.tkinterSession = { close: vi.fn(), dispose: vi.fn(async () => {}) };
+    runner.stop();
+    expect(runner.tkinterSession.close).toHaveBeenCalledOnce();
+    await runner.waitForBackgroundTaskCancellation();
+    expect(runner.tkinterSession.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('ignores stale window-close notifications after a session was replaced', async () => {
+    const runtime = createRuntime();
+    const runner = new PyodideRunner(runtime, {});
+    runner.pyodide = { runPythonAsync: vi.fn(async () => null) };
+    runner.hasBackgroundTask = true;
+    const session = { active: false, current: false, dispose: vi.fn() };
+    runner.onTkinterClosed(session);
+    await Promise.resolve();
+    expect(session.dispose).not.toHaveBeenCalled();
+    expect(runtime.onSuccess).not.toHaveBeenCalled();
+    expect(runner.pyodide.runPythonAsync).not.toHaveBeenCalled();
+  });
+
 });

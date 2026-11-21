@@ -1,4 +1,5 @@
-import { normalizePythonPackageEntries, PYTHON_MINIWORLDS_PACKAGES } from '../../services/python-package-utils';
+import { PYTHON_GUI_WHEEL_URLS } from '../../services/python-gui-packages';
+import { getPythonPackageUrlMap, normalizePythonPackageEntries, PYTHON_MINIWORLDS_PACKAGES } from '../../services/python-package-utils';
 import { normalizePyodideScriptUrl, sharedPyodideRuntimeState } from './pyodide-runtime-service';
 
 export const PYODIDE_FETCH_CACHE_NAME = 'h5p-pythonquestion-pyodide-fetch-v3';
@@ -398,6 +399,8 @@ export async function precachePyodideAssets(options = {}, packages = []) {
 
   try {
     const lock = await lockResponse.value.clone().json();
+    const explicitUrls = getPythonPackageUrlMap(options.packages, options.packageUrls);
+    const guiUrls = packageNames.map((name) => explicitUrls[name] || PYTHON_GUI_WHEEL_URLS[name]).filter(Boolean);
     const packageUrls = packageNames
       .map((packageName) => lock?.packages?.[packageName]?.file_name)
       .filter(Boolean)
@@ -409,7 +412,7 @@ export async function precachePyodideAssets(options = {}, packages = []) {
       }
     }
 
-    await Promise.allSettled(packageUrls.map((url) => window.fetch(url)));
+    await Promise.allSettled([...new Set([...packageUrls, ...guiUrls])].map((url) => window.fetch(url)));
   }
   catch (_) {
     // Precache is opportunistic. The regular Pyodide loading path reports any

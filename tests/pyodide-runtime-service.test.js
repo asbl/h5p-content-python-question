@@ -19,6 +19,7 @@ import {
   warmPyodidePackageImports,
   writePyodideRuntimeOutput,
 } from '../src/scripts/runtime/services/pyodide-runtime-service.js';
+import { PYTHON_GUI_WHEEL_URLS } from '../src/scripts/services/python-gui-packages';
 import { MINIWORLDS_PINNED_VERSIONS } from '../src/scripts/runtime/services/pyodide-precache-service.js';
 
 const pinnedMiniworldsVersion = MINIWORLDS_PINNED_VERSIONS.miniworlds;
@@ -248,6 +249,29 @@ describe('Pyodide runtime service', () => {
     ]));
     expect(fetchedUrls).not.toContain('https://static.example.com/pyodide/pyodide.js');
     window.fetch = originalFetch;
+  });
+
+  it('precaches the pinned backend for guizero and honors configured wheel URLs', async () => {
+    const originalFetch = window.fetch;
+    window.fetch = vi.fn(async () => ({
+      ok: true,
+      clone: () => ({ json: async () => ({ packages: {} }) }),
+    }));
+    try {
+      await precachePyodideAssets({ persistentPyodideCache: false }, ['guizero']);
+      expect(window.fetch).toHaveBeenCalledWith(PYTHON_GUI_WHEEL_URLS['tkinter-web-backend']);
+      window.fetch.mockClear();
+      const url = 'https://example.org/tkinter_web_backend-0.1.4-py3-none-any.whl';
+      await precachePyodideAssets({
+        persistentPyodideCache: false,
+        packageUrls: { 'tkinter-web-backend': url },
+      }, ['guizero']);
+      expect(window.fetch).toHaveBeenCalledWith(url);
+      expect(window.fetch).not.toHaveBeenCalledWith(PYTHON_GUI_WHEEL_URLS['tkinter-web-backend']);
+    }
+    finally {
+      window.fetch = originalFetch;
+    }
   });
 
   it('resolves the pinned Miniworlds wheel version without caching PyPI metadata', async () => {

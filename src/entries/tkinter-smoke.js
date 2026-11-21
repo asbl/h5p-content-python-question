@@ -1,3 +1,6 @@
+import PyodideRunner from '../scripts/runtime/pyodiderunner';
+import { installPyodideRuntimeCompatibility } from '../scripts/runtime/services/pyodide-runtime-service';
+import { loadMissingPyodidePackages } from '../scripts/runtime/services/pyodide-package-service';
 import {
   createTkinterOpenPort,
   createWaitMessageRegistry,
@@ -11,6 +14,9 @@ import {
  * Built by webpack.smoke.config.js, never shipped with the library.
  */
 window.H5PTkinterSmoke = {
+  PyodideRunner,
+  installPyodideRuntimeCompatibility,
+  loadMissingPyodidePackages,
   createTkinterOpenPort,
   createWaitMessageRegistry,
   installPyodideTurtleModule,

@@ -108,4 +108,11 @@ from pygame import display
       micropipPackages: ['tkinter-web-backend', 'guizero'],
     });
   });
+  it('includes the backend when only guizero is requested', () => {
+    expect(splitPythonPackages(['guizero'])).toEqual({
+      pyodidePackages: [],
+      micropipPackages: ['guizero', 'tkinter-web-backend'],
+    });
+  });
+
 });

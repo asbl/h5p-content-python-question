@@ -421,4 +421,19 @@ describe('PythonRuntime', () => {
     finally { vi.unstubAllGlobals(); }
   });
 
+  it.each(['import os, tkinter', 'from tkinter.ttk import Button', 'import  tkinter', 'import os, turtle'])('detects GUI imports consistently: %s', (code) => {
+    const runtime = new PythonRuntime(vi.fn(), code);
+    vi.spyOn(runtime, 'getAnalysisCode').mockReturnValue(code);
+    expect(runtime.containsTkinterCode()).toBe(true);
+    expect(runtime.containsCanvasCode()).toBe(true);
+    if (code.includes('turtle')) expect(runtime.containsTurtleCode()).toBe(true);
+  });
+
+  it('does not treat a local tkinter module as a GUI dependency', () => {
+    const runtime = new PythonRuntime(vi.fn(), 'import tkinter');
+    vi.spyOn(runtime, 'getAnalysisCode').mockReturnValue('import tkinter');
+    vi.spyOn(runtime, 'getLocalModuleNames').mockReturnValue(['tkinter']);
+    expect(runtime.containsTkinterCode()).toBe(false);
+  });
+
 });

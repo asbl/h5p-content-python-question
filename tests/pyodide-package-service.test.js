@@ -10,6 +10,7 @@ import {
   resetSharedPyodideRuntimeState,
   sharedPyodideRuntimeState,
 } from '../src/scripts/runtime/services/pyodide-runtime-service.js';
+import { PYTHON_GUI_WHEEL_URLS } from '../src/scripts/services/python-gui-packages';
 import { MINIWORLDS_PINNED_VERSIONS } from '../src/scripts/runtime/services/pyodide-precache-service.js';
 
 const pinnedMiniworldsVersion = MINIWORLDS_PINNED_VERSIONS.miniworlds;
@@ -92,7 +93,7 @@ describe('Pyodide package service', () => {
     window.fetch = originalFetch;
   });
 
-  it('installs tkinter-web-backend and guizero through micropip by PyPI name', async () => {
+  it('installs the pinned tkinter wheel alongside guizero', async () => {
     const micropip = {
       install: Object.assign(vi.fn(), {
         callKwargs: vi.fn(async () => {}),
@@ -107,11 +108,11 @@ describe('Pyodide package service', () => {
     await loadMissingPyodidePackages(pyodide, ['tkinter-web-backend', 'guizero']);
 
     // Only micropip itself comes from the Pyodide repository; the packages
-    // are resolved by name without Miniworlds wheel URL lookups.
+    // use a pinned backend URL without Miniworlds wheel URL lookups.
     expect(pyodide.loadPackage).toHaveBeenCalledTimes(1);
     expect(pyodide.loadPackage).toHaveBeenCalledWith(['micropip']);
     expect(micropip.install.callKwargs).toHaveBeenCalledWith(
-      ['tkinter-web-backend', 'guizero'],
+      [PYTHON_GUI_WHEEL_URLS['tkinter-web-backend'], 'guizero'],
       { deps: false },
     );
     expect(getLoadedPyodidePackages(pyodide).has('tkinter-web-backend')).toBe(true);
@@ -494,4 +495,17 @@ describe('Pyodide package service', () => {
     expect(firstPyodide.loadPackage).toHaveBeenCalledWith(['numpy']);
     expect(secondPyodide.loadPackage).toHaveBeenCalledWith(['numpy']);
   });
+  it('installs guizero with its backend and honors an explicit backend URL', async () => {
+    const install = vi.fn(async () => {});
+    const pyodide = {
+      loadPackage: vi.fn(async () => {}),
+      pyimport: () => ({ install: { callKwargs: install }, destroy: vi.fn() }),
+    };
+    const url = 'https://example.org/tkinter_web_backend-0.1.4-py3-none-any.whl';
+    await loadMissingPyodidePackages(pyodide, ['guizero'], {
+      packageUrls: { 'tkinter-web-backend': url },
+    });
+    expect(install).toHaveBeenCalledWith(['guizero', url], { deps: false });
+  });
+
 });

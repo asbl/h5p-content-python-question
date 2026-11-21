@@ -6,6 +6,7 @@ import {
   PYTHON_MINIWORLDS_PACKAGES,
   splitPythonPackages,
 } from '../../services/python-package-utils';
+import { PYTHON_GUI_WHEEL_URLS } from '../../services/python-gui-packages';
 import { tPython } from '../../services/python-l10n';
 import {
   PYODIDE_FETCH_CACHE_NAME,
@@ -85,12 +86,12 @@ _h5p_importlib_util.find_spec(${JSON.stringify(importName)}) is not None
  * @returns {Promise<string>} Package name or direct wheel URL.
  */
 async function resolveMicropipInstallPackage(packageName, packageUrls, options = {}) {
-  if (!MINIWORLDS_FAMILY_PACKAGES.includes(packageName)) {
-    return packageName;
-  }
-
   if (packageUrls[packageName]) {
     return packageUrls[packageName];
+  }
+
+  if (!MINIWORLDS_FAMILY_PACKAGES.includes(packageName)) {
+    return PYTHON_GUI_WHEEL_URLS[packageName] || packageName;
   }
 
   try {

@@ -16,6 +16,7 @@
     "pyodideScriptLoadFailed": "Failed to load Pyodide script: {url}",
     "pyodideP5Missing": "p5.js is not loaded.",
     "executionLimitExceeded": "Program exceeded the execution time limit.",
+    "tkinterBlockingUnsupported": "This browser does not support blocking Tkinter dialogs. Use a browser with WebAssembly JSPI support.",
     "pythonHintTemplate": "Hint: {hint}",
     "pythonHintSyntax": "Check punctuation and brackets. A common issue is a missing colon after if/for/while/def/class.",
     "pythonHintIndentation": "Check indentation. All lines inside a block need the same indentation level.",

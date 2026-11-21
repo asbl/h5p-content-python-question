@@ -88,21 +88,45 @@ function harnessHtml() {
   <div id="status">loading pyodide…</div>
   <div id="host"></div>
   <script src="${PYODIDE_CDN}"></script>
-  <script src="/tkinter-smoke.js"></script>
+  <script>window.H5P = { t: (key) => "[Missing translation " + key + "]", getLibraryPath: () => location.origin + "/library" };</script>\n  <script src="/tkinter-smoke.js"></script>
   <script>
     (async () => {
       try {
         const pyodide = await loadPyodide();
-        await pyodide.loadPackage("micropip");
-        await pyodide.runPythonAsync("import micropip\\nawait micropip.install(\\"tkinter-web-backend\\")");
-        await window.H5PTkinterSmoke.setupPyodideTkinterBridge({ pyodide }, document.getElementById("host"));
-        await pyodide.runPythonAsync(${JSON.stringify(LEARNER_PROGRAM)});
-        await pyodide.runPythonAsync(${JSON.stringify(TURTLE_PROGRAM)});
+        const api = window.H5PTkinterSmoke;
+        await api.installPyodideRuntimeCompatibility(pyodide);
+        let currentCode = ${JSON.stringify(LEARNER_PROGRAM + '\n' + TURTLE_PROGRAM)};
+        const errors = [];
+        const runtime = {
+          l10n: {},
+          containsCanvasCode: () => /tkinter|turtle|guizero/.test(currentCode),
+          containsTkinterCode: () => /tkinter|turtle|guizero/.test(currentCode),
+          containsTurtleCode: () => currentCode.includes('import turtle'),
+          containsSDLCode: () => false,
+          containsP5Code: () => false,
+          getAnalysisCode: () => currentCode,
+          getLocalModuleNames: () => [],
+          onSuccess: () => {},
+          onError: (error) => errors.push(error.message || String(error)),
+          outputHandler: () => {},
+          codeContainer: { getStateManager: () => ({ stop() {} }) },
+        };
+        const runner = new api.PyodideRunner(runtime, {});
+        runner.pyodide = pyodide;
+        runner._isInitialized = true;
+        runner.getFileServices = () => [];
+        const host = document.getElementById('host');
+        const run = async (code) => {
+          currentCode = code;
+          await runner.execute(code, host);
+          if (errors.length) throw new Error(errors.join('\\n'));
+        };
+        await run(currentCode);
         window.__smoke = {
+          runner, pyodide, run, errors,
           snapshot: () => JSON.parse(pyodide.runPython(${JSON.stringify(SNAPSHOT_PY)})),
-          // can_run_sync() is only true inside a promising entry point, so
-          // it must be probed through runPythonAsync.
           canRunSync: () => pyodide.runPythonAsync("from pyodide.ffi import can_run_sync\\ncan_run_sync()"),
+          stop: async () => { runner.stop(); await runner.waitForBackgroundTaskCancellation(); },
         };
         document.getElementById("status").textContent = "ready";
       }
@@ -123,10 +147,16 @@ function harnessHtml() {
 async function startServer() {
   const bundlePath = path.resolve(__dirname, 'build/tkinter-smoke.js');
   const server = http.createServer(async (request, response) => {
-    if (request.url === '/tkinter-smoke.js') {
-      const bundle = await readFile(bundlePath);
-      response.writeHead(200, { 'content-type': 'application/javascript' });
-      response.end(bundle);
+    if (/^\/(?:library\/dist\/)?[a-zA-Z0-9._-]+\.js$/.test(request.url)) {
+      try {
+        const bundle = await readFile(path.join(path.dirname(bundlePath), path.basename(request.url)));
+        response.writeHead(200, { 'content-type': 'application/javascript' });
+        response.end(bundle);
+      }
+      catch (_) {
+        response.writeHead(404);
+        response.end();
+      }
       return;
     }
 
@@ -253,6 +283,80 @@ async function main() {
       30000,
       'Closing the dialog did not unblock wait_window.',
     );
+
+    await page.evaluate(async (program) => {
+      if (!window.__smoke.runner.hasBackgroundTask) throw new Error('Tk run was marked complete prematurely');
+      await window.__smoke.stop();
+      if (document.querySelectorAll('iframe.pyodide-tkinter-frame').length) throw new Error('Stop left Tk frames behind');
+      await window.__smoke.run(program);
+    }, LEARNER_PROGRAM);
+    const restartedIframe = await page.waitForSelector('iframe.pyodide-tkinter-frame');
+    const restartedFrame = await restartedIframe.contentFrame();
+    await restartedFrame.waitForSelector('.tkw-window');
+    snapshot = await page.evaluate(() => window.__smoke.snapshot());
+    await clickCanvasWidget(page, restartedFrame, 'Smoke', snapshot.dlg_btn_box);
+    await pollUntil(() => page.evaluate(() => window.__smoke.snapshot().ok_box !== null), 30000, 'Restarted dialog did not open');
+    await page.evaluate(async () => {
+      await window.__smoke.stop();
+      await window.__smoke.run('print("after Tk stop")');
+      if (window.__smoke.runner.hasBackgroundTask) throw new Error('Stopped Tk run remained active');
+      if (document.querySelectorAll('iframe.pyodide-tkinter-frame').length) throw new Error('Plain run retained Tk windows');
+    });
+
+    // Module-level turtle functions must also work after a previous turtle session.
+    await page.evaluate(async () => {
+      await window.__smoke.run('import turtle\n' + 'turtle.forward(30)');
+      await window.__smoke.stop();
+      await window.__smoke.run('import turtle\n' + 'turtle.forward(40)');
+      await window.__smoke.stop();
+    });
+    // Natural closure must finish the runner and release learner globals.
+    await page.evaluate(async (program) => {
+      await window.__smoke.run(program);
+      await window.__smoke.pyodide.runPythonAsync('root.destroy()\nimport tkinter_web.app as _app\n_app.get_app().flush()');
+    }, LEARNER_PROGRAM);
+    await pollUntil(() => page.evaluate(() => !window.__smoke.runner.hasBackgroundTask), 30000, 'Closing the last window did not finish the run');
+    await page.evaluate(() => {
+      if (window.__smoke.pyodide.runPython('"state" in globals()')) throw new Error('Closed GUI retained learner globals');
+      if (window.__smoke.errors.length) throw new Error(window.__smoke.errors.join('\n'));
+    });
+
+    await page.evaluate(async () => {
+      await window.__smoke.run('from guizero import App, Text\napp = App()\ntext = Text(app, text="Guizero smoke")\napp.display()');
+      if (!window.__smoke.runner.hasBackgroundTask) throw new Error('Guizero window was not tracked');
+      await window.__smoke.stop();
+    });
+    // Stop also interrupts a dialog opened by top-level learner code, where
+    // the execution queue itself is suspended until the dialog is answered.
+    await page.evaluate(() => {
+      window.__smoke.pendingRun = window.__smoke.run('import tkinter as tk\nroot = tk.Tk()\nimport builtins\nmarker = "ready"\nroot.bind("<Destroy>", lambda event: setattr(builtins, "_h5p_tk_destroy_ok", marker))\ndialog = tk.Toplevel(root)\nroot.wait_window(dialog)');
+    });
+    await page.waitForSelector('iframe.pyodide-tkinter-frame');
+    await page.evaluate(async () => {
+      await window.__smoke.stop();
+      await window.__smoke.pendingRun;
+      if (window.__smoke.pyodide.runPython('"root" in globals()')) throw new Error('Stop retained learner globals');
+      if (!window.__smoke.pyodide.runPython('__import__("builtins")._h5p_tk_destroy_ok == "ready"')) throw new Error('Destroy bindings lost their globals');
+      await window.__smoke.run('print("top-level dialog cancelled")');
+    });
+    // Simulate a browser without JSPI: regular Tk still works, waits explain
+    // the missing capability in the localized runtime error.
+    await page.evaluate(async () => {
+      const smoke = window.__smoke;
+      await smoke.pyodide.runPythonAsync('import pyodide.ffi as _h5p_ffi\n_h5p_ffi._h5p_smoke_original_sync = _h5p_ffi.can_run_sync\n_h5p_ffi.can_run_sync = lambda: False');
+      try {
+        await smoke.run('import tkinter as tk\nfrom tkinter import messagebox\nroot = tk.Tk()\nmessagebox.showinfo("Test", "Test", parent=root)');
+        throw new Error('Unsupported blocking dialog did not report an error');
+      }
+      catch (error) {
+        if (!String(error).includes('blocking Tkinter dialogs')) throw error;
+      }
+      finally {
+        smoke.errors.length = 0;
+        await smoke.stop();
+        await smoke.pyodide.runPythonAsync('import pyodide.ffi as _h5p_ffi\n_h5p_ffi.can_run_sync = _h5p_ffi._h5p_smoke_original_sync\ndel _h5p_ffi._h5p_smoke_original_sync');
+      }
+    });
 
     console.log('Python tkinter smoke test passed.');
   }

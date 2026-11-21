@@ -16,6 +16,7 @@
     "pyodideScriptLoadFailed": "Pyodide-Skript konnte nicht geladen werden: {url}",
     "pyodideP5Missing": "p5.js ist nicht geladen.",
     "executionLimitExceeded": "Programm hat das Ausführungszeitlimit überschritten.",
+    "tkinterBlockingUnsupported": "Dieser Browser unterstützt keine blockierenden Tkinter-Dialoge. Verwende einen Browser mit WebAssembly JSPI-Unterstützung.",
     "pythonHintTemplate": "Tipp: {hint}",
     "pythonHintSyntax": "Prüfe Satzzeichen und Klammern. Häufig fehlt ein Doppelpunkt nach if/for/while/def/class.",
     "pythonHintIndentation": "Prüfe die Einrückung. Alle Zeilen in einem Block brauchen dieselbe Einrückung.",
