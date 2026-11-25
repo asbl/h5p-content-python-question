@@ -100,7 +100,7 @@ describe('PythonTestRuntime', () => {
     const enriched = runtime.addFunctionErrorHint(line);
 
     expect(enriched.startsWith(`${line}\n`)).toBe(true);
-    expect(enriched.split('\n').length).toBe(2);
+    expect(enriched.split('\n').length).toBe(3);
     expect(runtime.addFunctionErrorHint('__H5P_FUNCTION_TEST_RESULT__:abc:passed:[1]'))
       .toBe('__H5P_FUNCTION_TEST_RESULT__:abc:passed:[1]');
     expect(runtime.addFunctionErrorHint('__H5P_FUNCTION_TEST_RESULT__:abc:error:Custom: boom'))
