@@ -1063,6 +1063,14 @@
                                 }
                             ]
                         }
+                    },
+                    {
+                        "name": "explanation",
+                        "type": "text",
+                        "widget": "textarea",
+                        "label": "Explanation after checking",
+                        "description": "Optional short explanation shown after the learner checks the answer, whether it was right or wrong. Say why the correct answer is correct and which misconception the wrong ones reveal. Markdown is supported.",
+                        "optional": true
                     }
                 ]
             },
@@ -1243,6 +1251,14 @@
                                 }
                             ]
                         }
+                    },
+                    {
+                        "name": "explanation",
+                        "type": "text",
+                        "widget": "textarea",
+                        "label": "Explanation after checking",
+                        "description": "Optional short explanation shown after the learner checks the answer, whether it was right or wrong. Say why the correct answer is correct and which misconception the wrong ones reveal. Markdown is supported.",
+                        "optional": true
                     }
                 ]
             },
