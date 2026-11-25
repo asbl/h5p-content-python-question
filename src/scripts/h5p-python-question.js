@@ -42,7 +42,7 @@ export default class PythonQuestion extends H5P.CodeQuestion {
 
     // Recreate code tester so it also uses the updated localization chain.
     // Multiple choice uses CodeQuestion's built-in evaluator instead.
-    this.codeTester = this.gradingMethod && !this.isCodeQuestionMultipleChoice()
+    this.codeTester = this.gradingMethod && !this.isCodeQuestionMultipleChoice() && !this.isCodeQuestionAnswerForm()
       ? this.getCodeTesterFactory().create()
       : this.codeTester;
 
@@ -69,6 +69,16 @@ export default class PythonQuestion extends H5P.CodeQuestion {
     }
 
     return this.gradingMethod === 'multipleChoice';
+  }
+
+  /**
+   * Checks whether the inherited CodeQuestion grades through a form (matching,
+   * short answer, sorting, ...) instead of running code. Older cached
+   * CodeQuestion dependencies do not expose isAnswerFormQuestion yet.
+   * @returns {boolean} True if no code tester is needed.
+   */
+  isCodeQuestionAnswerForm() {
+    return typeof this.isAnswerFormQuestion === 'function' && this.isAnswerFormQuestion();
   }
 
   /**

@@ -136,6 +136,7 @@ try:
     __h5p_loops = [n for n in __h5p_nodes if isinstance(n, (ast.For, ast.While))]
     if int(__h5p_constraints.get('maxLoopCount') or 0) and len(__h5p_loops) > int(__h5p_constraints['maxLoopCount']): __h5p_violations.append('Too many loops')
     if int(__h5p_constraints.get('maxLoopNesting') or 0) and __h5p_loop_depth(__h5p_target or __h5p_tree) > int(__h5p_constraints['maxLoopNesting']): __h5p_violations.append('Loop nesting too deep')
+    if __h5p_constraints.get('forbidLoops') and any(isinstance(n, (ast.For, ast.While, ast.AsyncFor, ast.comprehension)) for n in __h5p_nodes): __h5p_violations.append('Loops are not allowed')
     if __h5p_constraints.get('requireConditional') and not any(isinstance(n, ast.If) for n in __h5p_nodes): __h5p_violations.append('Conditional required')
     if __h5p_constraints.get('requireReturn') and not any(isinstance(n, ast.Return) for n in __h5p_nodes): __h5p_violations.append('Return statement required')
     if __h5p_constraints.get('forbidTopLevelAssignments') and any(isinstance(n, (ast.Assign, ast.AnnAssign, ast.AugAssign)) for n in __h5p_tree.body): __h5p_violations.append('Top-level assignments are not allowed')

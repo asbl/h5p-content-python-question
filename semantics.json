@@ -1003,6 +1003,14 @@
                     {
                         "value": "parsons",
                         "label": "Parsons Problem (code lines)"
+                    },
+                    {
+                        "value": "matching",
+                        "label": "Matching (pairs)"
+                    },
+                    {
+                        "value": "shortAnswer",
+                        "label": "Short answer (number or text)"
                     }
                 ]
             },
@@ -1055,6 +1063,141 @@
                                 }
                             ]
                         }
+                    }
+                ]
+            },
+            {
+                "name": "matching",
+                "type": "group",
+                "label": "Matching",
+                "description": "Learners choose the matching right-hand entry for every left-hand entry from a drop-down list. Several left entries may share the same right entry.",
+                "widget": "showWhen",
+                "showWhen": {
+                    "rules": [
+                        {
+                            "field": "gradingMethod",
+                            "equals": "matching"
+                        }
+                    ]
+                },
+                "fields": [
+                    {
+                        "name": "pairs",
+                        "type": "list",
+                        "label": "Pairs",
+                        "entity": "pair",
+                        "min": 2,
+                        "field": {
+                            "name": "pair",
+                            "type": "group",
+                            "label": "Pair",
+                            "fields": [
+                                {
+                                    "name": "left",
+                                    "type": "text",
+                                    "label": "Left entry",
+                                    "description": "Markdown. Code fences are supported.",
+                                    "widget": "codeWidget",
+                                    "options": [
+                                        {
+                                            "language": "markdown",
+                                            "showAlways": true
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "right",
+                                    "type": "text",
+                                    "label": "Right entry",
+                                    "description": "Plain text shown in the drop-down list."
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "distractors",
+                        "type": "list",
+                        "label": "Distractors",
+                        "description": "Additional right-hand entries that match nothing.",
+                        "entity": "distractor",
+                        "optional": true,
+                        "field": {
+                            "name": "distractor",
+                            "type": "text",
+                            "label": "Distractor"
+                        }
+                    },
+                    {
+                        "name": "explanation",
+                        "type": "text",
+                        "widget": "textarea",
+                        "label": "Explanation after checking",
+                        "description": "Optional short explanation shown after the learner checks the answer, whether it was right or wrong. Say why the correct answer is correct and which misconception the wrong ones reveal. Markdown is supported.",
+                        "optional": true
+                    }
+                ]
+            },
+            {
+                "name": "shortAnswer",
+                "type": "group",
+                "label": "Short answer",
+                "description": "One input field. Numbers are compared with an optional tolerance (decimal comma accepted); other answers are compared as text without spaces, e.g. O(n²) equals o(n^2).",
+                "widget": "showWhen",
+                "showWhen": {
+                    "rules": [
+                        {
+                            "field": "gradingMethod",
+                            "equals": "shortAnswer"
+                        }
+                    ]
+                },
+                "fields": [
+                    {
+                        "name": "answers",
+                        "type": "list",
+                        "label": "Accepted answers",
+                        "entity": "answer",
+                        "min": 1,
+                        "field": {
+                            "name": "answer",
+                            "type": "text",
+                            "label": "Answer"
+                        }
+                    },
+                    {
+                        "name": "tolerance",
+                        "type": "number",
+                        "label": "Tolerance for numbers",
+                        "default": 0,
+                        "min": 0,
+                        "step": 0.001,
+                        "optional": true
+                    },
+                    {
+                        "name": "ignoreCase",
+                        "type": "boolean",
+                        "label": "Ignore upper/lower case",
+                        "default": true
+                    },
+                    {
+                        "name": "unit",
+                        "type": "text",
+                        "label": "Unit shown after the field",
+                        "optional": true
+                    },
+                    {
+                        "name": "placeholder",
+                        "type": "text",
+                        "label": "Placeholder",
+                        "optional": true
+                    },
+                    {
+                        "name": "explanation",
+                        "type": "text",
+                        "widget": "textarea",
+                        "label": "Explanation after checking",
+                        "description": "Optional short explanation shown after the learner checks the answer, whether it was right or wrong. Say why the correct answer is correct and which misconception the wrong ones reveal. Markdown is supported.",
+                        "optional": true
                     }
                 ]
             },
@@ -1164,6 +1307,14 @@
                                 }
                             ]
                         }
+                    },
+                    {
+                        "name": "explanation",
+                        "type": "text",
+                        "widget": "textarea",
+                        "label": "Explanation after checking",
+                        "description": "Optional short explanation shown after the learner checks the answer, whether it was right or wrong. Say why the correct answer is correct and which misconception the wrong ones reveal. Markdown is supported.",
+                        "optional": true
                     }
                 ]
             },
@@ -1196,6 +1347,7 @@
                     { "name": "requiredLoop", "type": "select", "label": "Required loop", "default": "none", "options": [{ "value": "none", "label": "No requirement" }, { "value": "any", "label": "Any loop" }, { "value": "for", "label": "For loop" }, { "value": "while", "label": "While loop" }] },
                     { "name": "maxLoopCount", "type": "number", "label": "Maximum loops in source", "description": "0 means no limit.", "default": 0, "min": 0 },
                     { "name": "maxLoopNesting", "type": "number", "label": "Maximum loop nesting", "description": "0 means no limit.", "default": 0, "min": 0 },
+                    { "name": "forbidLoops", "type": "boolean", "label": "Forbid loops", "description": "No for/while loops and no comprehensions inside the function.", "default": false },
                     { "name": "requireConditional", "type": "boolean", "label": "Require conditional", "default": false },
                     { "name": "requireReturn", "type": "boolean", "label": "Require return statement", "default": false },
                     { "name": "forbidTopLevelAssignments", "type": "boolean", "label": "Forbid top-level assignments", "default": false },
@@ -1428,6 +1580,15 @@
                             "default": 1,
                             "min": 1,
                             "max": 100
+                        },
+                        {
+                            "name": "maxOperations",
+                            "type": "number",
+                            "label": "Maximum counted steps (Pyodide, function tests)",
+                            "description": "0 means no limit. Learners count steps with ops.count(); the test fails when the counted total is higher.",
+                            "default": 0,
+                            "min": 0,
+                            "optional": true
                         },
                         {
                             "name": "hidden",

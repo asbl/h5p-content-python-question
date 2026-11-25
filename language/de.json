@@ -509,6 +509,12 @@
             },
             {
               "label": "Parsons-Problem (Codezeilen)"
+            },
+            {
+              "label": "Zuordnung (Paare)"
+            },
+            {
+              "label": "Kurzantwort (Zahl oder Text)"
             }
           ]
         },
@@ -533,6 +539,70 @@
                   }
                 ]
               }
+            }
+          ]
+        },
+        {
+          "label": "Zuordnung",
+          "description": "Lernende wählen zu jedem linken Eintrag den passenden rechten Eintrag aus einer Auswahlliste. Mehrere linke Einträge dürfen denselben rechten Eintrag haben.",
+          "fields": [
+            {
+              "label": "Paare",
+              "entity": "Paar",
+              "field": {
+                "label": "Paar",
+                "fields": [
+                  {
+                    "label": "Linker Eintrag",
+                    "description": "Markdown. Codeblöcke werden unterstützt."
+                  },
+                  {
+                    "label": "Rechter Eintrag",
+                    "description": "Einfacher Text, der in der Auswahlliste erscheint."
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Ablenker",
+              "description": "Zusätzliche rechte Einträge, die zu nichts passen.",
+              "entity": "Ablenker",
+              "field": {
+                "label": "Ablenker"
+              }
+            },
+            {
+              "label": "Erklärung nach der Prüfung",
+              "description": "Optionale kurze Erklärung, die nach dem Prüfen angezeigt wird – egal ob die Antwort richtig oder falsch war. Erkläre, warum die richtige Antwort stimmt und welches Missverständnis falsche Antworten verraten. Markdown wird unterstützt."
+            }
+          ]
+        },
+        {
+          "label": "Kurzantwort",
+          "description": "Ein Eingabefeld. Zahlen werden mit optionaler Toleranz verglichen (Dezimalkomma erlaubt); andere Antworten werden als Text ohne Leerzeichen verglichen, z. B. O(n²) entspricht o(n^2).",
+          "fields": [
+            {
+              "label": "Akzeptierte Antworten",
+              "entity": "Antwort",
+              "field": {
+                "label": "Antwort"
+              }
+            },
+            {
+              "label": "Toleranz bei Zahlen"
+            },
+            {
+              "label": "Groß-/Kleinschreibung ignorieren"
+            },
+            {
+              "label": "Einheit hinter dem Feld"
+            },
+            {
+              "label": "Platzhalter"
+            },
+            {
+              "label": "Erklärung nach der Prüfung",
+              "description": "Optionale kurze Erklärung, die nach dem Prüfen angezeigt wird – egal ob die Antwort richtig oder falsch war. Erkläre, warum die richtige Antwort stimmt und welches Missverständnis falsche Antworten verraten. Markdown wird unterstützt."
             }
           ]
         },
@@ -583,6 +653,10 @@
                   }
                 ]
               }
+            },
+            {
+              "label": "Erklärung nach der Prüfung",
+              "description": "Optionale kurze Erklärung, die nach dem Prüfen angezeigt wird – egal ob die Antwort richtig oder falsch war. Erkläre, warum die richtige Antwort stimmt und welches Missverständnis falsche Antworten verraten. Markdown wird unterstützt."
             }
           ]
         },
@@ -653,6 +727,10 @@
             {
               "label": "Maximale Schleifenverschachtelung",
               "description": "0 bedeutet keine Begrenzung."
+            },
+            {
+              "label": "Schleifen verbieten",
+              "description": "Keine for-/while-Schleifen und keine Comprehensions in der Funktion."
             },
             {
               "label": "Bedingung verlangen"
@@ -925,6 +1003,10 @@
               {
                 "label": "Punkte für diesen Test",
                 "description": "Wird verwendet, wenn Teilpunkte aktiviert sind."
+              },
+              {
+                "label": "Maximal gezählte Schritte (Pyodide, Funktionstests)",
+                "description": "0 bedeutet kein Limit. Lernende zählen Schritte mit ops.count(); der Test schlägt fehl, wenn die gezählte Summe größer ist."
               },
               {
                 "label": "Versteckter Testfall",

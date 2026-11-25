@@ -654,3 +654,17 @@ describe('algorithm constraint harness', () => {
     expect(result.violations).toContain('External access to protected attribute: _balance');
   });
 });
+
+describe('forbidLoops constraint', () => {
+  const run = (source) => runConstraintHarness(source, { forbidLoops: true }, 'answer');
+
+  it('accepts a closed formula', () => {
+    expect(run('def answer(n):\n    return n * (n + 1) // 2\n').passed).toBe(true);
+  });
+
+  it('rejects for loops, while loops and comprehensions', () => {
+    expect(run('def answer(n):\n    t = 0\n    for i in range(n):\n        t += i\n    return t\n').passed).toBe(false);
+    expect(run('def answer(n):\n    while n:\n        n -= 1\n    return n\n').passed).toBe(false);
+    expect(run('def answer(n):\n    return sum([i for i in range(n)])\n').passed).toBe(false);
+  });
+});

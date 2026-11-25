@@ -509,6 +509,12 @@
             },
             {
               "label": "Parsons Problem (code lines)"
+            },
+            {
+              "label": "Matching (pairs)"
+            },
+            {
+              "label": "Short answer (number or text)"
             }
           ]
         },
@@ -533,6 +539,70 @@
                   }
                 ]
               }
+            }
+          ]
+        },
+        {
+          "label": "Matching",
+          "description": "Learners choose the matching right-hand entry for every left-hand entry from a drop-down list. Several left entries may share the same right entry.",
+          "fields": [
+            {
+              "label": "Pairs",
+              "entity": "pair",
+              "field": {
+                "label": "Pair",
+                "fields": [
+                  {
+                    "label": "Left entry",
+                    "description": "Markdown. Code fences are supported."
+                  },
+                  {
+                    "label": "Right entry",
+                    "description": "Plain text shown in the drop-down list."
+                  }
+                ]
+              }
+            },
+            {
+              "label": "Distractors",
+              "description": "Additional right-hand entries that match nothing.",
+              "entity": "distractor",
+              "field": {
+                "label": "Distractor"
+              }
+            },
+            {
+              "label": "Explanation after checking",
+              "description": "Optional short explanation shown after the learner checks the answer, whether it was right or wrong. Say why the correct answer is correct and which misconception the wrong ones reveal. Markdown is supported."
+            }
+          ]
+        },
+        {
+          "label": "Short answer",
+          "description": "One input field. Numbers are compared with an optional tolerance (decimal comma accepted); other answers are compared as text without spaces, e.g. O(n²) equals o(n^2).",
+          "fields": [
+            {
+              "label": "Accepted answers",
+              "entity": "answer",
+              "field": {
+                "label": "Answer"
+              }
+            },
+            {
+              "label": "Tolerance for numbers"
+            },
+            {
+              "label": "Ignore upper/lower case"
+            },
+            {
+              "label": "Unit shown after the field"
+            },
+            {
+              "label": "Placeholder"
+            },
+            {
+              "label": "Explanation after checking",
+              "description": "Optional short explanation shown after the learner checks the answer, whether it was right or wrong. Say why the correct answer is correct and which misconception the wrong ones reveal. Markdown is supported."
             }
           ]
         },
@@ -583,6 +653,10 @@
                   }
                 ]
               }
+            },
+            {
+              "label": "Explanation after checking",
+              "description": "Optional short explanation shown after the learner checks the answer, whether it was right or wrong. Say why the correct answer is correct and which misconception the wrong ones reveal. Markdown is supported."
             }
           ]
         },
@@ -653,6 +727,10 @@
             {
               "label": "Maximum loop nesting",
               "description": "0 means no limit."
+            },
+            {
+              "label": "Forbid loops",
+              "description": "No for/while loops and no comprehensions inside the function."
             },
             {
               "label": "Require conditional"
@@ -925,6 +1003,10 @@
               {
                 "label": "Points for this test",
                 "description": "Used when partial credit is enabled."
+              },
+              {
+                "label": "Maximum counted steps (Pyodide, function tests)",
+                "description": "0 means no limit. Learners count steps with ops.count(); the test fails when the counted total is higher."
               },
               {
                 "label": "Hidden Testcase",

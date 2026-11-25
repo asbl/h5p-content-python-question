@@ -2,9 +2,11 @@ import CanvasRuntimeManager from './canvasruntimemanager';
 import PythonRuntime from './runtime-python';
 import PythonSolutionRuntime from './runtime-solution-python';
 import { getAlgorithmConstraintHarness, RESULT_PREFIX } from '../services/python-algorithm-constraints';
+import { getOpsCounterPreamble, usesOpsCounter } from '../services/python-ops-counter';
 import { getAlgorithmTracePreamble, getAlgorithmTraceNoopPreamble, TRACE_PREFIX } from '../services/python-algorithm-trace';
 import { logPythonDiagnostic } from '../services/python-diagnostics';
 import { addPythonErrorHint } from '../services/python-error-hints';
+import { getPythonL10nValue } from '../services/python-l10n';
 
 const DEBUG_PREFIX = 'Python test runtime:';
 
@@ -100,6 +102,11 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
       // traced case records events. Provide a silent stub elsewhere so those
       // calls stay valid even though each run starts from a fresh namespace.
       preamble += `${getAlgorithmTraceNoopPreamble()}\n`;
+    }
+    const needsOps = usesOpsCounter(learnerCode)
+      || Number(this.codeTester?.session?.getCurrentTestCase?.()?.maxOperations) > 0;
+    if (needsOps) {
+      preamble += `${getOpsCounterPreamble()}\n`;
     }
     return preamble;
   }
@@ -233,6 +240,31 @@ export default class PythonTestRuntime extends H5P.TestRuntimeMixin(PythonRuntim
     const testCaseLabel = this.codeTester.l10n.testCase;
 
     this._consoleManager.write(text, `${testCaseLabel} ${testCaseIndex + 1}`);
+  }
+
+  /**
+   * Turns an execution-limit timeout into a failed function test and moves on.
+   *
+   * The harness cannot report a timeout itself because the run is killed from
+   * outside. Without this, the first test that exceeds the limit (for example a
+   * loop over 10^8 elements) left the remaining tests pending forever.
+   * @param {*} error - Runtime error.
+   * @returns {Promise<void>|void} Continues with the next test case.
+   */
+  onError(error) {
+    const tester = this.codeTester;
+    const message = String(error?.message ?? error ?? '');
+    const limitMessage = getPythonL10nValue(this.options?.l10n || tester?.l10n || {}, 'executionLimitExceeded');
+    const isTimeout = Boolean(limitMessage) && message.includes(limitMessage);
+    const index = tester?.session?.testCaseIndex;
+
+    if (isTimeout && tester?.resultToken && typeof tester.addOutput === 'function'
+      && !tester.session?.outputs?.[index]?.length) {
+      tester.addOutput(`__H5P_FUNCTION_TEST_RESULT__:${tester.resultToken}:error:${limitMessage.replace(/\s+/g, ' ')}`);
+      return this.onSuccess();
+    }
+
+    return super.onError(error);
   }
 
   /**
