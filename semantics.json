@@ -1060,6 +1060,13 @@
                                             "showAlways": true
                                         }
                                     ]
+                                },
+                                {
+                                    "name": "note",
+                                    "type": "text",
+                                    "label": "Note (not shown to learners)",
+                                    "description": "Optional note for teachers. It is not displayed in the task.",
+                                    "optional": true
                                 }
                             ]
                         }
@@ -1178,7 +1185,7 @@
                         "label": "Tolerance for numbers",
                         "default": 0,
                         "min": 0,
-                        "step": 0.001,
+                        "decimals": 3,
                         "optional": true
                     },
                     {
@@ -1248,6 +1255,13 @@
                                             "showAlways": true
                                         }
                                     ]
+                                },
+                                {
+                                    "name": "note",
+                                    "type": "text",
+                                    "label": "Note (not shown to learners)",
+                                    "description": "Optional note for teachers. It is not displayed in the task.",
+                                    "optional": true
                                 }
                             ]
                         }
@@ -1386,7 +1400,14 @@
                             "type": "group",
                             "label": "Required class",
                             "fields": [
-                                { "name": "className", "type": "text", "label": "Class name", "description": "Required Python class name, for example BankAccount." }
+                                { "name": "className", "type": "text", "label": "Class name", "description": "Required Python class name, for example BankAccount." },
+                                {
+                                    "name": "note",
+                                    "type": "text",
+                                    "label": "Note (not shown to learners)",
+                                    "description": "Optional note for teachers. It is not displayed in the task.",
+                                    "optional": true
+                                }
                             ]
                         }
                     },

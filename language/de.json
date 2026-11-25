@@ -536,6 +536,10 @@
                   {
                     "label": "Text",
                     "description": "Schreibe das Element als Markdown. Du kannst Code-Blöcke oder Mermaid-Diagramme verwenden."
+                  },
+                  {
+                    "label": "Notiz (für Lernende nicht sichtbar)",
+                    "description": "Optionale Notiz für Lehrkräfte. Sie wird in der Aufgabe nicht angezeigt."
                   }
                 ]
               }
@@ -620,6 +624,10 @@
                   {
                     "label": "Code",
                     "description": "Eine einzelne Python-Codezeile inklusive Einrückung."
+                  },
+                  {
+                    "label": "Notiz (für Lernende nicht sichtbar)",
+                    "description": "Optionale Notiz für Lehrkräfte. Sie wird in der Aufgabe nicht angezeigt."
                   }
                 ]
               }
@@ -813,6 +821,10 @@
                   {
                     "label": "Klassenname",
                     "description": "Erforderlicher Python-Klassenname, zum Beispiel BankAccount."
+                  },
+                  {
+                    "label": "Notiz (für Lernende nicht sichtbar)",
+                    "description": "Optionale Notiz für Lehrkräfte. Sie wird in der Aufgabe nicht angezeigt."
                   }
                 ]
               }

@@ -536,6 +536,10 @@
                   {
                     "label": "Text",
                     "description": "Write the item as Markdown. You can use code fences or Mermaid diagrams."
+                  },
+                  {
+                    "label": "Note (not shown to learners)",
+                    "description": "Optional note for teachers. It is not displayed in the task."
                   }
                 ]
               }
@@ -620,6 +624,10 @@
                   {
                     "label": "Code",
                     "description": "A single line of Python code, including its indentation."
+                  },
+                  {
+                    "label": "Note (not shown to learners)",
+                    "description": "Optional note for teachers. It is not displayed in the task."
                   }
                 ]
               }
@@ -813,6 +821,10 @@
                   {
                     "label": "Class name",
                     "description": "Required Python class name, for example BankAccount."
+                  },
+                  {
+                    "label": "Note (not shown to learners)",
+                    "description": "Optional note for teachers. It is not displayed in the task."
                   }
                 ]
               }
