@@ -39,7 +39,7 @@
       "fields": [
         {
           "label": "Run console tasks in a worker",
-          "description": "For single-file Pyodide console and function tasks: keep the interface responsive and allow a hard stop. Graphics, additional source files and custom package URLs use the regular runtime. Browser APIs (js, DOM) are unavailable in worker mode. With no execution limit configured, worker execution is limited to 10 seconds."
+          "description": "For Pyodide console and function tasks: keep the interface responsive and allow a hard stop. Multi-file projects, pre/post code and custom package wheel URLs run in the worker too. Only graphics tasks (turtle, p5, pygame/miniworlds, tkinter/guizero, matplotlib) use the regular runtime. Browser APIs (js, DOM) are unavailable in worker mode. With no execution limit configured, worker execution is limited to 10 seconds."
         },
         {
           "label": "Show console",
@@ -82,6 +82,30 @@
     {
       "label": "Pyodide Advanced Options",
       "fields": [
+        {
+          "label": "Package set",
+          "description": "Curated, version-pinned Pyodide package set, loaded in addition to individually selected packages. Versions are pinned by the bundled Pyodide release and by pinned wheel URLs, so a set only changes with a library release.",
+          "options": [
+            {
+              "label": "None (only individually selected packages)"
+            },
+            {
+              "label": "Basic (numpy)"
+            },
+            {
+              "label": "Data analysis (numpy, pandas)"
+            },
+            {
+              "label": "Scientific (numpy, scipy, sympy)"
+            },
+            {
+              "label": "Graphics (numpy, pillow, matplotlib)"
+            },
+            {
+              "label": "Games (pygame-ce, miniworlds)"
+            }
+          ]
+        },
         {
           "label": "Pyodide-Packages",
           "entity": "package",

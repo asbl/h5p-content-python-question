@@ -220,6 +220,19 @@ describe('PythonRuntime', () => {
     expect(precachePyodideAssetsMock).not.toHaveBeenCalled();
   });
 
+  it('skips runtime preloading when cold-start measurement disables speculation', () => {
+    window.__h5pDisablePyodidePreload = true;
+    try {
+      const runtime = new PythonRuntime(vi.fn(), 'import numpy', { runner: 'pyodide', packages: ['numpy'] });
+      runtime.setup(createCodeContainer());
+      expect(precachePyodideAssetsMock).not.toHaveBeenCalled();
+      expect(runtime.runner.setup).not.toHaveBeenCalled();
+    }
+    finally {
+      delete window.__h5pDisablePyodidePreload;
+    }
+  });
+
   it('returns null project snapshot for non-pyodide runner', () => {
     const workspace = { files: [{ name: 'main.py', isEntry: true, code: 'x=1' }] };
     const runtime = new PythonRuntime(vi.fn(), 'print(1)', { runner: 'skulpt' });
@@ -404,7 +417,7 @@ describe('PythonRuntime', () => {
     expect(runtime.runner.setup).toHaveBeenCalledTimes(1);
     expect(callOrder).toEqual(['attachCanvas', 'setup']);
   });
-  it('uses isolation only for single-file console tasks and falls back for graphics or projects', () => {
+  it('uses isolation for console tasks with project files and package URLs, but not for graphics', () => {
     vi.stubGlobal('Worker', class {});
     try {
       const runtime = new PythonRuntime(vi.fn(), 'print(1)', { runner: 'pyodide', isolatedExecution: true });
@@ -412,10 +425,18 @@ describe('PythonRuntime', () => {
       runtime.code = 'import turtle';
       expect(runtime.shouldUseWorker()).toBe(false);
       runtime.code = 'print(1)';
+      // Multi-file projects run in the worker: files are passed to it.
       runtime.codeContainer = createCodeContainer({ files: [{ name: 'main.py', isEntry: true }, { name: 'helper.py' }] });
-      expect(runtime.shouldUseWorker()).toBe(false);
+      expect(runtime.shouldUseWorker()).toBe(true);
+      // Custom package wheel URLs run in the worker: the URL map is passed to it.
       runtime.codeContainer = createCodeContainer();
       runtime.options.packageUrls = { custom: 'https://example.test/package.whl' };
+      expect(runtime.shouldUseWorker()).toBe(true);
+      // GUI/canvas packages still require the main thread.
+      runtime.options.packages = ['numpy', 'matplotlib'];
+      expect(runtime.shouldUseWorker()).toBe(false);
+      runtime.options.packages = ['numpy'];
+      runtime.code = 'import pygame';
       expect(runtime.shouldUseWorker()).toBe(false);
     }
     finally { vi.unstubAllGlobals(); }

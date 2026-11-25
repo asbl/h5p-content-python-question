@@ -1,6 +1,4 @@
-import { getPyodideCompatibilityPreamble } from './pyodide-compat-service';
-
-import workerSource from '../assets/pyodide-worker.txt';
+import { createPyodideWorker, getPyodideWorkerOptions, normalizePyodideWorkerFiles, takePreparedPyodideWorker } from './pyodide-worker-preload';
 
 /** One worker per execution: no learner globals, modules or files survive a run. */
 export default class PyodideWorkerClient {
@@ -9,12 +7,9 @@ export default class PyodideWorkerClient {
     Object.assign(this, { onOutput, onInput, executionLimit, timeoutMessage, startupLimit });
   }
 
-  run(code, { pyodideCdnUrl = '', packages = [] } = {}) {
+  run(code, options = {}) {
     this.stop();
-    const base = pyodideCdnUrl || 'https://cdn.jsdelivr.net/pyodide/v0.29.5/full/pyodide.js';
-    const scriptUrl = new URL(/\/pyodide\.m?js(?:[?#].*)?$/.test(base)
-      ? base : `${base.replace(/\/$/, '')}/pyodide.js`, globalThis.location?.href).href.replace(/pyodide\.js(?=[?#]|$)/, 'pyodide.mjs');
-    const url = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
+    const data = getPyodideWorkerOptions(options);
     return new Promise((resolve, reject) => {
       let settled = false;
       const finish = (error, result) => {
@@ -29,12 +24,13 @@ export default class PyodideWorkerClient {
         else resolve(result);
       };
       let worker;
+      let url;
       let timer;
       try {
-        worker = new Worker(url, { type: 'module' });
+        ({ worker, url } = takePreparedPyodideWorker(data) || createPyodideWorker());
       }
       catch (error) {
-        URL.revokeObjectURL(url); reject(error); return;
+        reject(error); return;
       }
       this.worker = worker;
       this.stopRun = () => finish(null, { stopped: true });
@@ -70,9 +66,12 @@ export default class PyodideWorkerClient {
         if (data.type === 'success') finish(null, { stopped: false });
         if (data.type === 'error') finish(new Error(data.message));
       };
-      worker.postMessage({ type: 'run', code: String(code || ''), packages,
-        scriptUrl, indexURL: new URL('./', scriptUrl).href,
-        compatibility: getPyodideCompatibilityPreamble() });
+      worker.postMessage({
+        type: 'run',
+        code: String(code || ''),
+        files: normalizePyodideWorkerFiles(options.files),
+        ...data,
+      });
     });
   }
 

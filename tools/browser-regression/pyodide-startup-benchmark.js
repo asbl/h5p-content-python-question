@@ -132,8 +132,7 @@ async function main() {
 
     if (DISABLE_IDLE_PRELOAD) {
       await page.addInitScript(() => {
-        window.requestIdleCallback = () => 1;
-        window.cancelIdleCallback = () => {};
+        window.__h5pDisablePyodidePreload = true;
       });
     }
 
@@ -156,6 +155,7 @@ async function main() {
       contentId: CONTENT_ID,
       readDelayMs: READ_DELAY_MS,
       idlePreloadDisabled: DISABLE_IDLE_PRELOAD,
+      speculativePreloadDisabled: DISABLE_IDLE_PRELOAD,
       readinessTarget: EXPECT_CANVAS ? 'rendered-sdl-canvas' : 'console-output',
       startupBudgetMs: STARTUP_BUDGET_MS || null,
       runToReadyMs,

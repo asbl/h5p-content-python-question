@@ -1,5 +1,6 @@
 (function () {
   let pyodide;
+  let initialization;
   let output = '';
   let outputSize = 0;
   let flushTimer;
@@ -17,18 +18,14 @@
   };
   let inputId = 0;
   const inputs = new Map();
-  self.onmessage = async ({ data }) => {
-    if (data.type === 'input') {
-      const pending = inputs.get(data.id);
-      if (pending) {
-        inputs.delete(data.id);
-        if (data.error) pending.reject(new Error(data.error));
-        else pending.resolve(data.value);
-      }
-      return;
-    }
-    if (data.type !== 'run') return;
-    try {
+  // Mirrors PYTHON_MICROPIP_PACKAGES from python-package-utils.js: this worker
+  // script is a standalone asset and cannot import the shared module.
+  const MICROPIP_OWNED_PACKAGES = ['guizero', 'miniworlds', 'miniworlds-data', 'miniworlds-robot', 'miniworlds-turtle', 'tkinter-web-backend'];
+  // Same layout as pyodide-source-service.js, without a per-container segment.
+  const PROJECT_SRC_DIR = '/tmp/h5p_project/src';
+  const initialize = (data) => {
+    if (initialization) return initialization;
+    initialization = (async () => {
       const { loadPyodide } = await import(data.scriptUrl);
       pyodide = await loadPyodide({
         indexURL: data.indexURL,
@@ -47,8 +44,60 @@ async def _h5p_worker_input(prompt=''):
   return await input_handler(prompt)
 _h5p_builtins.input = _h5p_worker_input
 `);
-      if (data.packages.length) await pyodide.loadPackage(data.packages);
-      await pyodide.loadPackagesFromImports(data.code);
+      const packageUrls = data.packageUrls || {};
+      const directPackages = [];
+      const micropipInstalls = [];
+      (data.packages || []).forEach((name) => {
+        const url = packageUrls[name];
+        if (url && MICROPIP_OWNED_PACKAGES.includes(name)) micropipInstalls.push(url);
+        else directPackages.push(url || name);
+      });
+      if (directPackages.length) await pyodide.loadPackage(directPackages);
+      if (micropipInstalls.length) {
+        await pyodide.loadPackage('micropip');
+        const micropip = pyodide.pyimport('micropip');
+        try {
+          await micropip.install.callKwargs(micropipInstalls, { deps: false });
+        }
+        finally {
+          micropip.destroy?.();
+        }
+      }
+      await pyodide.runPythonAsync(`
+import sys as _h5p_sys
+if ${JSON.stringify(PROJECT_SRC_DIR)} not in _h5p_sys.path:
+    _h5p_sys.path.insert(0, ${JSON.stringify(PROJECT_SRC_DIR)})
+del _h5p_sys
+`);
+    })();
+    return initialization;
+  };
+  self.onmessage = async ({ data }) => {
+    if (data.type === 'input') {
+      const pending = inputs.get(data.id);
+      if (pending) {
+        inputs.delete(data.id);
+        if (data.error) pending.reject(new Error(data.error));
+        else pending.resolve(data.value);
+      }
+      return;
+    }
+    if (data.type !== 'run' && data.type !== 'prepare') return;
+    try {
+      await initialize(data);
+      if (data.type === 'prepare') {
+        self.postMessage({ type: 'ready' });
+        return;
+      }
+      for (const file of data.files || []) {
+        if (!file.name) continue;
+        const filePath = `${PROJECT_SRC_DIR}/${file.name}`;
+        try { pyodide.FS.mkdirTree(filePath.split('/').slice(0, -1).join('/')); }
+        catch (_) { /* parent directory already exists */ }
+        pyodide.FS.writeFile(filePath, String(file.code || ''));
+      }
+      const importScanCode = [...(data.files || []).map((file) => file.code), data.code].join('\n');
+      await pyodide.loadPackagesFromImports(importScanCode);
       self.postMessage({ type: 'executing' });
       const value = await pyodide.runPythonAsync(
         `await _h5p_run_with_async_input(${JSON.stringify(data.code)})`

@@ -320,22 +320,32 @@ export function installPyodideFetchCache(pyodideCdnUrl) {
       let fetchPromise = state.fetchCacheInflight.get(cacheKey);
 
       if (!fetchPromise) {
-        fetchPromise = nativeFetch(input, init).then(async (response) => {
+        fetchPromise = nativeFetch(input, init).then((response) => {
           if (response?.ok) {
             try {
-              await cache.put(request, response.clone());
+              // Return the stream immediately so WASM compilation can overlap
+              // the download. Keep this response available to concurrent callers
+              // until the persistent write has settled.
+              const write = cache.put(request, response.clone());
+              Promise.resolve(write).catch(() => {}).finally(() => {
+                if (state.fetchCacheInflight.get(cacheKey) === fetchPromise) {
+                  state.fetchCacheInflight.delete(cacheKey);
+                }
+              });
+              return response;
             }
             catch (_) {
               // Ignore cache write failures and return the network response.
             }
           }
 
-          return response;
-        }).finally(() => {
           state.fetchCacheInflight.delete(cacheKey);
+          return response;
+        }).catch((error) => {
+          state.fetchCacheInflight.delete(cacheKey);
+          throw error;
         });
         state.fetchCacheInflight.set(cacheKey, fetchPromise);
-        return fetchPromise;
       }
 
       const response = await fetchPromise;
@@ -390,32 +400,40 @@ export async function precachePyodideAssets(options = {}, packages = []) {
     }));
 
   const coreAssetUrls = PYODIDE_PRECACHE_CORE_ASSETS.map((assetName) => new URL(assetName, indexURL).toString());
-  const coreResponses = await Promise.allSettled(coreAssetUrls.map((url) => window.fetch(url)));
-  const lockResponse = coreResponses[PYODIDE_PRECACHE_CORE_ASSETS.indexOf('pyodide-lock.json')];
+  const coreRequests = coreAssetUrls.map((url) => window.fetch(url));
+  // Attach rejection handlers immediately, but don't put the large WASM and
+  // stdlib downloads ahead of package discovery in the critical path.
+  const coreSettled = Promise.allSettled(coreRequests);
+  const packagePrecache = async () => {
+    const lockResponse = (await Promise.allSettled([
+      coreRequests[PYODIDE_PRECACHE_CORE_ASSETS.indexOf('pyodide-lock.json')],
+    ]))[0];
 
-  if (lockResponse?.status !== 'fulfilled' || !lockResponse.value?.ok) {
-    return;
-  }
-
-  try {
-    const lock = await lockResponse.value.clone().json();
-    const explicitUrls = getPythonPackageUrlMap(options.packages, options.packageUrls);
-    const guiUrls = packageNames.map((name) => explicitUrls[name] || PYTHON_GUI_WHEEL_URLS[name]).filter(Boolean);
-    const packageUrls = packageNames
-      .map((packageName) => lock?.packages?.[packageName]?.file_name)
-      .filter(Boolean)
-      .map((fileName) => new URL(fileName, indexURL).toString());
-
-    for (const wheelUrl of await miniworldsWheelUrls) {
-      if (wheelUrl) {
-        packageUrls.push(wheelUrl);
-      }
+    if (lockResponse?.status !== 'fulfilled' || !lockResponse.value?.ok) {
+      return;
     }
 
-    await Promise.allSettled([...new Set([...packageUrls, ...guiUrls])].map((url) => window.fetch(url)));
-  }
-  catch (_) {
-    // Precache is opportunistic. The regular Pyodide loading path reports any
-    // real download failures with its existing, localized error handling.
-  }
+    try {
+      const lock = await lockResponse.value.clone().json();
+      const explicitUrls = getPythonPackageUrlMap(options.packages, options.packageUrls);
+      const guiUrls = packageNames.map((name) => explicitUrls[name] || PYTHON_GUI_WHEEL_URLS[name]).filter(Boolean);
+      const packageUrls = packageNames
+        .map((packageName) => lock?.packages?.[packageName]?.file_name)
+        .filter(Boolean)
+        .map((fileName) => new URL(fileName, indexURL).toString());
+
+      for (const wheelUrl of await miniworldsWheelUrls) {
+        if (wheelUrl) {
+          packageUrls.push(wheelUrl);
+        }
+      }
+
+      await Promise.allSettled([...new Set([...packageUrls, ...guiUrls])].map((url) => window.fetch(url)));
+    }
+    catch (_) {
+      // Precache is opportunistic. The regular Pyodide loading path reports any
+      // real download failures with its existing, localized error handling.
+    }
+  };
+  await Promise.all([coreSettled, packagePrecache()]);
 }

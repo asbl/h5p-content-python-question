@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PyodideWorkerClient from '../src/scripts/runtime/services/pyodide-worker-client';
+import { discardPreparedPyodideWorker, preparePyodideWorker } from '../src/scripts/runtime/services/pyodide-worker-preload';
 
 let workers;
 beforeEach(() => {
@@ -12,9 +13,74 @@ beforeEach(() => {
   URL.createObjectURL = vi.fn(() => 'blob:worker');
   URL.revokeObjectURL = vi.fn();
 });
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => {
+  discardPreparedPyodideWorker();
+  delete window.__h5pDisablePyodidePreload;
+  vi.useRealTimers(); vi.unstubAllGlobals();
+});
 
 describe('Pyodide worker transport', () => {
+  it('consumes a prepared worker once, even if initialization is still pending', async () => {
+    preparePyodideWorker({ packages: ['numpy'] });
+    expect(workers[0].postMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'prepare' }));
+    const client = new PyodideWorkerClient();
+    const run = client.run('x = 1', { packages: ['numpy'] });
+    expect(workers).toHaveLength(1);
+    expect(workers[0].postMessage).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'run', code: 'x = 1' }));
+    await workers[0].send({ type: 'ready' });
+    await workers[0].send({ type: 'success' });
+    await run;
+    expect(workers[0].terminate).toHaveBeenCalledOnce();
+    const next = client.run('print("x" in globals())', { packages: ['numpy'] });
+    expect(workers).toHaveLength(2);
+    await workers[1].send({ type: 'success' });
+    await next;
+  });
+
+  it('drops failed speculative workers and retries on Run', async () => {
+    preparePyodideWorker();
+    await workers[0].send({ type: 'error', message: 'download failed' });
+    expect(workers[0].terminate).toHaveBeenCalledOnce();
+    const run = new PyodideWorkerClient().run('print(1)');
+    expect(workers).toHaveLength(2);
+    await workers[1].send({ type: 'success' });
+    await run;
+  });
+
+  it('bounds preparation to one worker and honors the benchmark switch', async () => {
+    preparePyodideWorker();
+    preparePyodideWorker();
+    expect(workers).toHaveLength(1);
+    preparePyodideWorker({ packages: ['numpy'] });
+    expect(workers[0].terminate).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(120001);
+    expect(workers[1].terminate).toHaveBeenCalledOnce();
+    window.__h5pDisablePyodidePreload = true;
+    preparePyodideWorker();
+    expect(workers).toHaveLength(2);
+  });
+
+  it('forwards project files and package URLs with the run message, sanitized', async () => {
+    const client = new PyodideWorkerClient();
+    const run = client.run('import helper', {
+      packages: ['numpy', 'miniworlds'],
+      packageUrls: { miniworlds: 'https://example.test/miniworlds.whl' },
+      files: [
+        { name: 'helper.py', code: 'X = 1' },
+        { name: '../evil.py', code: 'nope' },
+        { name: '', code: 'ignored' },
+      ],
+    });
+    const message = workers[0].postMessage.mock.calls.at(-1)[0];
+    expect(message.type).toBe('run');
+    expect(message.code).toBe('import helper');
+    expect(message.files).toEqual([{ name: 'helper.py', code: 'X = 1' }, { name: 'evil.py', code: 'nope' }]);
+    expect(message.packageUrls).toEqual({ miniworlds: 'https://example.test/miniworlds.whl' });
+    expect(message.packages).toEqual(['numpy', 'miniworlds']);
+    await workers[0].send({ type: 'success' });
+    await expect(run).resolves.toEqual({ stopped: false });
+  });
+
   it('hard-stops a run and ignores late messages before starting a fresh worker', async () => {
     const output = vi.fn();
     const client = new PyodideWorkerClient({ onOutput: output });

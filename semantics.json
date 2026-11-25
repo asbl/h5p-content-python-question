@@ -147,6 +147,40 @@
         },
         "fields": [
             {
+                "name": "packageSet",
+                "type": "select",
+                "label": "Package set",
+                "description": "Curated, version-pinned Pyodide package set, loaded in addition to individually selected packages. Versions are pinned by the bundled Pyodide release and by pinned wheel URLs, so a set only changes with a library release.",
+                "default": "none",
+                "optional": true,
+                "options": [
+                    {
+                        "value": "none",
+                        "label": "None (only individually selected packages)"
+                    },
+                    {
+                        "value": "basic",
+                        "label": "Basic (numpy)"
+                    },
+                    {
+                        "value": "data",
+                        "label": "Data analysis (numpy, pandas)"
+                    },
+                    {
+                        "value": "science",
+                        "label": "Scientific (numpy, scipy, sympy)"
+                    },
+                    {
+                        "value": "graphics",
+                        "label": "Graphics (numpy, pillow, matplotlib)"
+                    },
+                    {
+                        "value": "games",
+                        "label": "Games (pygame-ce, miniworlds)"
+                    }
+                ]
+            },
+            {
                 "name": "packages",
                 "type": "list",
                 "label": "Pyodide-Packages",

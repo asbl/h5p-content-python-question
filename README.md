@@ -109,19 +109,47 @@ Existing tasks retain the previous all-tests-must-pass scoring by default.
 ## Isolated console execution
 
 Enable **Advanced Runtime Options → Run console tasks in a worker** with
-**Pyodide** for single-file console and function tasks. Execution runs in a fresh
+**Pyodide** for console and function tasks. Execution runs in a fresh
 worker for every run/test, keeping the page responsive and allowing Stop to
 terminate execution. The configured execution limit starts after Python and
 packages finish loading; time spent answering input dialogs is excluded. A
 10-second limit applies when no limit is configured. Loading has a separate
 120-second timeout, and output is limited to 1 MB per run.
 
-Graphics, additional project source files and custom package URLs retain the
-regular runtime. Browser APIs such as `js`/DOM access are unavailable inside a
-worker. Hosting CSP must permit `worker-src blob:` and loading the configured
-Pyodide module (`pyodide.mjs`) and its assets. A loading failure is reported;
-execution is not silently retried on the main thread.
+Multi-file projects, pre/post code and custom package wheel URLs run in the
+worker too: the additional project files are written into the worker's Python
+file system below `/tmp/h5p_project/src` (which is put on `sys.path`) and
+package names with a configured wheel URL are loaded from that URL. Only
+graphics tasks — turtle, p5, pygame/miniworlds, tkinter/guizero, matplotlib —
+retain the regular runtime, because a worker has no DOM canvas. Browser APIs
+such as `js`/DOM access are unavailable inside a worker. Hosting CSP must permit
+`worker-src blob:` and loading the configured Pyodide module (`pyodide.mjs`) and
+its assets. A loading failure is reported; execution is not silently retried on
+the main thread.
 
 After production builds, run `npm run test:browser:isolated-execution` for a
 server-free Chromium smoke test covering input, timeout, responsiveness,
 cancellation, fresh state, function-test sequencing and the author's OOP check.
+
+## Curated package sets
+
+**Pyodide Advanced Options → Package set** selects a curated set
+(`basic` numpy, `data` numpy+pandas, `science` numpy+scipy+sympy,
+`graphics` numpy+pillow+matplotlib, `games` pygame-ce+miniworlds) that is
+loaded in addition to individually selected packages. Set packages go through
+the same normalization as explicit ones, so package loading, worker
+eligibility, Blockly package blocks, precache and idle preload treat them
+equally. Versions are pinned by the bundled Pyodide release's
+`pyodide-lock.json` and by the pinned wheel URLs for PyPI packages
+(miniworlds family, GUI backends), so a set only changes together with a
+library release.
+
+## xAPI reporting per test case
+
+Besides the attempt-level `attempted`/`answered`/`completed` statements, every
+graded test case sends one `interacted` statement whose object is a sub-activity
+`<activity-id>#testcase-N` with the test case index, weight and pass/fail
+result. Hidden test cases never expose their name, learning goal or expected
+output. The per-test results are also persisted via `getCurrentState()`
+(`previousState.testResults`) and restored on the next page load, alongside the
+editor workspace.

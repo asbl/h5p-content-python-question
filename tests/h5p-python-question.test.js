@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   loadMissingPyodidePackages: vi.fn(async () => {}),
   precachePyodideAssets: vi.fn(async () => {}),
   warmPyodidePackageImports: vi.fn(async () => {}),
+  preparePyodideWorker: vi.fn(),
 }));
 
 vi.mock('../src/scripts/container/container-python', () => ({
@@ -33,6 +34,9 @@ vi.mock('../src/scripts/runtime/services/pyodide-runtime-service', () => ({
 vi.mock('../src/scripts/runtime/services/pyodide-package-service', () => ({
   loadMissingPyodidePackages: mocks.loadMissingPyodidePackages,
 }));
+vi.mock('../src/scripts/runtime/services/pyodide-worker-preload', () => ({
+  preparePyodideWorker: mocks.preparePyodideWorker,
+}));
 
 const { default: PythonQuestion } = await import('../src/scripts/h5p-python-question.js');
 
@@ -43,6 +47,8 @@ describe('PythonQuestion', () => {
     mocks.loadMissingPyodidePackages.mockClear();
     mocks.precachePyodideAssets.mockClear();
     mocks.warmPyodidePackageImports.mockClear();
+    mocks.preparePyodideWorker.mockClear();
+    delete window.__h5pDisablePyodidePreload;
     window.requestIdleCallback = vi.fn();
     document.head.innerHTML = '';
   });
@@ -136,11 +142,6 @@ describe('PythonQuestion', () => {
       expect.objectContaining({
         runner: 'pyodide',
         packages: ['numpy', 'pygame-ce', 'sqlite3'],
-      }),
-      expect.objectContaining({
-        l10n: question.runtimeL10n,
-        outputHandler: expect.any(Function),
-        inputHandler: expect.any(Function),
       }),
     );
     expect(question.getRuntimeOptions()).toEqual({
@@ -302,16 +303,42 @@ describe('PythonQuestion', () => {
         runner: 'pyodide',
         packages: ['numpy'],
       }),
-      expect.objectContaining({
-        l10n: question.runtimeL10n,
-        outputHandler: expect.any(Function),
-        inputHandler: expect.any(Function),
-      }),
     );
     expect(mocks.loadMissingPyodidePackages).toHaveBeenCalledWith({ type: 'pyodide' }, ['numpy'], {
       packageUrls: {},
     });
     expect(mocks.warmPyodidePackageImports).toHaveBeenCalledWith({ type: 'pyodide' }, ['numpy']);
+  });
+
+  it('warms the core interpreter during idle time without additional packages', async () => {
+    const question = new PythonQuestion({ pythonRunner: 'pyodide' }, 20);
+    expect(mocks.getSharedPyodide).not.toHaveBeenCalled();
+    await window.requestIdleCallback.mock.calls[0][0]();
+    expect(mocks.getSharedPyodide).toHaveBeenCalledWith(
+      expect.objectContaining({ packages: [] }),
+    );
+    expect(question._earlyPyodidePreloadPromise).toBeDefined();
+  });
+
+  it('disables immediate and idle preloading for cold-start benchmarks', () => {
+    window.__h5pDisablePyodidePreload = true;
+    for (const packages of [[], ['numpy'], ['miniworlds']]) {
+      new PythonQuestion({ pythonRunner: 'pyodide', pyodideOptions: { packages } }, 21);
+    }
+    expect(window.requestIdleCallback).not.toHaveBeenCalled();
+    expect(mocks.precachePyodideAssets).not.toHaveBeenCalled();
+    expect(mocks.getSharedPyodide).not.toHaveBeenCalled();
+    delete window.__h5pDisablePyodidePreload;
+  });
+
+  it('prepares a fresh worker instead of a shared interpreter for isolated tasks', async () => {
+    new PythonQuestion({ pythonRunner: 'pyodide', advancedOptions: { isolatedExecution: true } }, 22);
+    await window.requestIdleCallback.mock.calls[0][0]();
+    expect(mocks.preparePyodideWorker).toHaveBeenCalledWith(
+      expect.objectContaining({ isolatedExecution: true, packages: [] }),
+    );
+    expect(mocks.getSharedPyodide).not.toHaveBeenCalled();
+    expect(mocks.precachePyodideAssets).not.toHaveBeenCalled();
   });
 
   it('starts Miniworlds package preloading immediately', async () => {
@@ -331,7 +358,6 @@ describe('PythonQuestion', () => {
         runner: 'pyodide',
         packages: ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
       }),
-      expect.objectContaining({ l10n: question.runtimeL10n }),
     );
     expect(mocks.loadMissingPyodidePackages).toHaveBeenCalledWith(
       { type: 'pyodide' },
@@ -342,6 +368,16 @@ describe('PythonQuestion', () => {
       { type: 'pyodide' },
       ['miniworlds', 'numpy', 'pygame-ce', 'sqlite3'],
     );
+  });
+
+  it('warms the shared interpreter for graphics packages even when isolation is requested', async () => {
+    const question = new PythonQuestion({
+      pythonRunner: 'pyodide', pyodideOptions: { packages: ['miniworlds'] },
+      advancedOptions: { isolatedExecution: true },
+    }, 23);
+    await question._earlyPyodidePreloadPromise;
+    expect(mocks.getSharedPyodide).toHaveBeenCalled();
+    expect(mocks.preparePyodideWorker).not.toHaveBeenCalled();
   });
 
   it('falls back to setTimeout for early Pyodide preload when requestIdleCallback is unavailable', async () => {
@@ -366,7 +402,6 @@ describe('PythonQuestion', () => {
 
     expect(mocks.getSharedPyodide).toHaveBeenCalledWith(
       expect.objectContaining({ packages: ['numpy'] }),
-      expect.objectContaining({ l10n: question.runtimeL10n }),
     );
 
     setTimeoutSpy.mockRestore();

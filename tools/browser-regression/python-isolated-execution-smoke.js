@@ -36,6 +36,27 @@ const root = path.resolve(__dirname, '../../../..');
     }
 
     const result = await page.evaluate(async () => {
+      const NativeWorker = window.Worker;
+      const workerRecords = [];
+      window.Worker = class extends NativeWorker {
+        constructor(...args) {
+          super(...args);
+          this.record = { prepared: false, ready: false, runs: 0, terminated: false };
+          workerRecords.push(this.record);
+          this.addEventListener('message', ({ data }) => {
+            if (data.type === 'ready') this.record.ready = true;
+          });
+        }
+        postMessage(message, ...args) {
+          if (message.type === 'prepare') this.record.prepared = true;
+          if (message.type === 'run') this.record.runs++;
+          return super.postMessage(message, ...args);
+        }
+        terminate() {
+          this.record.terminated = true;
+          return super.terminate();
+        }
+      };
       const events = [];
       let code = 'zahl = int(input("Zahl?"))\nprint(zahl * 2)';
       const state = { start() {}, stop() {} };
@@ -55,12 +76,19 @@ const root = path.resolve(__dirname, '../../../..');
       };
       await run(code);
       const inputPassed = events.includes('14\n');
+      const prepared = workerRecords.find((record) => record.prepared);
+      const preparationDeadline = Date.now() + 120000;
+      while (prepared && !prepared.ready && !prepared.terminated && Date.now() < preparationDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      const preparedWithoutLearnerCode = Boolean(prepared?.ready && prepared.runs === 0);
       events.length = 0;
       let ticks = 0;
       const timer = setInterval(() => ticks++, 20);
       await run('while True:\n    pass');
       clearInterval(timer);
       const timeoutPassed = events.some((text) => text.includes('execution time limit'));
+      const preparedConsumedOnce = Boolean(prepared?.runs === 1 && prepared.terminated);
       const responsive = ticks > 2;
       events.length = 0;
       // Stop through the actual container method while the worker computes.
@@ -108,7 +136,8 @@ const root = path.resolve(__dirname, '../../../..');
       await assistant.checkTask();
       const referencePassed = assistant.output.textContent.split('assistantReferencePassed').length - 1 === 2;
       assistant.remove();
-      return { inputPassed, timeoutPassed, responsive, cancelled, earlyCancelled, fresh, asyncPassed, testsPassed, referencePassed };
+      return { inputPassed, preparedWithoutLearnerCode, preparedConsumedOnce,
+        timeoutPassed, responsive, cancelled, earlyCancelled, fresh, asyncPassed, testsPassed, referencePassed };
     });
     Object.entries(result).forEach(([name, passed]) => assert.equal(passed, true, name));
     const report = { passed: true, checks: result };

@@ -39,7 +39,7 @@
       "fields": [
         {
           "label": "Konsolenaufgaben in einem Worker ausführen",
-          "description": "Für Pyodide-Konsolen- und Funktionsaufgaben mit einer Datei: Oberfläche bedienbar halten und Ausführung sofort abbrechen können. Grafik, zusätzliche Quelldateien und eigene Paket-URLs verwenden die reguläre Laufzeit. Browser-APIs (js, DOM) stehen im Worker nicht zur Verfügung. Ohne konfiguriertes Zeitlimit gilt im Worker ein Limit von 10 Sekunden."
+          "description": "Für Pyodide-Konsolen- und Funktionsaufgaben: Oberfläche bedienbar halten und Ausführung sofort abbrechen können. Mehr-Datei-Projekte, Vor-/Nachcode und eigene Paket-Wheel-URLs laufen ebenfalls im Worker. Nur Grafikaufgaben (turtle, p5, pygame/miniworlds, tkinter/guizero, matplotlib) verwenden die reguläre Laufzeit. Browser-APIs (js, DOM) stehen im Worker nicht zur Verfügung. Ohne konfiguriertes Zeitlimit gilt im Worker ein Limit von 10 Sekunden."
         },
         {
           "label": "Konsole anzeigen",
@@ -82,6 +82,30 @@
     {
       "label": "Erweiterte Pyodide-Optionen",
       "fields": [
+        {
+          "label": "Paket-Set",
+          "description": "Kuratiertes, versioniertes Pyodide-Paket-Set, das zusätzlich zu einzeln gewählten Paketen geladen wird. Die Versionen sind durch die gebündelte Pyodide-Version und gepinnte Wheel-URLs festgelegt; ein Set ändert sich nur mit einem Library-Release.",
+          "options": [
+            {
+              "label": "Keines (nur einzeln gewählte Pakete)"
+            },
+            {
+              "label": "Basis (numpy)"
+            },
+            {
+              "label": "Datenanalyse (numpy, pandas)"
+            },
+            {
+              "label": "Naturwissenschaften (numpy, scipy, sympy)"
+            },
+            {
+              "label": "Grafik (numpy, pillow, matplotlib)"
+            },
+            {
+              "label": "Spiele (pygame-ce, miniworlds)"
+            }
+          ]
+        },
         {
           "label": "Pyodide-Pakete",
           "entity": "package",

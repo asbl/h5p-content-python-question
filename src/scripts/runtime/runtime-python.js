@@ -5,9 +5,10 @@ import PyodideWorkerRunner from './pyodide-worker-runner';
 import {
   getPythonL10nValue,
 } from '../services/python-l10n';
-import { getImportedPythonModules, getImportedPythonPackages, PYTHON_MINIWORLDS_PACKAGES, stripPythonLiteralsAndComments } from '../services/python-package-utils';
+import { getImportedPythonModules, getImportedPythonPackages, PYTHON_MINIWORLDS_PACKAGES, PYTHON_WORKER_EXCLUDED_PACKAGES, stripPythonLiteralsAndComments } from '../services/python-package-utils';
 import { logPythonDiagnostic } from '../services/python-diagnostics';
 import { precachePyodideAssets } from './services/pyodide-runtime-service';
+import { isPyodidePreloadEnabled } from './services/pyodide-preload-policy';
 
 /**
  * Python runtime for executing Python code via Skulpt.
@@ -78,7 +79,7 @@ export default class PythonRuntime extends H5P.Runtime {
    */
   schedulePyodidePreload() {
     if (
-      this.runnerType !== 'pyodide' || this.runner instanceof PyodideWorkerRunner ||
+      !isPyodidePreloadEnabled() || this.runnerType !== 'pyodide' || this.runner instanceof PyodideWorkerRunner ||
       this._pyodidePreloadScheduled
     ) {
       return;
@@ -180,17 +181,19 @@ export default class PythonRuntime extends H5P.Runtime {
   }
 
   /**
-   * Selects the isolated runner only for supported single-file programs.
+   * Selects the isolated runner for console tasks. Multi-file projects,
+   * pre/post code and custom package wheel URLs are supported: the worker
+   * receives the project files and the package URL map. Tasks that need a
+   * DOM canvas (turtle, p5, pygame/miniworlds, tkinter/guizero, matplotlib)
+   * stay on the main thread because a worker has no DOM access.
    * @returns {boolean} True when worker execution is enabled and supported.
    */
   shouldUseWorker() {
     return this.options.isolatedExecution === true
       && typeof Worker !== 'undefined'
       && !this.containsCanvasCode()
-      && !this.getProjectSnapshot()?.files?.some((file) => !file.isEntry)
       && ![...(this.options.packages || []), ...this.getPreloadPackageHints()].some((name) =>
-        [...PYTHON_MINIWORLDS_PACKAGES, 'pygame-ce', 'matplotlib', 'guizero', 'tkinter-web-backend'].includes(name))
-      && !Object.keys(this.options.packageUrls || {}).length;
+        PYTHON_WORKER_EXCLUDED_PACKAGES.includes(name));
   }
 
   /**

@@ -20,7 +20,7 @@ import {
   writePyodideRuntimeOutput,
 } from '../src/scripts/runtime/services/pyodide-runtime-service.js';
 import { PYTHON_GUI_WHEEL_URLS } from '../src/scripts/services/python-gui-packages';
-import { MINIWORLDS_PINNED_VERSIONS } from '../src/scripts/runtime/services/pyodide-precache-service.js';
+import { installPyodideFetchCache, MINIWORLDS_PINNED_VERSIONS } from '../src/scripts/runtime/services/pyodide-precache-service.js';
 
 const pinnedMiniworldsVersion = MINIWORLDS_PINNED_VERSIONS.miniworlds;
 const miniworldsMetadataUrl = `https://pypi.org/pypi/miniworlds/${pinnedMiniworldsVersion}/json`;
@@ -249,6 +249,65 @@ describe('Pyodide runtime service', () => {
     ]));
     expect(fetchedUrls).not.toContain('https://static.example.com/pyodide/pyodide.js');
     window.fetch = originalFetch;
+  });
+
+  it('returns streaming responses before the cache write completes and shares concurrent downloads', async () => {
+    let finishWrite;
+    const cache = {
+      match: vi.fn(async () => undefined),
+      put: vi.fn(() => new Promise((resolve) => { finishWrite = resolve; })),
+    };
+    const fetch = vi.fn(async () => new Response('wasm bytes'));
+    vi.stubGlobal('fetch', fetch);
+    vi.stubGlobal('caches', { open: vi.fn(async () => cache) });
+    installPyodideFetchCache('https://cdn.example.com/pyodide.js');
+    const first = await window.fetch('https://cdn.example.com/pyodide.asm.wasm');
+    // Both bodies must remain independently readable while cache.put is pending.
+    const second = await window.fetch('https://cdn.example.com/pyodide.asm.wasm');
+    expect(await first.text()).toBe('wasm bytes');
+    expect(await second.text()).toBe('wasm bytes');
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(sharedPyodideRuntimeState.fetchCacheInflight.size).toBe(1);
+    finishWrite();
+    await vi.waitFor(() => expect(sharedPyodideRuntimeState.fetchCacheInflight.size).toBe(0));
+  });
+
+  it('returns network data even when persistent caching fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('usable')));
+    vi.stubGlobal('caches', { open: vi.fn(async () => ({
+      match: async () => undefined,
+      put: async () => { throw new Error('quota exceeded'); },
+    })) });
+    installPyodideFetchCache('https://cdn.example.com/pyodide.js');
+    const response = await window.fetch('https://cdn.example.com/python_stdlib.zip');
+    expect(await response.text()).toBe('usable');
+    await vi.waitFor(() => expect(sharedPyodideRuntimeState.fetchCacheInflight.size).toBe(0));
+  });
+
+  it('starts package downloads when the lock file arrives, before the core finishes', async () => {
+    let releaseCore;
+    const core = new Promise((resolve) => { releaseCore = resolve; });
+    const originalFetch = window.fetch;
+    const fetch = vi.fn(async (url) => {
+      if (url.endsWith('pyodide-lock.json')) {
+        return { ok: true, clone: () => ({ json: async () => ({ packages: { numpy: { file_name: 'numpy.whl' } } }) }) };
+      }
+      if (url.endsWith('numpy.whl')) return { ok: true };
+      return core;
+    });
+    window.fetch = fetch;
+    try {
+      const preload = precachePyodideAssets({
+        pyodideCdnUrl: 'https://cdn.example.com/', packages: ['numpy'], persistentPyodideCache: false,
+      });
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledWith('https://cdn.example.com/numpy.whl'));
+      releaseCore({ ok: true });
+      await preload;
+    }
+    finally {
+      releaseCore({ ok: true });
+      window.fetch = originalFetch;
+    }
   });
 
   it('precaches the pinned backend for guizero and honors configured wheel URLs', async () => {

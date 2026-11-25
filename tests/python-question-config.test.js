@@ -201,6 +201,7 @@ describe('Python question config', () => {
 
     expect(config).toEqual({
       runner: 'pyodide',
+      packageSet: 'none',
       pyodidePackageEntries: [
         { package: 'miniworlds', url: 'https://static.example.com/wheels/miniworlds.whl' },
         { package: { value: 'sqlite3' } },
@@ -497,5 +498,42 @@ describe('Python question config', () => {
       { path: 'uploads/bg image.png', fileName: 'Background_Image.png' },
       { path: 'uploads/bg image.png', fileName: 'image_2.png' },
     ]);
+  });
+
+  it('expands a curated package set into the normalized package list', () => {
+    const config = normalizePythonQuestionConfig({
+      pythonRunner: 'pyodide',
+      pyodideOptions: {
+        packageSet: 'games',
+        packages: [{ package: 'networkx' }],
+      },
+    });
+
+    expect(config.packageSet).toBe('games');
+    // Set packages and explicit packages merge; dependency expansion applies.
+    expect(config.packages).toEqual(['pygame-ce', 'miniworlds', 'numpy', 'sqlite3', 'networkx']);
+  });
+
+  it('merges set packages with explicit ones without duplicates', () => {
+    const config = normalizePythonQuestionConfig({
+      pythonRunner: 'pyodide',
+      pyodideOptions: {
+        packageSet: 'data',
+        packages: ['numpy', { package: 'regex' }],
+      },
+    });
+
+    expect(config.packages).toEqual(['numpy', 'pandas', 'regex']);
+  });
+
+  it('falls back to no set for unknown values and defaults to none', () => {
+    expect(normalizePythonQuestionConfig({ pythonRunner: 'pyodide' }).packageSet).toBe('none');
+    expect(normalizePythonQuestionConfig({ pythonRunner: 'pyodide' }).packages).toEqual([]);
+    const unknown = normalizePythonQuestionConfig({
+      pythonRunner: 'pyodide',
+      pyodideOptions: { packageSet: 'does-not-exist' },
+    });
+    expect(unknown.packageSet).toBe('none');
+    expect(unknown.packages).toEqual([]);
   });
 });

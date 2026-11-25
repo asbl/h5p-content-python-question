@@ -7,7 +7,7 @@ import {
   getPyodidePackageEntriesFromParams,
   normalizePythonQuestionConfig,
 } from './services/python-question-config';
-import { PYTHON_MICROPIP_PACKAGES } from './services/python-package-utils';
+import { PYTHON_MICROPIP_PACKAGES, PYTHON_WORKER_EXCLUDED_PACKAGES } from './services/python-package-utils';
 import { createPythonL10n } from './services/python-l10n';
 import {
   getSharedPyodide,
@@ -16,6 +16,8 @@ import {
 } from './runtime/services/pyodide-runtime-service';
 import { loadMissingPyodidePackages } from './runtime/services/pyodide-package-service';
 import { logPythonDiagnostic } from './services/python-diagnostics';
+import { isPyodidePreloadEnabled } from './runtime/services/pyodide-preload-policy';
+import { preparePyodideWorker } from './runtime/services/pyodide-worker-preload';
 
 const IMMEDIATE_PYODIDE_PRELOAD_PACKAGES = Object.freeze([
   'pygame-ce',
@@ -44,6 +46,13 @@ export default class PythonQuestion extends H5P.CodeQuestion {
       ? this.getCodeTesterFactory().create()
       : this.codeTester;
 
+    // The recreated tester needs the per-test-case xAPI hook and the persisted
+    // test results again (wired onto the original tester in super()). Guarded
+    // because hosts may still serve an older cached CodeQuestion dependency.
+    if (typeof this.wireCodeTester === 'function') {
+      this.wireCodeTester(this.codeTester);
+    }
+
     this.pythonRunner = this.pythonConfig.runner;
     this.scheduleEarlyPyodidePreload();
   }
@@ -70,11 +79,9 @@ export default class PythonQuestion extends H5P.CodeQuestion {
    */
   scheduleEarlyPyodidePreload() {
     if (
-      this.pythonConfig.runner !== 'pyodide' ||
-      this.pythonConfig.advancedOptions?.isolatedExecution === true ||
+      !isPyodidePreloadEnabled() || this.pythonConfig.runner !== 'pyodide' ||
       this._earlyPyodidePreloadScheduled ||
-      !Array.isArray(this.pythonConfig.packages) ||
-      this.pythonConfig.packages.length === 0
+      !Array.isArray(this.pythonConfig.packages)
     ) {
       return;
     }
@@ -82,20 +89,22 @@ export default class PythonQuestion extends H5P.CodeQuestion {
     this._earlyPyodidePreloadScheduled = true;
     const options = buildPythonRuntimeOptions(this.pythonConfig, this.runtimeL10n);
     const packages = [...this.pythonConfig.packages];
+    const isolated = options.isolatedExecution === true
+      && !packages.some((name) => PYTHON_WORKER_EXCLUDED_PACKAGES.includes(name));
 
-    precachePyodideAssets(options, packages).catch(() => {
+    if (!isolated) precachePyodideAssets(options, packages).catch(() => {
       // Opportunistic preload; normal Run path reports actionable failures.
     });
 
     const preload = async () => {
-      const preloadRuntime = {
-        l10n: this.runtimeL10n,
-        outputHandler: () => {},
-        inputHandler: () => '',
-      };
-
+      if (isolated) {
+        preparePyodideWorker(options);
+        return;
+      }
       try {
-        const pyodide = await getSharedPyodide(options, preloadRuntime);
+        // Background preparation must not replace the IO handlers of a
+        // learner program that is already running in another question.
+        const pyodide = await getSharedPyodide(options);
         await loadMissingPyodidePackages(pyodide, packages, {
           packageUrls: options.packageUrls,
         });

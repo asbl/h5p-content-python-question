@@ -49,6 +49,19 @@ export const PYTHON_MICROPIP_PACKAGES = Object.freeze([
 ]);
 
 /**
+ * Packages that need DOM/canvas access and therefore must never run inside the
+ * isolated worker. Single source of truth for worker eligibility checks.
+ * @type {string[]}
+ */
+export const PYTHON_WORKER_EXCLUDED_PACKAGES = Object.freeze([
+  ...PYTHON_MINIWORLDS_PACKAGES,
+  'pygame-ce',
+  'matplotlib',
+  'guizero',
+  'tkinter-web-backend',
+]);
+
+/**
  * Additional packages that become available as transitive dependencies.
  * @type {Record<string, string[]>}
  */

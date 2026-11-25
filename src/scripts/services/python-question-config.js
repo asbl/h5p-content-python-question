@@ -4,6 +4,10 @@ import {
   normalizePythonPackageEntries,
 } from './python-package-utils';
 import {
+  getPythonPackageSetPackages,
+  normalizePythonPackageSetName,
+} from './python-package-sets';
+import {
   decodeHtmlCode,
   getExternalLibraryUrl as getExternalLibraryUrlShared,
   normalizeEditorMode,
@@ -243,16 +247,23 @@ export function normalizePythonAdvancedOptions(advancedOptions = {}, pyodideOpti
  * Per-editor fields (sourceFiles, allowAddingFiles) are NOT included here;
  * they are resolved per-container via buildPythonCodeContainerOptions.
  * @param {object} [params] - Raw PythonQuestion params.
- * @returns {{runner: 'skulpt'|'pyodide', pyodidePackageEntries: Array<*>, packages: string[], advancedOptions: {disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, enablePythonTutor: boolean, enableDiagnosticLogs: boolean, executionLimit: number}}} Normalized config.
+ * @returns {{runner: 'skulpt'|'pyodide', packageSet: string, pyodidePackageEntries: Array<*>, packages: string[], advancedOptions: {disableOutputPopups: boolean, enableImageUploads: boolean, enableSoundUploads: boolean, enableSaveLoadButtons: boolean, enablePythonTutor: boolean, enableDiagnosticLogs: boolean, executionLimit: number}}} Normalized config.
  */
 export function normalizePythonQuestionConfig(params = {}) {
   const runner = normalizePythonRunner(params.pythonRunner);
   const pyodidePackageEntries = getPyodidePackageEntriesFromParams(params);
+  const packageSet = normalizePythonPackageSetName(params.pyodideOptions?.packageSet);
 
   return {
     runner,
+    packageSet,
     pyodidePackageEntries,
-    packages: normalizePythonPackageEntries(pyodidePackageEntries),
+    // The curated set expands into the same normalized list as explicit entries,
+    // so loading, precache, preload and worker eligibility treat them equally.
+    packages: normalizePythonPackageEntries([
+      ...getPythonPackageSetPackages(packageSet),
+      ...pyodidePackageEntries,
+    ]),
     packageUrls: getPythonPackageUrlMap(pyodidePackageEntries, params.pyodideOptions?.packageUrls),
     advancedOptions: normalizePythonAdvancedOptions(params.advancedOptions, params.pyodideOptions),
   };
