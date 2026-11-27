@@ -1,0 +1,120 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Matplotlib Blockly blocks > generate the expected Python code for every toolbox block 1`] = `
+{
+  "matplotlib_create_figure": "plt.figure()
+",
+  "matplotlib_import_pyplot": "import matplotlib.pyplot as plt
+",
+  "matplotlib_plot_line": "plt.plot([], [])
+",
+  "matplotlib_set_title": "plt.title('')
+",
+  "matplotlib_show_plot": "plt.show()
+",
+}
+`;
+
+exports[`Miniworlds Blockly blocks > generate the expected Python code for every toolbox block 1`] = `
+{
+  "miniworlds_actor_add_costume": "player.add_costume('images/player.png')
+",
+  "miniworlds_actor_call_method": "player.move()
+",
+  "miniworlds_actor_detect": "player.detect(target)",
+  "miniworlds_actor_event_key": "@player.register
+def on_key_down_up(self):
+    pass
+",
+  "miniworlds_actor_event_key_down": "@player.register
+def on_key_down_w(self):
+    pass
+",
+  "miniworlds_actor_event_key_pressed": "@player.register
+def on_key_pressed(self, keys):
+    pass
+",
+  "miniworlds_actor_event_lifecycle": "@player.register
+def on_setup(self):
+    pass
+",
+  "miniworlds_actor_event_mouse": "@player.register
+def on_mouse_left_down(self, position):
+    pass
+",
+  "miniworlds_actor_get_attribute": "player.color",
+  "miniworlds_actor_move": "player.move_up()
+",
+  "miniworlds_actor_move_by": "player.move(10)
+",
+  "miniworlds_actor_move_to": "player.move_to(0, 0)
+",
+  "miniworlds_actor_move_towards": "player.move_towards(target, 1)
+",
+  "miniworlds_actor_remove": "player.remove()
+",
+  "miniworlds_actor_set_attribute": "player.color = (255, 0, 0)
+",
+  "miniworlds_actor_set_costume_index": "player.costume_number = 0
+",
+  "miniworlds_actor_set_costume_option": "player.costume.is_rotatable = False
+",
+  "miniworlds_actor_set_position": "player.position = (0, 0)
+",
+  "miniworlds_actor_set_visible": "player.is_visible = True
+",
+  "miniworlds_actor_turn": "player.turn_left(15)
+",
+  "miniworlds_add_background": "world.add_background('images/grass.jpg')
+",
+  "miniworlds_after_delay": "def __h5p_timer_miniworlds_after_delay():
+    pass
+ActionTimer(1000, __h5p_timer_miniworlds_after_delay, None)
+",
+  "miniworlds_create_actor": "player = Actor((90, 90))
+",
+  "miniworlds_create_circle": "ball = Circle((0, 0), 20)
+",
+  "miniworlds_create_rectangle": "wall = Rectangle((0, 0), 20, 20)
+",
+  "miniworlds_create_tiled_world": "world = TiledWorld(10, 10)
+",
+  "miniworlds_create_world": "world = World(400, 400)
+",
+  "miniworlds_import_core": "from miniworlds import World, Actor, Circle, Rectangle, TiledWorld, ActionTimer
+",
+  "miniworlds_play_sound": "world.sound.play('sound.wav')
+",
+  "miniworlds_rgb_color": "(255, 0, 0)",
+  "miniworlds_rgba_color": "(255, 0, 0, 255)",
+  "miniworlds_world_call_method": "world.add_background()
+",
+  "miniworlds_world_event": "@world.register
+def on_setup(self):
+    pass
+",
+  "miniworlds_world_get_attribute": "world.color",
+  "miniworlds_world_run": "world.run()
+",
+  "miniworlds_world_set_attribute": "world.color = (100, 100, 100)
+",
+}
+`;
+
+exports[`NumPy Blockly blocks > generate the expected Python code for every toolbox block 1`] = `
+{
+  "numpy_array_create": "np.array([])",
+  "numpy_import_as": "import numpy as np
+",
+  "numpy_linspace": "np.linspace(0, 1, 50)",
+  "numpy_mean": "np.mean([])",
+}
+`;
+
+exports[`SciPy Blockly blocks > generate the expected Python code for every toolbox block 1`] = `
+{
+  "scipy_import_linalg": "from scipy import linalg
+",
+  "scipy_linalg_solve": "linalg.solve([], [])",
+}
+`;

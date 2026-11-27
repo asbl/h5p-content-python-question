@@ -55,6 +55,34 @@ The advanced `Skulpt Script URL` setting accepts either a base directory or a di
 
 `p5-python-web` also ships a combined `dist/p5-python-web.js`, but this H5P integration intentionally uses the separate `lib/skulpt.min.js` and `lib/skulpt-stdlib.js` files so the existing Skulpt loader and runtime setup stay in control.
 
+## External files and self-hosting
+
+By default the content type loads its runtimes from public servers, so learners'
+browsers contact them: `cdn.jsdelivr.net` (Skulpt, Pyodide and its packages,
+Blockly, p5, Ruff, Pyrefly and UI libraries), `esm.sh` (Markdown, Mermaid),
+`media.githubusercontent.com` (Pyrefly), and, for some Pyodide packages,
+`pypi.org` and `files.pythonhosted.org`.
+
+To serve these files yourself, set **External Library URLs (YAML)** on a task,
+or define the same keys once for the whole site:
+
+```html
+<script>
+  window.H5PPythonQuestionLibraryUrls = {
+    skulpt: 'https://school.example/vendor/skulpt/skulpt.min.js',
+    pyodide: 'https://school.example/vendor/pyodide/pyodide.js',
+  };
+</script>
+```
+
+The script has to run inside the frame that runs H5P, before the content is
+created. How to add it depends on the platform (for example the
+`h5p_alter_scripts` hooks). A setting on a task wins over the site-wide value.
+
+Not covered by these keys: the `pypi.org` lookups for the Miniworlds packages and
+the default `tkinter-web-backend` wheel. Mermaid diagrams in the task
+instructions still use the default URL.
+
 ## Examples:
 
 

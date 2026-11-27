@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: libraries/H5P.PythonQuestion-6.0
+
+    steps:
+      # The build and the tests import sibling libraries by relative path, so
+      # the checkouts mirror the libraries/ folder of an H5P workspace.
+      - uses: actions/checkout@v4
+        with:
+          path: libraries/H5P.PythonQuestion-6.0
+      - uses: actions/checkout@v4
+        with:
+          repository: asbl/h5p-lib-code-tools
+          path: libraries/H5P.LibCodeTools-6.0
+      - uses: actions/checkout@v4
+        with:
+          repository: asbl/h5p-content-code-question
+          path: libraries/H5P.CodeQuestion-6.0
+      - uses: actions/checkout@v4
+        with:
+          repository: asbl/h5p-editor-code-widget
+          path: libraries/H5PEditor.CodeWidget-6.0
+      # CodeWidget imports the SQL query constraints from SQLQuestion.
+      - uses: actions/checkout@v4
+        with:
+          repository: asbl/h5p-content-sql-question
+          path: libraries/H5P.SQLQuestion-5.17
+      # A semantics test runs the real H5P list editor.
+      - uses: actions/checkout@v4
+        with:
+          repository: h5p/h5p-editor-php-library
+          ref: 52001a28664dfd6a9e0b1cc3a0b01fbef2877804
+          path: libraries/h5p-editor-php-library
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.5
+
+      - name: Install dependencies
+        run: |
+          for library in H5P.LibCodeTools-6.0 H5P.CodeQuestion-6.0 H5PEditor.CodeWidget-6.0 H5P.PythonQuestion-6.0; do
+            npm ci --prefix "../$library"
+          done
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        env:
+          NODE_ENV: production
+        run: |
+          for library in H5P.CodeQuestion-6.0 H5PEditor.CodeWidget-6.0 H5P.PythonQuestion-6.0; do
+            npm run build --prefix "../$library"
+          done
+
+      - name: Browser smoke test (isolated execution)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:browser:isolated-execution

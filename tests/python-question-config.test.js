@@ -304,6 +304,7 @@ describe('Python question config', () => {
       blocklyCdnUrl: 'https://cdn.example.com/blockly/',
       codeMirrorCdnUrl: 'https://cdn.example.com/codemirror/',
       markdownCdnUrl: 'https://cdn.example.com/markdown/',
+      mermaidCdnUrl: '',
       fontAwesomeCdnUrl: 'https://cdn.example.com/fontawesome.css',
       sweetAlertCdnUrl: 'https://cdn.example.com/sweetalert/',
       jsZipCdnUrl: 'https://cdn.example.com/jszip/',

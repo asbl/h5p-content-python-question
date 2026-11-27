@@ -1,4 +1,5 @@
 import { normalizePythonExecutionLimit } from './python-execution-limit';
+import { getSiteLibraryUrls } from './python-site-library-urls';
 import {
   getPythonPackageUrlMap,
   normalizePythonPackageEntries,
@@ -19,21 +20,22 @@ export { normalizePythonExecutionLimit };
 export { decodeHtmlCode, parseExternalLibraryUrlsYaml };
 
 /**
- * Resolves one external library URL, preferring YAML overrides, falling back to Pyodide
- * options for the Pyodide CDN URL itself.
+ * Resolves one external library URL. Settings of the task (YAML, advanced
+ * options, Pyodide options for the Pyodide URL) win over the site-wide value.
  * @param {object} yamlUrls - URLs parsed from the externalLibraryUrls YAML field.
  * @param {object} advancedOptions - Raw advanced options.
  * @param {object} pyodideOptions - Raw Pyodide advanced options.
  * @param {string} optionName - Name of the URL option to resolve.
+ * @param {object} siteUrls - Site-wide URL overrides.
  * @returns {string} Resolved URL, or an empty string if not configured.
  */
-function getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, optionName) {
+function getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, optionName, siteUrls) {
   return getExternalLibraryUrlShared({
     yamlUrls,
     advancedOptions,
     fallbackOptions: optionName === 'pyodideCdnUrl' ? pyodideOptions : {},
     optionName,
-  });
+  }) || siteUrls[optionName] || '';
 }
 
 /**
@@ -212,6 +214,7 @@ export function normalizePythonRunner(runner) {
  */
 export function normalizePythonAdvancedOptions(advancedOptions = {}, pyodideOptions = {}) {
   const yamlUrls = parseExternalLibraryUrlsYaml(advancedOptions?.externalLibraryUrls);
+  const siteUrls = getSiteLibraryUrls();
 
   return {
     isolatedExecution: advancedOptions?.isolatedExecution === true,
@@ -224,20 +227,20 @@ export function normalizePythonAdvancedOptions(advancedOptions = {}, pyodideOpti
     enableDiagnosticLogs: advancedOptions?.enableDiagnosticLogs === true,
     enableRuffDiagnostics: advancedOptions?.enableRuffDiagnostics !== false,
     enablePyreflyDiagnostics: advancedOptions?.enablePyreflyDiagnostics === true,
-    blocklyCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'blocklyCdnUrl'),
-    codeMirrorCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'codeMirrorCdnUrl'),
-    markdownCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'markdownCdnUrl'),
-    mermaidCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'mermaidCdnUrl'),
-    fontAwesomeCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'fontAwesomeCdnUrl'),
-    sweetAlertCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'sweetAlertCdnUrl'),
-    jsZipCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'jsZipCdnUrl'),
-    p5CdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'p5CdnUrl'),
-    skulptCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'skulptCdnUrl'),
-    sqlJsUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'sqlJsUrl'),
-    pyodideCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'pyodideCdnUrl'),
-    ruffCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'ruffCdnUrl'),
-    pyreflyCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'pyreflyCdnUrl'),
-    pyreflyWasmUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'pyreflyWasmUrl'),
+    blocklyCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'blocklyCdnUrl', siteUrls),
+    codeMirrorCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'codeMirrorCdnUrl', siteUrls),
+    markdownCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'markdownCdnUrl', siteUrls),
+    mermaidCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'mermaidCdnUrl', siteUrls),
+    fontAwesomeCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'fontAwesomeCdnUrl', siteUrls),
+    sweetAlertCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'sweetAlertCdnUrl', siteUrls),
+    jsZipCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'jsZipCdnUrl', siteUrls),
+    p5CdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'p5CdnUrl', siteUrls),
+    skulptCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'skulptCdnUrl', siteUrls),
+    sqlJsUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'sqlJsUrl', siteUrls),
+    pyodideCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'pyodideCdnUrl', siteUrls),
+    ruffCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'ruffCdnUrl', siteUrls),
+    pyreflyCdnUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'pyreflyCdnUrl', siteUrls),
+    pyreflyWasmUrl: getExternalLibraryUrl(yamlUrls, advancedOptions, pyodideOptions, 'pyreflyWasmUrl', siteUrls),
     executionLimit: normalizePythonExecutionLimit(advancedOptions?.execLimit),
   };
 }
@@ -322,6 +325,7 @@ export function buildPythonCodeContainerOptions(parentOptions, config, editorPar
     blocklyCdnUrl: config?.advancedOptions?.blocklyCdnUrl || '',
     codeMirrorCdnUrl: config?.advancedOptions?.codeMirrorCdnUrl || '',
     markdownCdnUrl: config?.advancedOptions?.markdownCdnUrl || '',
+    mermaidCdnUrl: config?.advancedOptions?.mermaidCdnUrl || '',
     fontAwesomeCdnUrl: config?.advancedOptions?.fontAwesomeCdnUrl || '',
     sweetAlertCdnUrl: config?.advancedOptions?.sweetAlertCdnUrl || '',
     jsZipCdnUrl: config?.advancedOptions?.jsZipCdnUrl || '',
