@@ -543,6 +543,10 @@
                   }
                 ]
               }
+            },
+            {
+              "label": "Explanation after checking",
+              "description": "Optional short explanation shown after the learner checks the answer, whether it was right or wrong. Say why the correct answer is correct and which misconception the wrong ones reveal. Markdown is supported."
             }
           ]
         },
@@ -631,6 +635,10 @@
                   }
                 ]
               }
+            },
+            {
+              "label": "Explanation after checking",
+              "description": "Optional short explanation shown after the learner checks the answer, whether it was right or wrong. Say why the correct answer is correct and which misconception the wrong ones reveal. Markdown is supported."
             }
           ]
         },

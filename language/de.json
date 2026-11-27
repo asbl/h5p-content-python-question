@@ -543,6 +543,10 @@
                   }
                 ]
               }
+            },
+            {
+              "label": "Erklärung nach dem Prüfen",
+              "description": "Optionale kurze Erklärung, die nach dem Prüfen der Antwort angezeigt wird, egal ob richtig oder falsch. Erkläre, warum die richtige Antwort stimmt und welches Missverständnis hinter den falschen steckt. Markdown wird unterstützt."
             }
           ]
         },
@@ -631,6 +635,10 @@
                   }
                 ]
               }
+            },
+            {
+              "label": "Erklärung nach dem Prüfen",
+              "description": "Optionale kurze Erklärung, die nach dem Prüfen der Antwort angezeigt wird, egal ob richtig oder falsch. Erkläre, warum die richtige Antwort stimmt und welches Missverständnis hinter den falschen steckt. Markdown wird unterstützt."
             }
           ]
         },
