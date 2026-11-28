@@ -1073,11 +1073,11 @@
     },
     {
       "label": "Hint Cascade",
-      "description": "Didactic hints that learners reveal one by one. Order them from conceptual to strategic to a partial solution.",
+      "description": "Didactic hints that learners can reveal one by one after the first wrong answer. Order them from conceptual to strategic to a partial solution.",
       "fields": [
         {
           "label": "Enable hint button",
-          "description": "Shows a hint button that reveals the hints below one at a time. Hint usage is reported via xAPI."
+          "description": "Shows a hint button after the first wrong answer. Each click reveals the next hint below. Hint usage is reported via xAPI."
         },
         {
           "label": "Hints",

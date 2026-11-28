@@ -1073,11 +1073,11 @@
     },
     {
       "label": "Hinweiskaskade",
-      "description": "Didaktische Hinweise, die Lernende nacheinander aufdecken. Reihenfolge: konzeptuell, strategisch, Teillösung.",
+      "description": "Didaktische Hinweise, die Lernende nach der ersten falschen Antwort nacheinander aufdecken. Reihenfolge: konzeptuell, strategisch, Teillösung.",
       "fields": [
         {
           "label": "Hinweis-Button aktivieren",
-          "description": "Zeigt einen Hinweis-Button, der die Hinweise unten einzeln aufdeckt. Die Hinweisnutzung wird per xAPI gemeldet."
+          "description": "Zeigt einen Hinweis-Button nach der ersten falschen Antwort. Jeder Klick deckt den nächsten Hinweis auf. Die Hinweisnutzung wird per xAPI gemeldet."
         },
         {
           "label": "Hinweise",
